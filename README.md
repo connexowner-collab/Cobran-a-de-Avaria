@@ -72,6 +72,31 @@ Na sidebar do portal há o link **API (Swagger)** que abre a documentação. É 
 
 O projeto usa um **store em memória** (`src/lib/store.ts`) com clientes e usuários de exemplo. Em produção, substitua por banco de dados (ex.: PostgreSQL + Prisma) e valide e-mail, cliente e permissões no backend.
 
+## Subir para o Git
+
+O repositório está configurado com o remote `origin` apontando para o repositório local **Portal_do_Cliente**. Para enviar suas alterações:
+
+**Opção 1 – Script (recomendado)**  
+Na raiz do projeto, no PowerShell:
+
+```powershell
+.\subir.ps1
+```
+
+Isso adiciona todas as alterações, faz commit (com mensagem padrão) e push para `origin main`. Para mensagem personalizada:
+
+```powershell
+.\subir.ps1 "feat: nova funcionalidade X"
+```
+
+**Opção 2 – Comandos manuais**
+
+```bash
+git add -A
+git commit -m "sua mensagem"
+git push origin main
+```
+
 ## Layout
 
 Layout base com **sidebar** (Início, Gestão de Usuários, Clientes) e **header** fixo, seguindo padrão de módulos operacionais (ex.: Cobrança de Avaria): listagem em tabela, filtros em card, formulários em cards e matriz de permissões por módulo/funcionalidade.
