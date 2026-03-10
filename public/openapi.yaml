@@ -1,0 +1,363 @@
+openapi: 3.0.3
+info:
+  title: Portal do Cliente - Gestão de Usuários
+  description: |
+    API para a equipe de Operações gerenciar usuários vinculados a cada cliente,
+    definindo módulos e funcionalidades de acesso no Portal do Cliente.
+  version: 1.0.0
+  contact:
+    name: Suporte Operações
+
+servers:
+  - url: /
+    description: Servidor local (prefixo da aplicação Next.js)
+
+tags:
+  - name: Clientes
+    description: Listagem de clientes
+  - name: Usuários
+    description: CRUD de usuários e permissões
+  - name: Módulos
+    description: Módulos e funcionalidades disponíveis para permissões
+
+paths:
+  /api/clientes:
+    get:
+      tags:
+        - Clientes
+      summary: Listar clientes
+      description: Retorna todos os clientes cadastrados no portal.
+      operationId: listarClientes
+      responses:
+        '200':
+          description: Lista de clientes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Cliente'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+
+  /api/usuarios:
+    get:
+      tags:
+        - Usuários
+      summary: Listar usuários
+      description: Retorna usuários com filtros opcionais por cliente, busca (nome/e-mail) e status.
+      operationId: listarUsuarios
+      parameters:
+        - name: clienteId
+          in: query
+          description: Filtrar por ID do cliente
+          required: false
+          schema:
+            type: string
+            example: '1'
+        - name: busca
+          in: query
+          description: Buscar por nome ou e-mail
+          required: false
+          schema:
+            type: string
+        - name: ativo
+          in: query
+          description: Filtrar por status ativo (true/false)
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Lista de usuários
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Usuario'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+
+    post:
+      tags:
+        - Usuários
+      summary: Criar usuário
+      description: Cadastra um novo usuário vinculado a um cliente com permissões por módulo/funcionalidade.
+      operationId: criarUsuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioInput'
+      responses:
+        '201':
+          description: Usuário criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '400':
+          description: Dados inválidos (nome, email ou clienteId ausentes)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+
+  /api/usuarios/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdUsuario'
+    get:
+      tags:
+        - Usuários
+      summary: Buscar usuário por ID
+      operationId: buscarUsuario
+      responses:
+        '200':
+          description: Usuário encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '404':
+          description: Usuário não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+
+    put:
+      tags:
+        - Usuários
+      summary: Atualizar usuário
+      description: Atualiza dados e/ou permissões do usuário. Envie apenas os campos que deseja alterar.
+      operationId: atualizarUsuario
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioInput'
+      responses:
+        '200':
+          description: Usuário atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '404':
+          description: Usuário não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+
+    delete:
+      tags:
+        - Usuários
+      summary: Excluir usuário
+      operationId: excluirUsuario
+      responses:
+        '200':
+          description: Usuário excluído
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '404':
+          description: Usuário não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Erro'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+
+  /api/modulos:
+    get:
+      tags:
+        - Módulos
+      summary: Listar módulos e funcionalidades
+      description: Retorna os módulos do portal e suas funcionalidades (ids usados em permissoes).
+      operationId: listarModulos
+      responses:
+        '200':
+          description: Lista de módulos com funcionalidades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Modulo'
+        '500':
+          $ref: '#/components/responses/ErroInterno'
+
+components:
+  parameters:
+    IdUsuario:
+      name: id
+      in: path
+      required: true
+      description: ID do usuário
+      schema:
+        type: string
+        example: 'u1'
+
+  responses:
+    ErroInterno:
+      description: Erro interno do servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Erro'
+
+  schemas:
+    Cliente:
+      type: object
+      properties:
+        id:
+          type: string
+          example: '1'
+        razaoSocial:
+          type: string
+          example: 'Empresa Alpha Ltda'
+        nomeFantasia:
+          type: string
+          nullable: true
+          example: 'Alpha'
+        cnpj:
+          type: string
+          nullable: true
+          example: '00.000.000/0001-00'
+        ativo:
+          type: boolean
+      required:
+        - id
+        - razaoSocial
+        - ativo
+
+    Funcionalidade:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'avaria_visualizar'
+        nome:
+          type: string
+          example: 'Visualizar'
+        descricao:
+          type: string
+          nullable: true
+          example: 'Consultar avarias'
+
+    Modulo:
+      type: object
+      properties:
+        id:
+          type: string
+          enum:
+            - cobranca
+            - avaria
+            - entregas
+            - relatorios
+            - cadastros
+            - configuracoes
+          example: 'avaria'
+        nome:
+          type: string
+          example: 'Cobrança de Avaria'
+        descricao:
+          type: string
+          example: 'Registro e acompanhamento de avarias'
+        funcionalidades:
+          type: array
+          items:
+            $ref: '#/components/schemas/Funcionalidade'
+
+    PermissaoUsuario:
+      type: object
+      additionalProperties:
+        type: boolean
+      description: Mapa de id da funcionalidade para habilitado (true/false)
+      example:
+        avaria_visualizar: true
+        avaria_registrar: true
+        avaria_aprovar: false
+
+    Usuario:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'u1'
+        nome:
+          type: string
+          example: 'João Silva'
+        email:
+          type: string
+          format: email
+          example: 'joao.silva@cliente.com'
+        ativo:
+          type: boolean
+        clienteId:
+          type: string
+          example: '1'
+        permissoes:
+          $ref: '#/components/schemas/PermissaoUsuario'
+        criadoEm:
+          type: string
+          format: date-time
+          example: '2024-01-15T10:00:00Z'
+        atualizadoEm:
+          type: string
+          format: date-time
+          example: '2024-03-01T14:30:00Z'
+      required:
+        - id
+        - nome
+        - email
+        - ativo
+        - clienteId
+        - permissoes
+        - criadoEm
+        - atualizadoEm
+
+    UsuarioInput:
+      type: object
+      properties:
+        nome:
+          type: string
+          example: 'Maria Santos'
+        email:
+          type: string
+          format: email
+          example: 'maria@cliente.com'
+        ativo:
+          type: boolean
+          default: true
+        clienteId:
+          type: string
+          example: '1'
+        permissoes:
+          $ref: '#/components/schemas/PermissaoUsuario'
+      required:
+        - nome
+        - email
+        - clienteId
+
+    Erro:
+      type: object
+      properties:
+        error:
+          type: string
+          example: 'Usuário não encontrado'

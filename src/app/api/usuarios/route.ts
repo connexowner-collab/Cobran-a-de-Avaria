@@ -1,0 +1,46 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getUsuarios, criarUsuario } from '@/lib/store';
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const clienteId = searchParams.get('clienteId') ?? undefined;
+    const busca = searchParams.get('busca') ?? undefined;
+    const ativoParam = searchParams.get('ativo');
+    const ativo = ativoParam === 'true' ? true : ativoParam === 'false' ? false : undefined;
+
+    const usuarios = getUsuarios({ clienteId, busca, ativo });
+    return NextResponse.json(usuarios);
+  } catch (e) {
+    return NextResponse.json(
+      { error: 'Erro ao listar usuários' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { nome, email, ativo = true, clienteId, permissoes = {} } = body;
+    if (!nome || !email || !clienteId) {
+      return NextResponse.json(
+        { error: 'Campos obrigatórios: nome, email, clienteId' },
+        { status: 400 }
+      );
+    }
+    const usuario = criarUsuario({
+      nome,
+      email,
+      ativo: Boolean(ativo),
+      clienteId,
+      permissoes: permissoes || {},
+    });
+    return NextResponse.json(usuario, { status: 201 });
+  } catch (e) {
+    return NextResponse.json(
+      { error: 'Erro ao criar usuário' },
+      { status: 500 }
+    );
+  }
+}

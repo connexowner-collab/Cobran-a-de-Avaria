@@ -1,0 +1,246 @@
+/* Padrão PDV - Plataforma Digital Vamos (Cobrança-Avaria) */
+
+:root {
+  --pdv-primary: #c41e3a;
+  --pdv-primary-dark: #a01830;
+  --pdv-topbar: #444444;
+  --pdv-card-bg: #fff;
+  --pdv-text: #374151;
+  --pdv-text-muted: #6b7280;
+  --pdv-border: #e5e7eb;
+}
+
+/* ---- Tela inicial (home) ---- */
+.plataforma-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+}
+
+.plataforma-top {
+  flex: 0 0 50vh;
+  min-height: 50vh;
+  background: linear-gradient(160deg, #5c1a24 0%, #3d1219 50%, #2a0d12 100%);
+  min-width: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.plataforma-bottom {
+  flex: 1;
+  min-height: 50vh;
+  background: #e0e0e0;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+  padding-top: 2rem;
+}
+
+.plataforma-cards-layer {
+  position: relative;
+  z-index: 3;
+  margin-top: -5rem;
+  background: transparent;
+}
+
+.plataforma-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.plataforma-header-left { display: flex; align-items: center; gap: 1rem; }
+.plataforma-header-left .header-logo { height: 36px; width: auto; max-width: 140px; object-fit: contain; display: block; }
+.plataforma-header .icon-btn {
+  width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; color: #fff; cursor: pointer; border-radius: 6px;
+}
+.plataforma-header .icon-btn:hover { background: rgba(255, 255, 255, 0.1); }
+.plataforma-header .icon-btn svg { width: 22px; height: 22px; }
+.plataforma-header-right { display: flex; align-items: center; gap: 0.5rem; }
+.plataforma-header .icon-btn-bell { position: relative; }
+.plataforma-header .badge {
+  position: absolute; top: 4px; right: 4px; min-width: 20px; height: 20px; padding: 0 5px;
+  font-size: 0.65rem; font-weight: 700; background: var(--pdv-primary); color: #fff;
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+}
+.plataforma-header .user-dropdown {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.75rem;
+  background: transparent; border: none; color: #fff; font-size: 0.875rem; font-weight: 500; cursor: pointer;
+}
+.plataforma-header .user-dropdown svg { width: 16px; height: 16px; }
+
+.plataforma-hero-area { position: relative; }
+.plataforma-hero { padding: 2rem 1.5rem 1.5rem; max-width: 900px; }
+.plataforma-hero h1 {
+  font-size: 1.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em;
+  margin: 0 0 0.5rem; color: #fff;
+}
+.plataforma-hero .subtitle { font-size: 0.9375rem; color: rgba(255, 255, 255, 0.85); margin-bottom: 1.5rem; line-height: 1.4; }
+.plataforma-search { position: relative; max-width: 400px; }
+.plataforma-search input {
+  width: 100%; padding: 0.75rem 1rem 0.75rem 2.75rem; border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px; background: rgba(255, 255, 255, 0.1); color: #fff; font-size: 0.875rem;
+}
+.plataforma-search input::placeholder { color: rgba(255, 255, 255, 0.6); }
+.plataforma-search .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: rgba(255, 255, 255, 0.7); }
+.plataforma-search .search-icon svg { width: 18px; height: 18px; }
+
+.bem-vindo-wrap { position: absolute; top: 6rem; right: 1.5rem; width: 364px; }
+.bem-vindo-card {
+  background: #fff; border-radius: 10px; border-left: 5px solid var(--pdv-primary);
+  padding: 1.3rem 1.625rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  display: flex; align-items: flex-start; gap: 1rem;
+}
+.bem-vindo-card .bem-vindo-icon {
+  width: 62px; height: 62px; flex-shrink: 0; background: rgba(34, 197, 94, 0.15);
+  border-radius: 10px; color: #22c55e; display: flex; align-items: center; justify-content: center;
+}
+.bem-vindo-card .bem-vindo-icon svg { width: 31px; height: 31px; }
+.bem-vindo-card .bem-vindo-text h3 { font-size: 1rem; font-weight: 700; color: var(--pdv-primary); margin: 0 0 0.325rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.bem-vindo-card .bem-vindo-text .nome { font-size: 1.14rem; font-weight: 600; color: #1a1a1f; margin-bottom: 0.2rem; }
+.bem-vindo-card .bem-vindo-text .doc { font-size: 0.975rem; color: var(--pdv-text-muted); }
+
+.plataforma-section-title--red { padding: 0 1.5rem; margin: 0 0 1.25rem 0; position: relative; z-index: 1; }
+.plataforma-section { padding: 0 1.5rem 1rem; padding-top: 0; margin-top: 0; width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; overflow-x: visible; }
+.plataforma-section-title { display: flex; align-items: center; gap: 0.5rem; font-size: 1rem; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); }
+.plataforma-section-title svg { width: 20px; height: 20px; color: #f59e0b; }
+
+.favoritos-scroll {
+  display: flex; gap: 1rem; overflow-x: auto; overflow-y: visible; padding: 0.5rem 0;
+  width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; -webkit-overflow-scrolling: touch;
+}
+.favoritos-scroll::-webkit-scrollbar { height: 6px; }
+.favoritos-scroll::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); border-radius: 3px; }
+
+/* Card favorito: estrela no canto, área clicável para navegar (padrão Cobrança_Avaria) */
+.favorito-card {
+  flex: 0 0 260px; width: 260px; min-height: 100px; padding: 0.875rem 1rem;
+  background: #fff; border: 2px solid var(--pdv-border); border-radius: 10px; text-align: left;
+  position: relative; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  display: flex; flex-direction: column; gap: 0.5rem; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.favorito-card:hover { border-color: var(--pdv-primary); box-shadow: 0 2px 12px rgba(196, 30, 58, 0.15); }
+.favorito-card .favorito-card-link {
+  text-decoration: none; color: inherit; cursor: pointer; flex: 1; display: flex; flex-direction: column; gap: 0.5rem;
+}
+.favorito-card .star-btn.star-fav {
+  position: absolute; top: 0.875rem; right: 1rem; padding: 0.25rem;
+  border: none; background: none; cursor: pointer; z-index: 10; pointer-events: auto;
+}
+.favorito-card .star-btn.star-fav svg { width: 18px; height: 18px; }
+.favorito-card .star-btn.star-fav.star-filled { color: #facc15; }
+.favorito-card .star-btn.star-fav.star-outline { color: #d1d5db; }
+.favorito-card .star-btn.star-fav.star-outline:hover { color: #facc15; }
+.favorito-card .card-row { display: flex; align-items: flex-start; gap: 0.75rem; }
+.favorito-card .card-icon-wrap {
+  width: 44px; height: 44px; min-width: 44px; border-radius: 50%;
+  background: rgba(196, 30, 58, 0.12); color: var(--pdv-primary-dark);
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 6px rgba(196, 30, 58, 0.06);
+}
+.favorito-card .card-icon-wrap svg { width: 22px; height: 22px; }
+.favorito-card .card-title { font-size: 0.875rem; font-weight: 700; color: var(--pdv-primary-dark); line-height: 1.2; padding-right: 1.5rem; }
+.favorito-card .card-desc { font-size: 0.75rem; color: var(--pdv-text-muted); line-height: 1.35; margin: 0; }
+
+.pdv-module-card {
+  flex: 0 0 260px; width: 260px; min-height: 100px; padding: 0.875rem 1rem;
+  background: #fff; border: 2px solid var(--pdv-border); border-radius: 10px; text-align: left;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08); display: flex; flex-direction: column; gap: 0.5rem;
+  transition: border-color 0.2s, box-shadow 0.2s; text-decoration: none; color: inherit; cursor: pointer;
+}
+.pdv-module-card:hover { border-color: var(--pdv-primary); box-shadow: 0 2px 12px rgba(196, 30, 58, 0.15); }
+.pdv-module-card .card-row { display: flex; align-items: flex-start; gap: 0.75rem; }
+.pdv-module-card .card-icon-wrap {
+  width: 44px; height: 44px; min-width: 44px; border-radius: 50%;
+  background: rgba(196, 30, 58, 0.12); color: var(--pdv-primary-dark);
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 6px rgba(196, 30, 58, 0.06);
+}
+.pdv-module-card .card-icon-wrap svg { width: 22px; height: 22px; }
+.pdv-module-card .card-title { font-size: 0.875rem; font-weight: 700; color: var(--pdv-primary-dark); line-height: 1.2; padding-right: 1.5rem; }
+.pdv-module-card .card-desc { font-size: 0.75rem; color: var(--pdv-text-muted); line-height: 1.35; margin: 0; }
+
+.faturamento-section { padding: 1.5rem 1.5rem 2rem; background: #e0e0e0; margin-top: 0; }
+.faturamento-section-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+.faturamento-section-header .red-line { width: 4px; height: 24px; background: var(--pdv-primary); border-radius: 2px; }
+.faturamento-section-header .section-label { font-size: 1.125rem; font-weight: 700; color: var(--pdv-text); text-transform: uppercase; letter-spacing: 0.02em; }
+.faturamento-cards { display: flex; flex-wrap: wrap; gap: 1rem; }
+.faturamento-card {
+  display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; min-width: 200px;
+  background: #fff; border: 2px solid var(--pdv-border); border-radius: 8px; cursor: pointer; text-align: left;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s; text-decoration: none; color: inherit;
+}
+.faturamento-card:hover { background: #fafafa; border-color: var(--pdv-primary); box-shadow: 0 2px 8px rgba(196, 30, 58, 0.12); }
+.faturamento-card .faturamento-card-icon {
+  width: 48px; height: 48px; border-radius: 8px; background: rgba(196, 30, 58, 0.1); color: var(--pdv-primary);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.faturamento-card .faturamento-card-icon svg { width: 24px; height: 24px; }
+.faturamento-card .faturamento-card-label { font-size: 0.875rem; font-weight: 700; color: #1a1a1f; text-transform: uppercase; letter-spacing: 0.02em; }
+.faturamento-card .faturamento-star-btn {
+  margin-left: auto; padding: 0.35rem; min-width: 36px; min-height: 36px;
+  border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; pointer-events: auto;
+}
+.faturamento-card .faturamento-star-btn svg { width: 18px; height: 18px; }
+.faturamento-card .faturamento-star-btn.star-filled { color: #facc15; }
+.faturamento-card .faturamento-star-btn.star-outline { color: #d1d5db; }
+.faturamento-card .faturamento-star-btn.star-outline:hover { color: #facc15; }
+
+/* ---- Layout interno (módulos) ---- */
+.pdv-inner .pdv-top-bar {
+  background: var(--pdv-topbar); padding: 0.5rem 1.25rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+}
+.pdv-inner .pdv-top-bar-left { display: flex; align-items: center; gap: 0.75rem; }
+.pdv-inner .pdv-top-bar .icon-btn {
+  width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; color: #fff; cursor: pointer; border-radius: 6px;
+}
+.pdv-inner .pdv-top-bar .icon-btn:hover { background: rgba(255, 255, 255, 0.1); }
+.pdv-inner .pdv-top-bar .icon-btn svg { width: 22px; height: 22px; }
+.pdv-inner .pdv-top-bar-right { display: flex; align-items: center; gap: 0.25rem; }
+.pdv-inner .pdv-top-bar .user-dropdown {
+  display: flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.75rem;
+  background: transparent; border: none; color: #fff; font-size: 0.875rem; font-weight: 500; cursor: pointer; border-radius: 6px;
+}
+.pdv-inner .pdv-top-bar .user-dropdown:hover { background: rgba(255, 255, 255, 0.1); }
+.pdv-inner .pdv-top-bar .user-dropdown svg { width: 16px; height: 16px; opacity: 0.9; }
+.pdv-inner .pdv-top-bar .logo-vamos { height: 36px; width: auto; max-width: 140px; object-fit: contain; display: block; }
+
+.pdv-inner .pdv-sub-header {
+  background: #f5f5f5; padding: 0.6rem 1.5rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  border-bottom: 1px solid var(--pdv-border);
+}
+.pdv-inner .pdv-page-title { font-size: 1.125rem; font-weight: 700; color: var(--pdv-text); text-transform: uppercase; letter-spacing: 0.02em; margin: 0; }
+.pdv-inner .pdv-btn-voltar {
+  display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; margin-right: 0.5rem;
+  background: transparent; border: none; border-radius: 6px; color: var(--pdv-text); font-size: 0.875rem; font-weight: 600;
+  cursor: pointer; text-decoration: none; transition: background 0.2s, color 0.2s;
+}
+.pdv-inner .pdv-btn-voltar:hover { background: #f3f4f6; color: #1f2937; }
+.pdv-inner .pdv-btn-voltar svg { width: 18px; height: 18px; flex-shrink: 0; }
+.pdv-inner .pdv-breadcrumb { display: flex; align-items: center; gap: 0.35rem; font-size: 0.8125rem; color: var(--pdv-text-muted); }
+.pdv-inner .pdv-breadcrumb a { display: flex; align-items: center; gap: 0.35rem; color: var(--pdv-text-muted); text-decoration: none; }
+.pdv-inner .pdv-breadcrumb a:hover { color: var(--pdv-text); }
+.pdv-inner .pdv-breadcrumb .current { color: var(--pdv-text); font-weight: 500; }
+.pdv-inner .pdv-breadcrumb .sep { color: #9ca3af; margin: 0 0.15rem; }
+.pdv-inner .pdv-breadcrumb svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+.pdv-inner .pdv-main { margin: 1.5rem; background: var(--pdv-card-bg); border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); overflow: hidden; min-height: 400px; }
+.pdv-inner .pdv-inner-body { padding: 1.5rem; }
+
+/* Botões das páginas internas (alinhados ao PDV) */
+.pdv-inner .btn-primary { background: var(--pdv-primary) !important; }
+.pdv-inner .btn-primary:hover { background: var(--pdv-primary-dark) !important; }
