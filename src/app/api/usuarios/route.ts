@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUsuarios, criarUsuario } from '@/lib/store';
 
+const DEFAULT_ITENS_POR_PAGINA = 25;
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -9,9 +11,16 @@ export async function GET(request: NextRequest) {
     const busca = searchParams.get('busca') ?? undefined;
     const ativoParam = searchParams.get('ativo');
     const ativo = ativoParam === 'true' ? true : ativoParam === 'false' ? false : undefined;
+    const pagina = Math.max(1, parseInt(searchParams.get('pagina') ?? '1', 10) || 1);
+    const itensPorPagina = Math.min(100, Math.max(1, parseInt(searchParams.get('itensPorPagina') ?? String(DEFAULT_ITENS_POR_PAGINA), 10) || DEFAULT_ITENS_POR_PAGINA));
 
-    const usuarios = getUsuarios({ clienteId, grupoId, busca, ativo });
-    return NextResponse.json(usuarios);
+    const todos = getUsuarios({ clienteId, grupoId, busca, ativo });
+    const totalItens = todos.length;
+    const totalPaginas = Math.max(1, Math.ceil(totalItens / itensPorPagina));
+    const inicio = (pagina - 1) * itensPorPagina;
+    const items = todos.slice(inicio, inicio + itensPorPagina);
+
+    return NextResponse.json({ items, totalItens, totalPaginas });
   } catch (e) {
     return NextResponse.json(
       { error: 'Erro ao listar usuários' },

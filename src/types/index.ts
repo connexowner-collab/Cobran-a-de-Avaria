@@ -172,4 +172,13 @@ export interface FiltrosUsuarios {
   grupoId?: string;
   busca?: string;
   ativo?: boolean;
+  pagina?: number;
+  itensPorPagina?: number;
+}
+
+/** Resultado paginado (padrão Cobrança Avaria). */
+export interface PagedResult<T> {
+  items: T[];
+  totalItens: number;
+  totalPaginas: number;
 }

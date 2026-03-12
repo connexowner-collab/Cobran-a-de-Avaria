@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGruposList, criarGrupo } from '@/lib/store';
 
-export async function GET() {
+const DEFAULT_ITENS_POR_PAGINA = 25;
+
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const pagina = Math.max(1, parseInt(searchParams.get('pagina') ?? '1', 10) || 1);
+    const itensPorPagina = Math.min(100, Math.max(1, parseInt(searchParams.get('itensPorPagina') ?? String(DEFAULT_ITENS_POR_PAGINA), 10) || DEFAULT_ITENS_POR_PAGINA));
+
     const list = getGruposList();
-    return NextResponse.json(list);
+    const totalItens = list.length;
+    const totalPaginas = Math.max(1, Math.ceil(totalItens / itensPorPagina));
+    const inicio = (pagina - 1) * itensPorPagina;
+    const items = list.slice(inicio, inicio + itensPorPagina);
+
+    return NextResponse.json({ items, totalItens, totalPaginas });
   } catch (e) {
     return NextResponse.json(
       { error: 'Erro ao listar grupos' },
