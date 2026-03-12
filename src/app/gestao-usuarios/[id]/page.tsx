@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import type { Cliente } from '@/types';
+import type { GrupoListItem } from '@/types';
 import type { PermissaoUsuario } from '@/types';
 import { MatrizPermissoes } from '@/components/MatrizPermissoes';
 
@@ -13,11 +13,11 @@ export default function EditarUsuarioPage() {
   const params = useParams();
   const id = params?.id as string;
 
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [grupos, setGrupos] = useState<GrupoListItem[]>([]);
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [ativo, setAtivo] = useState(true);
-  const [clienteId, setClienteId] = useState('');
+  const [grupoId, setGrupoId] = useState('');
   const [permissoes, setPermissoes] = useState<PermissaoUsuario>({});
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -27,15 +27,15 @@ export default function EditarUsuarioPage() {
   useEffect(() => {
     if (!id) return;
     Promise.all([
-      fetch('/api/clientes').then((r) => r.json()),
+      fetch('/api/grupos').then((r) => r.json()),
       fetch(`/api/usuarios/${id}`).then((r) => (r.ok ? r.json() : null)),
-    ]).then(([clientesData, usuario]) => {
-      setClientes(Array.isArray(clientesData) ? clientesData : []);
+    ]).then(([gruposData, usuario]) => {
+      setGrupos(Array.isArray(gruposData) ? gruposData : []);
       if (usuario) {
         setNome(usuario.nome);
         setEmail(usuario.email);
         setAtivo(usuario.ativo);
-        setClienteId(usuario.clienteId);
+        setGrupoId(usuario.grupoId || usuario.clienteId ? `grp-${usuario.clienteId}` : '');
         setPermissoes(usuario.permissoes || {});
       } else {
         setNotFound(true);
@@ -58,8 +58,8 @@ export default function EditarUsuarioPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!nome.trim() || !email.trim() || !clienteId) {
-      setError('Preencha nome, e-mail e cliente.');
+    if (!nome.trim() || !email.trim() || !grupoId) {
+      setError('Preencha nome, e-mail e grupo de cliente.');
       return;
     }
     setSubmitting(true);
@@ -70,7 +70,7 @@ export default function EditarUsuarioPage() {
         nome: nome.trim(),
         email: email.trim().toLowerCase(),
         ativo,
-        clienteId,
+        grupoId,
         permissoes,
       }),
     })
@@ -139,17 +139,17 @@ export default function EditarUsuarioPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Cliente *</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Grupo de cliente *</label>
               <select
-                value={clienteId}
-                onChange={(e) => setClienteId(e.target.value)}
+                value={grupoId}
+                onChange={(e) => setGrupoId(e.target.value)}
                 className="input-field"
                 required
               >
                 <option value="">Selecione</option>
-                {clientes.filter((c) => c.ativo).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nomeFantasia || c.razaoSocial}
+                {grupos.filter((g) => g.ativo).map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.nome}
                   </option>
                 ))}
               </select>

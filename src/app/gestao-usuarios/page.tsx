@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Plus, Search, Pencil, Trash2, Users, Building2 } from 'lucide-react';
-import type { Usuario } from '@/types';
+import type { Usuario, GrupoListItem } from '@/types';
 import type { Cliente } from '@/types';
+import ModalNovoGrupo from '@/components/ModalNovoGrupo';
 
 type Aba = 'usuarios' | 'clientes';
 
@@ -16,11 +17,15 @@ export default function GestaoUsuariosPage() {
 
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [grupos, setGrupos] = useState<GrupoListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingClientes, setLoadingClientes] = useState(false);
-  const [clienteId, setClienteId] = useState<string>('');
+  const [loadingGrupos, setLoadingGrupos] = useState(false);
+  const [grupoIdFiltro, setGrupoIdFiltro] = useState<string>('');
   const [busca, setBusca] = useState('');
   const [ativoFiltro, setAtivoFiltro] = useState<string>('');
+  const [modalNovoGrupoOpen, setModalNovoGrupoOpen] = useState(false);
+  const [grupoEditId, setGrupoEditId] = useState<string | null>(null);
 
   const loadClientes = () => {
     setLoadingClientes(true);
@@ -33,9 +38,20 @@ export default function GestaoUsuariosPage() {
       .catch(() => setLoadingClientes(false));
   };
 
+  const loadGrupos = () => {
+    setLoadingGrupos(true);
+    fetch('/api/grupos')
+      .then((res) => res.json())
+      .then((data) => {
+        setGrupos(Array.isArray(data) ? data : []);
+        setLoadingGrupos(false);
+      })
+      .catch(() => setLoadingGrupos(false));
+  };
+
   const loadUsuarios = () => {
     const params = new URLSearchParams();
-    if (clienteId) params.set('clienteId', clienteId);
+    if (grupoIdFiltro) params.set('grupoId', grupoIdFiltro);
     if (busca.trim()) params.set('busca', busca.trim());
     if (ativoFiltro === 'true') params.set('ativo', 'true');
     if (ativoFiltro === 'false') params.set('ativo', 'false');
@@ -51,17 +67,21 @@ export default function GestaoUsuariosPage() {
 
   useEffect(() => {
     loadClientes();
+    loadGrupos();
   }, []);
 
   useEffect(() => {
     if (aba === 'usuarios') loadUsuarios();
-  }, [aba, clienteId, busca, ativoFiltro]);
+  }, [aba, grupoIdFiltro, busca, ativoFiltro]);
 
   useEffect(() => {
     if (abaParam === 'clientes') setAba('clientes');
   }, [abaParam]);
 
-  const getClienteNome = (id: string) => clientes.find((c) => c.id === id)?.razaoSocial ?? id;
+  const getGrupoOuClienteNome = (u: Usuario) => {
+    if (u.grupoId) return grupos.find((g) => g.id === u.grupoId)?.nome ?? u.grupoId;
+    return clientes.find((c) => c.id === u.clienteId)?.nomeFantasia || clientes.find((c) => c.id === u.clienteId)?.razaoSocial ?? u.clienteId;
+  };
 
   const handleExcluir = (id: string, nome: string) => {
     if (!confirm(`Excluir o usuário "${nome}"?`)) return;
@@ -100,7 +120,7 @@ export default function GestaoUsuariosPage() {
             }`}
           >
             <Building2 className="h-4 w-4" />
-            Clientes
+            Grupo de cliente
           </button>
         </nav>
       </div>
@@ -118,16 +138,16 @@ export default function GestaoUsuariosPage() {
           <div className="card p-4">
             <div className="flex flex-wrap items-end gap-4">
               <div className="min-w-[200px] flex-1">
-                <label className="mb-1 block text-sm font-medium text-slate-700">Cliente</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Grupo de cliente</label>
                 <select
-                  value={clienteId}
-                  onChange={(e) => setClienteId(e.target.value)}
+                  value={grupoIdFiltro}
+                  onChange={(e) => setGrupoIdFiltro(e.target.value)}
                   className="input-field"
                 >
                   <option value="">Todos</option>
-                  {clientes.filter((c) => c.ativo).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nomeFantasia || c.razaoSocial}
+                  {grupos.filter((g) => g.ativo).map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.nome}
                     </option>
                   ))}
                 </select>
@@ -171,7 +191,7 @@ export default function GestaoUsuariosPage() {
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Nome</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">E-mail</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Cliente</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Grupo de cliente</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Status</th>
                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Ações</th>
                   </tr>
@@ -186,7 +206,7 @@ export default function GestaoUsuariosPage() {
                       <tr key={u.id} className="hover:bg-slate-50/50">
                         <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-900">{u.nome}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{u.email}</td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{getClienteNome(u.clienteId)}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{getGrupoOuClienteNome(u)}</td>
                         <td className="whitespace-nowrap px-4 py-3">
                           <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${u.ativo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
                             {u.ativo ? 'Ativo' : 'Inativo'}
@@ -214,11 +234,53 @@ export default function GestaoUsuariosPage() {
 
       {aba === 'clientes' && (
         <>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900">Clientes</h2>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-bold text-slate-900">Grupo de cliente</h2>
+            <button
+              type="button"
+              onClick={() => {
+                setGrupoEditId(null);
+                setModalNovoGrupoOpen(true);
+              }}
+              className="btn-primary inline-flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Novo Grupo
+            </button>
           </div>
+          <ModalNovoGrupo
+            open={modalNovoGrupoOpen}
+            onClose={() => {
+              setModalNovoGrupoOpen(false);
+              setGrupoEditId(null);
+            }}
+            grupoId={grupoEditId}
+            onSalvar={async (payload) => {
+              try {
+                const isEdit = !!payload.grupoId;
+                const url = isEdit ? `/api/grupos/${payload.grupoId}` : '/api/grupos';
+                const res = await fetch(url, {
+                  method: isEdit ? 'PUT' : 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(
+                    isEdit
+                      ? { nome: payload.nomeGrupo, responsavelId: payload.responsavelId, contratoIds: payload.contratoIds }
+                      : { nomeGrupo: payload.nomeGrupo, responsavelId: payload.responsavelId, contratoIds: payload.contratoIds }
+                  ),
+                });
+                if (res.ok) {
+                  loadGrupos();
+                } else {
+                  const err = await res.json().catch(() => ({}));
+                  alert(err?.error || (isEdit ? 'Erro ao atualizar grupo.' : 'Erro ao criar grupo.'));
+                }
+              } catch {
+                alert('Erro ao salvar grupo.');
+              }
+            }}
+          />
           <div className="table-container">
-            {loadingClientes ? (
+            {loadingGrupos ? (
               <div className="flex justify-center py-12">
                 <span className="text-slate-500">Carregando...</span>
               </div>
@@ -226,25 +288,71 @@ export default function GestaoUsuariosPage() {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Razão Social</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Nome Fantasia</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">CNPJ</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">ID</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Grupo</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Qtd de Contrato</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Qtd de Ativo</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Qtd de Contatos vinculados</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Status</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
-                  {clientes.map((c) => (
-                    <tr key={c.id} className="hover:bg-slate-50/50">
-                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-900">{c.razaoSocial}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{c.nomeFantasia ?? '-'}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{c.cnpj ?? '-'}</td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${c.ativo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
-                          {c.ativo ? 'Ativo' : 'Inativo'}
-                        </span>
-                      </td>
+                  {grupos.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-slate-500">Nenhum grupo encontrado.</td>
                     </tr>
-                  ))}
+                  ) : (
+                    grupos.map((g) => (
+                      <tr key={g.id} className="hover:bg-slate-50/50">
+                        <td className="whitespace-nowrap px-4 py-3 text-sm font-mono text-slate-700">{g.id}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-900">{g.nome}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{g.qtdContrato}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{g.qtdAtivo}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{g.qtdContatosVinculados}</td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${g.ativo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                            {g.ativo ? 'Ativo' : 'Inativo'}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setGrupoEditId(g.id);
+                                setModalNovoGrupoOpen(true);
+                              }}
+                              className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-primary-600"
+                              title="Editar"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(`/api/grupos/${g.id}`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ ativo: !g.ativo }),
+                                  });
+                                  if (res.ok) loadGrupos();
+                                  else alert('Erro ao alterar status.');
+                                } catch {
+                                  alert('Erro ao alterar status.');
+                                }
+                              }}
+                              className={`rounded px-2 py-1 text-xs font-medium ${g.ativo ? 'text-amber-700 hover:bg-amber-50' : 'text-emerald-700 hover:bg-emerald-50'}`}
+                              title={g.ativo ? 'Desativar' : 'Ativar'}
+                            >
+                              {g.ativo ? 'Desativar' : 'Ativar'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             )}

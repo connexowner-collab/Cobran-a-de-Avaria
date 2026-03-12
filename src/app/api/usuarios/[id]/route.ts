@@ -27,12 +27,13 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { nome, email, ativo, clienteId, permissoes } = body;
+    const { nome, email, ativo, clienteId, grupoId, permissoes } = body;
     const usuario = atualizarUsuario(id, {
       ...(nome !== undefined && { nome }),
       ...(email !== undefined && { email }),
       ...(ativo !== undefined && { ativo: Boolean(ativo) }),
       ...(clienteId !== undefined && { clienteId }),
+      ...(grupoId !== undefined && { grupoId }),
       ...(permissoes !== undefined && { permissoes }),
     });
     if (!usuario) {

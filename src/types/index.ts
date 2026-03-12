@@ -90,12 +90,66 @@ export interface Cliente {
   ativo: boolean;
 }
 
+/** Contrato vinculado a um cliente */
+export interface Contrato {
+  id: string;
+  clienteId: string;
+  numero: string;
+}
+
+/** Ativo (equipamento) vinculado a um contrato */
+export interface Ativo {
+  id: string;
+  contratoId: string;
+  placa: string;
+  chassi: string;
+  numeroSerie: string;
+  modelo: string;
+}
+
+/** Opção cliente+contrato para autocomplete (nome + contrato + CNPJ) */
+export interface ClienteContratoOption {
+  contratoId: string;
+  clienteId: string;
+  razaoSocial: string;
+  nomeFantasia?: string;
+  cnpj: string;
+  numeroContrato: string;
+}
+
+/** Responsável para autocomplete no modal Novo Grupo */
+export interface ResponsavelOption {
+  id: string;
+  nome: string;
+}
+
+/** Grupo criado (possui ID único). */
+export interface Grupo {
+  id: string;
+  nome: string;
+  responsavelId?: string;
+  contratoIds: string[];
+  ativo: boolean;
+}
+
+/** Item da listagem da aba Grupo de cliente (contagens por grupo) */
+export interface GrupoListItem {
+  id: string;
+  nome: string;
+  qtdContrato: number;
+  qtdAtivo: number;
+  qtdContatosVinculados: number;
+  ativo: boolean;
+}
+
 export interface Usuario {
   id: string;
   nome: string;
   email: string;
   ativo: boolean;
   clienteId: string;
+  /** ID do grupo (quando vinculado a um grupo criado no modal). */
+  grupoId?: string;
   permissoes: PermissaoUsuario;
   criadoEm: string;
   atualizadoEm: string;
@@ -109,11 +163,13 @@ export interface UsuarioInput {
   email: string;
   ativo: boolean;
   clienteId: string;
+  grupoId?: string;
   permissoes: PermissaoUsuario;
 }
 
 export interface FiltrosUsuarios {
   clienteId?: string;
+  grupoId?: string;
   busca?: string;
   ativo?: boolean;
 }

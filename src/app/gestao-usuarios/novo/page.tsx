@@ -4,36 +4,36 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import type { Cliente } from '@/types';
+import type { GrupoListItem } from '@/types';
 import type { PermissaoUsuario } from '@/types';
 import { MatrizPermissoes } from '@/components/MatrizPermissoes';
 
 export default function NovoUsuarioPage() {
   const router = useRouter();
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [grupos, setGrupos] = useState<GrupoListItem[]>([]);
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [ativo, setAtivo] = useState(true);
-  const [clienteId, setClienteId] = useState('');
+  const [grupoId, setGrupoId] = useState('');
   const [permissoes, setPermissoes] = useState<PermissaoUsuario>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/clientes')
+    fetch('/api/grupos')
       .then((res) => res.json())
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
-        setClientes(list);
-        if (list.length > 0 && !clienteId) setClienteId(list[0].id);
+        setGrupos(list);
+        if (list.length > 0 && !grupoId) setGrupoId(list[0].id);
       });
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!nome.trim() || !email.trim() || !clienteId) {
-      setError('Preencha nome, e-mail e cliente.');
+    if (!nome.trim() || !email.trim() || !grupoId) {
+      setError('Preencha nome, e-mail e grupo de cliente.');
       return;
     }
     setSubmitting(true);
@@ -44,7 +44,7 @@ export default function NovoUsuarioPage() {
         nome: nome.trim(),
         email: email.trim().toLowerCase(),
         ativo,
-        clienteId,
+        grupoId,
         permissoes,
       }),
     })
@@ -105,17 +105,17 @@ export default function NovoUsuarioPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Cliente *</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Grupo de cliente *</label>
               <select
-                value={clienteId}
-                onChange={(e) => setClienteId(e.target.value)}
+                value={grupoId}
+                onChange={(e) => setGrupoId(e.target.value)}
                 className="input-field"
                 required
               >
                 <option value="">Selecione</option>
-                {clientes.filter((c) => c.ativo).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nomeFantasia || c.razaoSocial}
+                {grupos.filter((g) => g.ativo).map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.nome}
                   </option>
                 ))}
               </select>
