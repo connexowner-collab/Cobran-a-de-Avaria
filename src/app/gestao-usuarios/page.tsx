@@ -80,7 +80,8 @@ export default function GestaoUsuariosPage() {
 
   const getGrupoOuClienteNome = (u: Usuario) => {
     if (u.grupoId) return grupos.find((g) => g.id === u.grupoId)?.nome ?? u.grupoId;
-    return clientes.find((c) => c.id === u.clienteId)?.nomeFantasia || clientes.find((c) => c.id === u.clienteId)?.razaoSocial ?? u.clienteId;
+    const c = clientes.find((x) => x.id === u.clienteId);
+    return (c?.nomeFantasia || c?.razaoSocial) ?? u.clienteId;
   };
 
   const handleExcluir = (id: string, nome: string) => {
@@ -305,32 +306,17 @@ export default function GestaoUsuariosPage() {
                   ) : (
                     grupos.map((g) => (
                       <tr key={g.id} className="hover:bg-slate-50/50">
-                        <td className="whitespace-nowrap px-4 py-3 text-sm font-mono text-slate-700">{g.id}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm font-mono text-slate-700">{g.id.toUpperCase()}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-900">{g.nome}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{g.qtdContrato}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{g.qtdAtivo}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{g.qtdContatosVinculados}</td>
                         <td className="whitespace-nowrap px-4 py-3">
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${g.ativo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
-                            {g.ativo ? 'Ativo' : 'Inativo'}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setGrupoEditId(g.id);
-                                setModalNovoGrupoOpen(true);
-                              }}
-                              className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-primary-600"
-                              title="Editar"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={async () => {
+                          <label className="flex cursor-pointer items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={!!g.ativo}
+                              onChange={async () => {
                                 try {
                                   const res = await fetch(`/api/grupos/${g.id}`, {
                                     method: 'PUT',
@@ -343,12 +329,24 @@ export default function GestaoUsuariosPage() {
                                   alert('Erro ao alterar status.');
                                 }
                               }}
-                              className={`rounded px-2 py-1 text-xs font-medium ${g.ativo ? 'text-amber-700 hover:bg-amber-50' : 'text-emerald-700 hover:bg-emerald-50'}`}
+                              className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                               title={g.ativo ? 'Desativar' : 'Ativar'}
-                            >
-                              {g.ativo ? 'Desativar' : 'Ativar'}
-                            </button>
-                          </div>
+                            />
+                            <span className="text-sm text-slate-600">{g.ativo ? 'Ativo' : 'Inativo'}</span>
+                          </label>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setGrupoEditId(g.id);
+                              setModalNovoGrupoOpen(true);
+                            }}
+                            className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-primary-600"
+                            title="Editar"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
                         </td>
                       </tr>
                     ))
