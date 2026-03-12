@@ -23,6 +23,6 @@ Write-Host "`nCommit: $mensagem" -ForegroundColor Cyan
 git commit -m $mensagem
 
 Write-Host "`nEnviando para origin/main..." -ForegroundColor Cyan
-git push origin main
+git push origin main --force
 
 Write-Host "`nConcluído." -ForegroundColor Green

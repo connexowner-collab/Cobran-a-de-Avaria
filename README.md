@@ -89,12 +89,23 @@ Isso adiciona todas as alterações, faz commit (com mensagem padrão) e push pa
 .\subir.ps1 "feat: nova funcionalidade X"
 ```
 
-**Opção 2 – Comandos manuais**
+**Opção 2 – Subida automática (contínua)**  
+Para que as alterações subam sozinhas no Git, execute o script em um terminal e deixe rodando:
+
+```powershell
+.\subir-auto.ps1
+```
+
+A cada 60 segundos o script verifica se há alterações; se houver, faz `git add -A`, commit com mensagem `auto: YYYY-MM-DD HH:mm` e o hook envia (push) para o remoto. Encerre com Ctrl+C.
+
+No Cursor/VS Code: **Terminal → Executar tarefa** e escolha **"Auto subir no Git (contínuo)"** para iniciar o mesmo script. Para subir uma vez: **"Subir no Git agora"**.
+
+**Opção 3 – Comandos manuais**
 
 ```bash
 git add -A
 git commit -m "sua mensagem"
-git push origin main
+git push origin main --force
 ```
 
 ## Layout

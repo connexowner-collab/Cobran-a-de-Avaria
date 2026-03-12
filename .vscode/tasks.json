@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Auto subir no Git (contínuo)",
+      "type": "shell",
+      "command": "powershell -ExecutionPolicy Bypass -File \"${workspaceFolder}/subir-auto.ps1\"",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": false
+      },
+    },
+    {
+      "label": "Subir no Git agora",
+      "type": "shell",
+      "command": "powershell -ExecutionPolicy Bypass -File \"${workspaceFolder}/subir.ps1\" -mensagem \"chore: atualização\"",
+      "problemMatcher": []
+    }
+  ]
+}
