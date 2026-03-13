@@ -7,12 +7,14 @@ import { ChevronLeft, Home, FileText, Users, Building2 } from 'lucide-react';
 const ROUTES: Record<string, { title: string; breadcrumb: string }> = {
   '/gestao-usuarios': { title: 'GESTÃO DE CLIENTES/EXTERNO', breadcrumb: 'Gestão de clientes/Externo' },
   '/clientes': { title: 'CLIENTES', breadcrumb: 'Clientes' },
+  '/medicao': { title: 'MEDIÇÃO', breadcrumb: 'Medição' },
   '/api-docs': { title: 'API (SWAGGER)', breadcrumb: 'API (Swagger)' },
 };
 
 function getRouteInfo(pathname: string): { title: string; breadcrumb: string } | null {
   if (ROUTES[pathname]) return ROUTES[pathname];
   if (pathname.startsWith('/gestao-usuarios')) return ROUTES['/gestao-usuarios'];
+  if (pathname.startsWith('/medicao')) return ROUTES['/medicao'];
   return null;
 }
 

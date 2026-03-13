@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, Building2, LayoutDashboard, FileText } from 'lucide-react';
+import { Users, Building2, LayoutDashboard, FileText, Calculator } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const nav = [
   { href: '/', label: 'Início', icon: LayoutDashboard },
   { href: '/gestao-usuarios', label: 'Gestão de clientes/Externo', icon: Users },
   { href: '/clientes', label: 'Clientes', icon: Building2 },
+  { href: '/medicao', label: 'Medição', icon: Calculator },
   { href: '/api-docs', label: 'API (Swagger)', icon: FileText },
 ];
 

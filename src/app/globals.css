@@ -22,11 +22,14 @@ body {
   .input-field {
     @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:text-sm;
   }
+  .input-field.input-field--no-border {
+    @apply border-0 shadow-none focus:ring-0;
+  }
   .card {
     @apply rounded-xl border border-slate-200 bg-white shadow-sm;
   }
   .table-container {
-    @apply overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm;
+    @apply overflow-x-auto overflow-y-hidden rounded-lg border border-slate-200 bg-white shadow-sm;
   }
 
   /* Paginação (padrão Cobrança Avaria) */
@@ -48,4 +51,25 @@ body {
   .pagination-controls select {
     @apply ml-2 rounded border border-slate-300 bg-white px-2 py-1 text-sm accent-red-500;
   }
+}
+
+/* Calendário do filtro por período: sem negrito e período em vermelho */
+.date-range-filter-popover .rdp {
+  --rdp-accent-color: var(--pdv-primary, #c41e3a);
+  --rdp-background-color: rgba(196, 30, 58, 0.12);
+  --rdp-outline: 2px solid var(--pdv-primary, #c41e3a);
+  --rdp-outline-selected: 3px solid var(--pdv-primary, #c41e3a);
+}
+.date-range-filter-popover .rdp-caption_label,
+.date-range-filter-popover .rdp-head_cell {
+  font-weight: normal;
+}
+/* Mês/ano clicáveis como dropdown */
+.date-range-filter-popover .rdp-caption_dropdowns .rdp-caption_label {
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+.date-range-filter-popover .rdp-caption_dropdowns .rdp-caption_label:hover {
+  background-color: rgba(196, 30, 58, 0.08);
 }

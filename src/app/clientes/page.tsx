@@ -15,7 +15,7 @@ export default function ClientesPage() {
   }, [router]);
 
   return (
-    <div className="flex justify-center py-12">
+    <div className="flex justify-center py-12" role="status" aria-live="polite">
       <span className="text-slate-500">Redirecionando para Gestão de clientes/Externo...</span>
     </div>
   );

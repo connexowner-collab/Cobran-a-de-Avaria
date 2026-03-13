@@ -9,17 +9,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        /* Identidade visual PDV / Vamos (Cobrança Avaria) */
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: '#fdf2f4',
+          100: '#fce7ea',
+          200: '#f9d0d7',
+          300: '#f4a9b5',
+          400: '#ec7a8e',
+          500: '#e04d6a',
+          600: '#c41e3a',
+          700: '#a01830',
+          800: '#86162a',
+          900: '#731628',
         },
       },
     },

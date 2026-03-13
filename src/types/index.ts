@@ -101,7 +101,8 @@ export interface Contrato {
 export interface Ativo {
   id: string;
   contratoId: string;
-  placa: string;
+  /** Placa (opcional; alguns ativos têm apenas Nº de série). */
+  placa?: string;
   chassi: string;
   numeroSerie: string;
   modelo: string;
@@ -123,6 +124,13 @@ export interface ResponsavelOption {
   nome: string;
 }
 
+/** Divisão de frota vinculada a um grupo (nome + ativos). */
+export interface Divisao {
+  id: string;
+  nome: string;
+  ativoIds: string[];
+}
+
 /** Grupo criado (possui ID único). */
 export interface Grupo {
   id: string;
@@ -130,6 +138,12 @@ export interface Grupo {
   responsavelId?: string;
   contratoIds: string[];
   ativo: boolean;
+  /** Divisões de frota do grupo. */
+  divisoes?: Divisao[];
+  /** Data e hora de criação (ISO). Preenchida pelo sistema ao criar. */
+  criadoEm?: string;
+  /** Data e hora da última atualização (ISO). Atualizada pelo sistema ao editar. */
+  atualizadoEm?: string;
 }
 
 /** Item da listagem da aba Grupo de cliente (contagens por grupo) */
@@ -139,7 +153,13 @@ export interface GrupoListItem {
   qtdContrato: number;
   qtdAtivo: number;
   qtdContatosVinculados: number;
+  /** Quantidade de divisões de frota do grupo. */
+  qtdDivisoes: number;
   ativo: boolean;
+  /** Data e hora de criação (ISO). */
+  criadoEm?: string;
+  /** Data e hora da última atualização (ISO). */
+  atualizadoEm?: string;
 }
 
 export interface Usuario {
@@ -148,15 +168,27 @@ export interface Usuario {
   email: string;
   ativo: boolean;
   clienteId: string;
-  /** ID do grupo (quando vinculado a um grupo criado no modal). */
+  /** ID do grupo (compatibilidade; use grupoIds quando múltiplos). */
   grupoId?: string;
+  /** IDs dos grupos vinculados (seleção múltipla). */
+  grupoIds?: string[];
   permissoes: PermissaoUsuario;
+  /** Data e hora de criação do usuário (ISO). */
   criadoEm: string;
   atualizadoEm: string;
+  /** Data e hora do último acesso no portal do cliente, atualizada via PDV (ISO). */
+  ultimoAcessoEm?: string | null;
 }
 
 /** Permissões por funcionalidade (id da funcionalidade => habilitado) */
 export type PermissaoUsuario = Record<string, boolean>;
+
+/** Perfil de acesso (conjunto de permissões reutilizável) */
+export interface Perfil {
+  id: string;
+  nome: string;
+  permissoes: PermissaoUsuario;
+}
 
 export interface UsuarioInput {
   nome: string;
@@ -164,6 +196,8 @@ export interface UsuarioInput {
   ativo: boolean;
   clienteId: string;
   grupoId?: string;
+  /** Múltiplos grupos (prioridade sobre grupoId). */
+  grupoIds?: string[];
   permissoes: PermissaoUsuario;
 }
 

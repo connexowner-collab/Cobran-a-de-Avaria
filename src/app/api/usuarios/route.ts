@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUsuarios, criarUsuario } from '@/lib/store';
+import { getUsuarios, criarUsuario, reloadStoreFromFile } from '@/lib/store';
+
+function emailJaCadastrado(email: string, excluirUsuarioId?: string): boolean {
+  const normalizado = email.trim().toLowerCase();
+  const todos = getUsuarios();
+  return todos.some(
+    (u) => u.email.toLowerCase() === normalizado && u.id !== excluirUsuarioId
+  );
+}
 
 const DEFAULT_ITENS_POR_PAGINA = 25;
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    reloadStoreFromFile();
+    const searchParams = request.nextUrl.searchParams;
     const clienteId = searchParams.get('clienteId') ?? undefined;
     const grupoId = searchParams.get('grupoId') ?? undefined;
     const busca = searchParams.get('busca') ?? undefined;
@@ -23,14 +34,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ items, totalItens, totalPaginas });
   } catch (e) {
     return NextResponse.json(
-      { error: 'Erro ao listar usuários' },
-      { status: 500 }
+      { items: [], totalItens: 0, totalPaginas: 0, error: 'Erro ao listar usuários' },
+      { status: 200 }
     );
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    reloadStoreFromFile();
     const body = await request.json();
     const { nome, email, ativo = true, clienteId, grupoId, permissoes = {} } = body;
     if (!nome || !email) {
@@ -45,9 +57,16 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    const emailNorm = (email as string).trim().toLowerCase();
+    if (emailJaCadastrado(emailNorm)) {
+      return NextResponse.json(
+        { error: 'Já existe um usuário cadastrado com este e-mail.' },
+        { status: 409 }
+      );
+    }
     const usuario = criarUsuario({
       nome,
-      email,
+      email: emailNorm,
       ativo: Boolean(ativo),
       clienteId: clienteId || '',
       ...(grupoId && { grupoId }),
@@ -55,8 +74,9 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json(usuario, { status: 201 });
   } catch (e) {
+    const message = e instanceof Error ? e.message : 'Erro ao criar usuário';
     return NextResponse.json(
-      { error: 'Erro ao criar usuário' },
+      { error: message },
       { status: 500 }
     );
   }

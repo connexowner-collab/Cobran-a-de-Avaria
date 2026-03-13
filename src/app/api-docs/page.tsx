@@ -16,7 +16,7 @@ export default function ApiDocsPage() {
 
   if (!mounted) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
+      <div className="flex min-h-[400px] items-center justify-center" role="status" aria-live="polite">
         <span className="text-slate-500">Carregando documentação...</span>
       </div>
     );
