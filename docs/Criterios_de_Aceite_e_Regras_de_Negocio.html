@@ -1,0 +1,205 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Critérios de Aceite e Regras de Negócio - Gestão de Usuários Portal do Cliente (detalhado com rastreabilidade)</title>
+<style>
+  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.4; margin: 2cm; }
+  h1 { font-size: 18pt; margin-top: 24pt; margin-bottom: 12pt; border-bottom: 1pt solid #000; }
+  h2 { font-size: 14pt; margin-top: 18pt; margin-bottom: 8pt; }
+  h3 { font-size: 12pt; margin-top: 14pt; margin-bottom: 6pt; }
+  h4 { font-size: 11pt; margin-top: 10pt; margin-bottom: 4pt; color: #333; }
+  p { margin: 0 0 6pt; }
+  table { border-collapse: collapse; width: 100%; margin: 12pt 0; font-size: 10.5pt; }
+  th, td { border: 1pt solid #333; padding: 6pt 8pt; text-align: left; vertical-align: top; }
+  th { background: #f0f0f0; font-weight: bold; }
+  ul, ol { margin: 6pt 0 6pt 20pt; }
+  li { margin-bottom: 4pt; }
+  .note { background: #fff9e6; padding: 8pt; margin: 8pt 0; border-left: 4pt solid #f0c000; }
+  .trace { background: #e8f4f8; padding: 8pt; margin: 6pt 0; border-left: 4pt solid #0563c1; font-family: Consolas, monospace; font-size: 10pt; }
+  .story { background: #f0f8ff; padding: 10pt; margin: 8pt 0; border-left: 4pt solid #0563c1; }
+  .id { font-weight: bold; color: #0563c1; }
+  .code { font-family: Consolas, monospace; font-size: 10pt; background: #f5f5f5; padding: 1pt 4pt; }
+</style>
+</head>
+<body>
+
+<h1>Critérios de Aceite e Regras de Negócio</h1>
+<p><strong>Projeto:</strong> Gestão de Usuários – Portal do Cliente</p>
+<p><strong>Versão:</strong> 2.0 (detalhado com rastreabilidade código)</p>
+<p><strong>Objetivo:</strong> Documento de referência para a equipe de Operações e desenvolvimento, com critérios de aceite e regras de negócio redigidos em estilo PO, explicados em mínimo detalhe e vinculados ao código-fonte por IDs únicos.</p>
+
+<div class="note"><strong>Como obter .docx:</strong> Abra este arquivo no Word (Arquivo &gt; Abrir &gt; este .html) e use Arquivo &gt; Salvar como &gt; Documento do Word (*.docx).</div>
+
+<h2>1. Convenção de IDs e Rastreabilidade</h2>
+<p><strong>Tipos de ID:</strong></p>
+<ul>
+  <li><span class="id">CA-Uxx</span> – Critério de aceite (Usuários).</li>
+  <li><span class="id">CA-Gxx</span> – Critério de aceite (Grupos de cliente).</li>
+  <li><span class="id">CA-Pxx</span> – Critério de aceite (Perfis de acesso).</li>
+  <li><span class="id">CA-Axx</span> – Critério de aceite (Ativos e placas).</li>
+  <li><span class="id">RN-Uxx</span>, <span class="id">RN-Gxx</span>, <span class="id">RN-Pxx</span>, <span class="id">RN-Axx</span> – Regras de negócio (Usuários, Grupos, Perfis, Ativos).</li>
+</ul>
+<p><strong>Uso:</strong> Cada ID aparece no documento com explicação detalhada e, em seguida, na seção <em>Rastreabilidade</em> com o(s) arquivo(s) e o trecho de código (função, componente, rota API) que implementa ou valida aquele item. A <strong>Matriz de rastreabilidade</strong> (Seção 2) concentra ID → arquivo → referência no código para consulta rápida.</p>
+
+<h2>2. Matriz de Rastreabilidade (ID → Código)</h2>
+<table>
+  <thead>
+    <tr><th>ID</th><th>Tipo</th><th>Descrição resumida</th><th>Arquivo(s)</th><th>Referência no código</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>CA-U01</td><td>Critério</td><td>Impedir salvar sem nome ou e-mail</td><td>src/app/gestao-usuarios/novo/page.tsx, [id]/page.tsx<br>src/app/api/usuarios/route.ts, [id]/route.ts</td><td>setError('Preencha nome e e-mail.') (novo ~L76, [id] ~L131). API: if (!nome || !email) → 400 'Campos obrigatórios: nome e email'</td></tr>
+    <tr><td>CA-U02</td><td>Critério</td><td>Exigir ao menos um vínculo (grupo/divisão/cliente)</td><td>src/app/gestao-usuarios/novo/page.tsx, [id]/page.tsx<br>src/app/api/usuarios/route.ts</td><td>setError('Adicione ao menos um grupo ou divisão de cliente.') (novo ~L80). API: ids.length===0 && divIds.length===0 && !clienteId → 400 'Informe ao menos um grupo...'</td></tr>
+    <tr><td>CA-U03</td><td>Critério</td><td>Exigir perfil de acesso na criação</td><td>src/app/gestao-usuarios/novo/page.tsx</td><td>if (!perfilId) setError('Selecione um perfil de acesso.') (~L83-84)</td></tr>
+    <tr><td>CA-U04</td><td>Critério</td><td>E-mail único (rejeitar duplicado)</td><td>src/app/api/usuarios/route.ts, [id]/route.ts<br>src/lib/store.ts</td><td>emailJaCadastrado() em route.ts (POST ~L63, PUT ~L44); retorno 409 'Já existe um usuário cadastrado com este e-mail.'</td></tr>
+    <tr><td>CA-U05</td><td>Critério</td><td>Perfil persistido e exibido na edição</td><td>src/app/gestao-usuarios/[id]/page.tsx<br>src/lib/store.ts, src/app/api/usuarios/[id]/route.ts</td><td>setPerfilId(usuario.perfilId ?? '') (~L60). Store: perfilId em criarUsuario/atualizarUsuario. API PUT: perfilId no body e no update</td></tr>
+    <tr><td>CA-U06</td><td>Critério</td><td>Matriz de permissões somente leitura fora de Criar perfil</td><td>src/components/MatrizPermissoes.tsx<br>src/app/gestao-usuarios/novo/page.tsx, [id]/page.tsx</td><td>MatrizPermissoes readOnly prop; toggle/toggleModulo return if readOnly; pointer-events-none quando readOnly. Páginas: &lt;MatrizPermissoes readOnly /&gt;</td></tr>
+    <tr><td>CA-U07</td><td>Critério</td><td>Coluna Perfil de acesso na lista</td><td>src/app/gestao-usuarios/page.tsx</td><td>getPerfilNome(u), estado perfis, loadPerfis(), &lt;th&gt; Perfil de acesso, &lt;td&gt; getPerfilNome(u), FilterInput filtroColPerfil</td></tr>
+    <tr><td>CA-U08</td><td>Critério</td><td>Filtros na listagem (nome, e-mail, grupo, perfil, status, datas)</td><td>src/app/gestao-usuarios/page.tsx</td><td>matchCol(filtroColPerfil, getPerfilNome(u)), estados filtroCol*, isDateInRange; FilterInput por coluna</td></tr>
+    <tr><td>CA-U09</td><td>Critério</td><td>Exclusão com mensagem adequada (ID inválido/não encontrado)</td><td>src/app/gestao-usuarios/page.tsx, src/app/api/usuarios/[id]/route.ts</td><td>handleExcluir: ID inválido → setMensagemFlash erro. API DELETE: 404 'Usuário não encontrado' ou 400 ID inválido</td></tr>
+    <tr><td>CA-G01</td><td>Critério</td><td>Obrigatoriedade nomeGrupo, responsavelId, contratoIds</td><td>src/app/api/grupos/route.ts<br>src/components/ModalNovoGrupo.tsx</td><td>API: if (!nomeGrupo || !responsavelId || !Array.isArray(contratoIds)) → 400 'Dados inválidos: nomeGrupo, responsavelId e contratoIds são obrigatórios'. Modal: handleSalvar valida e botão disabled</td></tr>
+    <tr><td>CA-G02</td><td>Critério</td><td>Nome de grupo único (409 ao duplicar)</td><td>src/app/api/grupos/route.ts, [id]/route.ts<br>src/lib/store.ts</td><td>grupoNomeEmUso(nomeTrim) / grupoNomeEmUso(nomeTrim, id). Store: grupoNomeEmUso(). Retorno 409 'Já existe um grupo com este nome. Escolha outro nome.'</td></tr>
+    <tr><td>CA-G03</td><td>Critério</td><td>Seleção múltipla de clientes (dropdown com busca e chips)</td><td>src/components/DropdownClientesMultiplo.tsx<br>src/components/ModalNovoGrupo.tsx</td><td>DropdownClientesMultiplo: opcoes, selectedContratoIds, onAdd, onRemove, busca, chips. Modal: selectedContratoIds, addCliente, removeCliente</td></tr>
+    <tr><td>CA-G04</td><td>Critério</td><td>Clientes/contratos carregados na edição do grupo</td><td>src/components/ModalNovoGrupo.tsx<br>src/app/api/grupos/[id]/route.ts</td><td>useEffect quando grupoId: setSelectedContratoIds(grupo.contratoIds ?? []), loadClienteOpcoes; GET /api/grupos/[id] retorna grupo.contratoIds</td></tr>
+    <tr><td>CA-G05</td><td>Critério</td><td>Checkbox em ativos; botões Gerar divisão e Movimentar lado a lado</td><td>src/components/ModalNovoGrupo.tsx</td><td>selectedAtivoIds (Set), checkbox por ativo; botões "Gerar divisão" e "Movimentar" no mesmo bloco flex (~L749-755)</td></tr>
+    <tr><td>CA-G06</td><td>Critério</td><td>Campo Nome da divisão só após clicar em Gerar divisão</td><td>src/components/ModalNovoGrupo.tsx</td><td>showNomeDivisaoInput; onClick={() => setShowNomeDivisaoInput(true)} no botão "Gerar divisão" (~L745); label/input Nome da divisão condicionados a showNomeDivisaoInput</td></tr>
+    <tr><td>CA-G07</td><td>Critério</td><td>Movimentação em lote; checkboxes visíveis em Divisão de frota</td><td>src/components/ModalNovoGrupo.tsx<br>src/lib/store.ts</td><td>moverAtivosEmLoteParaDivisao(ativoIds, divisaoDestinoId); select "Movimentar N ativo(s) para"; tabela com checkbox mesmo quando mostrarDivisaoFrota</td></tr>
+    <tr><td>CA-G08</td><td>Critério</td><td>Sem piscar ao adicionar cliente (carregamento em segundo plano)</td><td>src/components/ModalNovoGrupo.tsx</td><td>useEffect ativos: setAtivosLoading(true) só se !isRefetch (ativos.length === 0); se já há ativos, fetch em background sem trocar lista por "Carregando..."</td></tr>
+    <tr><td>CA-P01</td><td>Critério</td><td>Nome do perfil obrigatório</td><td>src/app/api/perfis/route.ts<br>src/components/ModalCriarPerfil.tsx</td><td>API: if (!nome || !nome.trim()) → 400 'Nome do perfil é obrigatório'. Modal: setError('Informe o nome do perfil.') (~L33)</td></tr>
+    <tr><td>CA-P02</td><td>Critério</td><td>Perfis persistidos (store.json)</td><td>src/lib/store.ts, src/app/api/perfis/route.ts</td><td>saveToFile(usuarios, grupos, perfis); STORE_FILE = .data/store.json; criarPerfil chama saveToFile; reloadStoreFromFile() no GET/POST</td></tr>
+    <tr><td>CA-P03</td><td>Critério</td><td>Matriz editável só em Criar perfil</td><td>src/components/MatrizPermissoes.tsx, ModalCriarPerfil.tsx</td><td>ModalCriarPerfil não passa readOnly; telas de usuário passam readOnly. MatrizPermissoes: readOnly desabilita toggles e aplica opacity/pointer-events-none</td></tr>
+    <tr><td>CA-A01</td><td>Critério</td><td>Ativo identificado por placa ou número de série</td><td>src/types/index.ts, src/components/ModalNovoGrupo.tsx<br>src/lib/store.ts</td><td>Ativo: placa?: string; numeroSerie: string. Exibição: a.placa || a.numeroSerie. Store: ativos com e sem placa (a129–a133 sem placa)</td></tr>
+    <tr><td>CA-A02</td><td>Critério</td><td>Placa sem traço (armazenamento e exibição)</td><td>src/types/index.ts, src/lib/store.ts</td><td>Placas em seed/store sem hífen (ex.: ABC1D23). Tipo Ativo placa opcional; nenhum formato com traço aplicado</td></tr>
+    <tr><td>CA-A03</td><td>Critério</td><td>Ativos sem placa vinculáveis a grupo/divisão por número de série</td><td>src/lib/store.ts, ModalNovoGrupo.tsx</td><td>Ativos sem placa (numeroSerie obrigatório) na lista; moverAtivosEmLoteParaDivisao por ativoIds; getAtivosByContratoIds retorna todos do contrato</td></tr>
+    <tr><td>RN-U01</td><td>Regra</td><td>E-mail normalizado (trim e minúsculas)</td><td>src/app/api/usuarios/route.ts, [id]/route.ts</td><td>emailNorm = (email).trim().toLowerCase(); emailJaCadastrado compara normalizado; criarUsuario/atualizarUsuario recebem email já normalizado na API</td></tr>
+    <tr><td>RN-U02</td><td>Regra</td><td>Múltiplos grupos e/ou divisões; grupoIds prioridade</td><td>src/lib/store.ts, src/types/index.ts<br>src/app/api/usuarios/route.ts, [id]/route.ts</td><td>UsuarioInput/Usuario: grupoIds?, divisaoIds?; criarUsuario: grupoIds = input.grupoIds?.length ? input.grupoIds : input.grupoId ? [input.grupoId] : []</td></tr>
+    <tr><td>RN-U03</td><td>Regra</td><td>clienteId derivado de divisões (grupo da 1ª divisão)</td><td>src/lib/store.ts</td><td>resolveClienteIdFromDivisoes(divisaoIds); getGrupoByDivisaoId(divisaoIds[0]); em criarUsuario/atualizarUsuario quando divisaoIds.length</td></tr>
+    <tr><td>RN-U04</td><td>Regra</td><td>clienteId derivado de grupos (1º contrato do 1º grupo)</td><td>src/lib/store.ts</td><td>resolveClienteIdFromGrupos(grupoIds); getGrupoById(grupoIds[0]); contrato do primeiro grupo → clienteId</td></tr>
+    <tr><td>RN-U05</td><td>Regra</td><td>Permissões chave-valor; perfil e persistência por usuário</td><td>src/lib/store.ts, src/types/index.ts<br>src/app/api/usuarios/route.ts, [id]/route.ts</td><td>permissoes: PermissaoUsuario (Record&lt;string, boolean&gt;); criarUsuario/atualizarUsuario clonam permissoes; body perfilId e permissoes</td></tr>
+    <tr><td>RN-U06</td><td>Regra</td><td>perfilId opcional; persistido e exibido</td><td>src/lib/store.ts, src/types/index.ts<br>src/app/gestao-usuarios/page.tsx, [id]/page.tsx</td><td>Usuario.perfilId?; criarUsuario/atualizarUsuario (input.perfilId). Listagem: getPerfilNome(u); edição: setPerfilId(usuario.perfilId ?? '')</td></tr>
+    <tr><td>RN-U07</td><td>Regra</td><td>criadoEm, atualizadoEm, ultimoAcessoEm (sistema)</td><td>src/lib/store.ts, src/app/api/usuarios</td><td>criarUsuario: criadoEm/atualizadoEm = now; atualizarUsuario atualiza atualizadoEm; ultimoAcessoEm atualizável via API (ex.: PUT ultimo-acesso)</td></tr>
+    <tr><td>RN-G01</td><td>Regra</td><td>Grupo: nome único, responsavelId, contratoIds, divisoes</td><td>src/types/index.ts, src/lib/store.ts<br>src/app/api/grupos</td><td>Grupo: id, nome, responsavelId?, contratoIds, ativo, divisoes?. criarGrupo, atualizarGrupo; GET/POST/PUT /api/grupos</td></tr>
+    <tr><td>RN-G02</td><td>Regra</td><td>Divisão: id, nome, ativoIds; Gerar divisão / Movimentar</td><td>src/lib/store.ts, ModalNovoGrupo.tsx</td><td>Divisao: id, nome, ativoIds. moverAtivosEmLoteParaDivisao; nova divisão com nomeDivisao e ativoIds selecionados; atualizarGrupo(divisoes)</td></tr>
+    <tr><td>RN-G03</td><td>Regra</td><td>Grupo com múltiplos contratoIds; ativos = união</td><td>src/lib/store.ts, src/app/api/ativos/route.ts</td><td>getAtivosByContratoIds(contratoIds); GET /api/ativos?contratoIds=... retorna união dos ativos dos contratos</td></tr>
+    <tr><td>RN-G04</td><td>Regra</td><td>Listagem grupos: contagens (contratos, ativos, contatos, divisões)</td><td>src/lib/store.ts, src/app/api/grupos</td><td>getGruposList(): qtdContrato, qtdAtivo, qtdContatosVinculados, qtdDivisoes por grupo</td></tr>
+    <tr><td>RN-G05</td><td>Regra</td><td>Cliente/Contrato referência; opções com razão social, contrato, CNPJ</td><td>src/app/api/clientes/opcoes/route.ts, types (ClienteContratoOption)</td><td>ClienteContratoOption: contratoId, clienteId, razaoSocial, nomeFantasia?, cnpj, numeroContrato. DropdownClientesMultiplo exibe e busca por esses campos</td></tr>
+    <tr><td>RN-P01</td><td>Regra</td><td>Perfil: id, nome, permissoes</td><td>src/types/index.ts, src/lib/store.ts</td><td>Perfil: id, nome, permissoes: PermissaoUsuario. criarPerfil(nome, permissoes)</td></tr>
+    <tr><td>RN-P02</td><td>Regra</td><td>Aplicar perfil à matriz; edição não sobrescrever na 1ª carga</td><td>src/app/gestao-usuarios/[id]/page.tsx</td><td>skipNextPerfilApply ref; setPermissoes(usuario.permissoes) e skipNextPerfilApply.current=true antes setPerfilId; useEffect(perfilId) ignora se skipNextPerfilApply</td></tr>
+    <tr><td>RN-P03</td><td>Regra</td><td>Catálogo módulos/funcionalidades (MODULOS_PORTAL)</td><td>src/types/index.ts</td><td>MODULOS_PORTAL: cobranca, avaria, entregas, relatorios, cadastros, configuracoes; cada um com funcionalidades (ids e nomes)</td></tr>
+    <tr><td>RN-P04</td><td>Regra</td><td>Matriz somente leitura fora de Criar perfil; texto orientação</td><td>src/components/MatrizPermissoes.tsx</td><td>readOnly: texto "As permissões são definidas pelo perfil selecionado. Para alterar... use Criar perfil."; pointer-events-none select-none opacity-90</td></tr>
+    <tr><td>RN-A01</td><td>Regra</td><td>Ativo: contratoId, placa?, chassi, numeroSerie, modelo</td><td>src/types/index.ts, src/lib/store.ts</td><td>Ativo interface; seed ativos com e sem placa; exibição (a.placa || a.numeroSerie)</td></tr>
+    <tr><td>RN-A02</td><td>Regra</td><td>Placa sem hífen (formato único)</td><td>src/lib/store.ts, src/types/index.ts</td><td>Dados de ativos no store sem traço em placa; tipo string; nenhuma formatação com hífen no código</td></tr>
+    <tr><td>RN-A03</td><td>Regra</td><td>Movimentação em lote: só ativos selecionados; atualizar e persistir</td><td>src/components/ModalNovoGrupo.tsx, src/lib/store.ts</td><td>moverAtivosEmLoteParaDivisao(Array.from(selectedAtivoIds), destId); atualizar divisão ativoIds e chamar onSalvar; atualizarGrupo com divisoes atualizadas</td></tr>
+  </tbody>
+</table>
+
+<h2>3. Detalhamento por Área</h2>
+
+<h3>3.1 Usuários</h3>
+<div class="story"><strong>Como</strong> operador do portal, <strong>quero</strong> cadastrar e editar usuários com nome, e-mail, vínculo a grupo(s)/divisão(ões)/cliente e perfil de acesso, <strong>para que</strong> cada pessoa acesse apenas o que for autorizado e eu possa auditar e ajustar acessos sem depender de suporte técnico.</div>
+
+<h4>CA-U01 – Validação de nome e e-mail obrigatórios</h4>
+<p><strong>Explicação detalhada:</strong> O sistema não pode permitir que um usuário seja criado ou atualizado sem nome ou sem e-mail, pois esses campos são essenciais para identificação e para login no portal. A validação ocorre em duas camadas: (1) na interface, antes do envio do formulário, bloqueando o submit e exibindo mensagem clara; (2) na API, garantindo que mesmo chamadas diretas (ex.: integração) não persistam dados inválidos. O texto exibido ao usuário deve ser único e objetivo: "Preencha nome e e-mail."</p>
+<div class="trace"><strong>Rastreabilidade CA-U01:</strong> Front-end: <span class="code">src/app/gestao-usuarios/novo/page.tsx</span> (handleSubmit, ~L74-76), <span class="code">src/app/gestao-usuarios/[id]/page.tsx</span> (handleSubmit, ~L129-131) — <span class="code">setError('Preencha nome e e-mail.')</span>. API: <span class="code">src/app/api/usuarios/route.ts</span> POST (~L47-51), <span class="code">src/app/api/usuarios/[id]/route.ts</span> PUT — <span class="code">if (!nome || !email) return NextResponse.json({ error: 'Campos obrigatórios: nome e email' }, { status: 400 })</span>.</div>
+
+<h4>CA-U02 – Exigência de ao menos um vínculo (grupo, divisão ou cliente)</h4>
+<p><strong>Explicação detalhada:</strong> Todo usuário deve estar vinculado a pelo menos um contexto de acesso: um ou mais grupos de cliente (grupoIds ou o legado grupoId), uma ou mais divisões (divisaoIds) ou, em último caso, um cliente (clienteId). Sem isso, o usuário não teria escopo de dados no portal. A regra é aplicada na tela (impedindo envio e exibindo "Adicione ao menos um grupo ou divisão de cliente.") e na API (retornando 400 com a mensagem longa que inclui os nomes dos campos técnicos para integração).</p>
+<div class="trace"><strong>Rastreabilidade CA-U02:</strong> Front-end: <span class="code">novo/page.tsx</span> (~L78-80), <span class="code">[id]/page.tsx</span> (~L133-135). API: <span class="code">src/app/api/usuarios/route.ts</span> POST (~L53-59): <span class="code">ids.length === 0 && divIds.length === 0 && !clienteId</span> → 400, <span class="code">error: 'Informe ao menos um grupo de cliente (grupoIds ou grupoId), divisão (divisaoIds) ou cliente (clienteId)'</span>.</div>
+
+<h4>CA-U03 – Perfil de acesso obrigatório na criação</h4>
+<p><strong>Explicação detalhada:</strong> Na criação do usuário, a PO define que é obrigatório selecionar um perfil de acesso. O perfil carrega o conjunto padrão de permissões (módulos e funcionalidades) e pode ser ajustado depois na edição; mas na criação, não permitimos usuário sem perfil para evitar acessos indefinidos. A mensagem na interface é: "Selecione um perfil de acesso." A validação é feita apenas no front (novo/page.tsx), pois na edição o perfil pode ficar em branco se o usuário foi criado antes da regra ou por migração.</p>
+<div class="trace"><strong>Rastreabilidade CA-U03:</strong> <span class="code">src/app/gestao-usuarios/novo/page.tsx</span> handleSubmit (~L82-85): <span class="code">if (!perfilId) { setError('Selecione um perfil de acesso.'); return; }</span>. Select de perfil: estado <span class="code">perfilId</span>, opção vazia "Selecione um perfil".</div>
+
+<h4>CA-U04 – Unicidade de e-mail (rejeição com 409)</h4>
+<p><strong>Explicação detalhada:</strong> Não podem existir dois usuários com o mesmo e-mail (considerando normalização: trim e conversão para minúsculas). A verificação é feita na API em POST (criação) e em PUT (edição); na edição, o próprio usuário sendo editado é excluído da checagem (excluirUsuarioId). Em caso de conflito, a API retorna HTTP 409 Conflict com a mensagem "Já existe um usuário cadastrado com este e-mail." para que a interface ou o integrador exibam feedback claro.</p>
+<div class="trace"><strong>Rastreabilidade CA-U04:</strong> <span class="code">src/app/api/usuarios/route.ts</span>: função <span class="code">emailJaCadastrado(email, excluirUsuarioId)</span>; POST ~L61-66: <span class="code">if (emailJaCadastrado(emailNorm)) return NextResponse.json({ error: 'Já existe...' }, { status: 409 })</span>. <span class="code">src/app/api/usuarios/[id]/route.ts</span> PUT ~L43-48: mesma função com <span class="code">id</span> como excluirUsuarioId.</div>
+
+<h4>CA-U05 – Perfil persistido e exibido na edição</h4>
+<p><strong>Explicação detalhada:</strong> O perfil escolhido no cadastro (ou na última edição) deve ser salvo no objeto do usuário (campo perfilId) e persistido no store. Ao reabrir o usuário para edição, o dropdown de perfil deve mostrar o perfil salvo e a matriz de permissões deve refletir as permissões do usuário (que podem ter sido herdadas do perfil e eventualmente customizadas). Para não sobrescrever as permissões já salvas na primeira carga da tela de edição, o código usa um useRef (skipNextPerfilApply) para ignorar o primeiro efeito que aplica as permissões do perfil ao trocar perfilId.</p>
+<div class="trace"><strong>Rastreabilidade CA-U05:</strong> <span class="code">src/app/gestao-usuarios/[id]/page.tsx</span>: carregamento do usuário ~L58-61 (<span class="code">setPerfilId(usuario.perfilId ?? '')</span>, <span class="code">setPermissoes(usuario.permissoes)</span>, <span class="code">skipNextPerfilApply.current = true</span>). <span class="code">src/lib/store.ts</span>: <span class="code">criarUsuario</span> e <span class="code">atualizarUsuario</span> incluem <span class="code">perfilId</span>. <span class="code">src/app/api/usuarios/[id]/route.ts</span> PUT: <span class="code">perfilId</span> no body e no objeto <span class="code">update</span>.</div>
+
+<h4>CA-U06 – Matriz de permissões somente leitura fora de "Criar perfil"</h4>
+<p><strong>Explicação detalhada:</strong> As alterações de módulos e funcionalidades (quais telas e ações o usuário pode acessar) devem ser feitas exclusivamente na tela "Criar perfil", para centralizar a governança. Nas telas de criação e edição de usuário, a matriz é apenas visualização: os checkboxes estão desabilitados, a área tem pointer-events-none e opacidade reduzida, e o texto explicativo orienta o usuário a usar "Criar perfil" para alterar. Isso evita que operadores alterem permissões de forma fragmentada por usuário.</p>
+<div class="trace"><strong>Rastreabilidade CA-U06:</strong> <span class="code">src/components/MatrizPermissoes.tsx</span>: prop <span class="code">readOnly?: boolean</span>; em <span class="code">toggle</span> e <span class="code">toggleModulo</span> <span class="code">if (readOnly) return</span>; container com <span class="code">readOnly ? 'pointer-events-none select-none opacity-90'</span>; labels e inputs <span class="code">disabled={readOnly}</span>. <span class="code">src/app/gestao-usuarios/novo/page.tsx</span> e <span class="code">[id]/page.tsx</span>: <span class="code">&lt;MatrizPermissoes ... readOnly /&gt;</span>. ModalCriarPerfil usa MatrizPermissoes sem readOnly.</div>
+
+<h4>CA-U07 a CA-U09 – Listagem, filtros e exclusão</h4>
+<p><strong>CA-U07:</strong> A coluna "Perfil de acesso" aparece na tabela de usuários antes da coluna "Status". O valor exibido é o nome do perfil (resolvido a partir de perfis carregados via GET /api/perfis); se o usuário não tiver perfilId, exibe "—". <span class="trace">Código: <span class="code">src/app/gestao-usuarios/page.tsx</span> — estado <span class="code">perfis</span>, <span class="code">loadPerfis()</span>, <span class="code">getPerfilNome(u)</span>, &lt;th&gt; e &lt;td&gt; da coluna, <span class="code">FilterInput</span> para <span class="code">filtroColPerfil</span>.</span></p>
+<p><strong>CA-U08:</strong> O operador pode filtrar a lista por nome, e-mail, grupo de cliente, perfil de acesso, status e por intervalo de datas (data de criação e último acesso). Cada coluna tem um campo de filtro; as datas usam DateRangeFilter. <span class="trace">Código: <span class="code">page.tsx</span> — <span class="code">usuariosFiltered</span> com <span class="code">matchCol</span> e <span class="code">isDateInRange</span>; estados <span class="code">filtroCol*</span>, <span class="code">filtroCriadoEmRange</span>, <span class="code">filtroUltimoAcessoRange</span>.</span></p>
+<p><strong>CA-U09:</strong> Ao excluir um usuário, se o ID for inválido ou o usuário não for encontrado (ex.: já excluído), a API retorna 400 ou 404 com mensagem adequada; a interface exibe o erro via setMensagemFlash. <span class="trace">Código: <span class="code">page.tsx</span> <span class="code">handleExcluir</span>; <span class="code">src/app/api/usuarios/[id]/route.ts</span> DELETE: validação de id, getUsuarioById, 404 'Usuário não encontrado', 400 para ID inválido.</span></p>
+
+<h3>3.2 Grupos de Cliente</h3>
+<div class="story"><strong>Como</strong> operador, <strong>quero</strong> criar e editar grupos com nome, responsável e múltiplos clientes/contratos, e organizar ativos em divisões de frota, <strong>para que</strong> eu reflita a estrutura do cliente no portal e controle a quais ativos cada grupo (ou divisão) tem acesso.</div>
+<p><strong>CA-G01:</strong> O grupo só pode ser criado com nome (nomeGrupo), responsável (responsavelId) e ao menos um cliente/contrato (contratoIds). A API valida tipo e presença; a mensagem de erro é: "Dados inválidos: nomeGrupo, responsavelId e contratoIds são obrigatórios". <span class="trace">API: <span class="code">src/app/api/grupos/route.ts</span> POST ~L42-48. Modal: <span class="code">ModalNovoGrupo.tsx</span> handleSalvar e botão Salvar disabled quando falta nome, responsável ou selectedContratoIds.</span></p>
+<p><strong>CA-G02:</strong> O nome do grupo deve ser único. Na criação, grupoNomeEmUso(nomeTrim); na edição, grupoNomeEmUso(nomeTrim, id) para ignorar o próprio grupo. Retorno 409 com "Já existe um grupo com este nome. Escolha outro nome." <span class="trace">Store: <span class="code">src/lib/store.ts</span> <span class="code">grupoNomeEmUso(nome, excluirGrupoId?)</span>. API: <span class="code">grupos/route.ts</span> POST, <span class="code">grupos/[id]/route.ts</span> PUT.</span></p>
+<p><strong>CA-G03:</strong> O campo Cliente do grupo usa o mesmo padrão do campo Grupo de cliente na aba Usuário: dropdown com busca, permanece aberto após seleção, e itens selecionados aparecem como chips. Permite múltiplos clientes (contratos). <span class="trace"><span class="code">src/components/DropdownClientesMultiplo.tsx</span>; <span class="code">ModalNovoGrupo.tsx</span> estado <span class="code">selectedContratoIds</span>, <span class="code">addCliente</span>, <span class="code">removeCliente</span>, payload <span class="code">contratoIds</span>.</span></p>
+<p><strong>CA-G04:</strong> Ao abrir o modal em modo edição (grupoId preenchido), a lista de clientes/contratos do grupo é carregada e exibida no multi-select (selectedContratoIds = grupo.contratoIds). <span class="trace"><span class="code">ModalNovoGrupo.tsx</span> useEffect quando grupoId: fetch GET /api/grupos/[id], <span class="code">setSelectedContratoIds(grupo.contratoIds ?? [])</span>, e carregamento de opções de cliente se necessário.</span></p>
+<p><strong>CA-G05:</strong> Cada ativo na lista tem um checkbox; ao marcar um ou mais ativos, os botões "Gerar divisão" e "Movimentar" são exibidos lado a lado (mesmo bloco flex). <span class="trace"><strong>Rastreabilidade CA-G05:</strong> <span class="code">ModalNovoGrupo.tsx</span>: <span class="code">selectedAtivoIds</span> (Set), renderização condicional dos botões quando selectedAtivoIds.size &gt; 0.</span></p>
+<p><strong>CA-G06:</strong> O campo "Nome da divisão" (input e label) só é exibido após o usuário clicar no botão "Gerar divisão". O estado showNomeDivisaoInput controla a visibilidade; o botão chama setShowNomeDivisaoInput(true). <span class="trace"><span class="code">ModalNovoGrupo.tsx</span>: estado <span class="code">showNomeDivisaoInput</span>; botão "Gerar divisão" <span class="code">onClick={() => setShowNomeDivisaoInput(true)}</span> (~L745); bloco do input condicionado a showNomeDivisaoInput (~L717-732).</span></p>
+<p><strong>CA-G07:</strong> O operador pode movimentar em lote os ativos selecionados para uma divisão existente (select "Movimentar N ativo(s) para"). Os checkboxes continuam visíveis na visualização "Divisão de frota" (mostrarDivisaoFrota true). <span class="trace"><span class="code">moverAtivosEmLoteParaDivisao(ativoIds, divisaoDestinoId)</span> em ModalNovoGrupo; select de destino e botão aplicar; tabela de ativos com checkbox também na vista de divisões.</span></p>
+<p><strong>CA-G08:</strong> Ao adicionar um novo cliente ao grupo (selectedContratoIds aumenta), a lista de ativos é recarregada. Se já havia ativos na tela, o loading não substitui a lista por "Carregando..."; o fetch roda em segundo plano e a lista é atualizada quando a resposta chegar (isRefetch = ativos.length &gt; 0, então setAtivosLoading(true) não é chamado). <span class="trace"><span class="code">ModalNovoGrupo.tsx</span> useEffect [contratoIds.join(',')]: <span class="code">const isRefetch = ativos.length > 0; if (!isRefetch) setAtivosLoading(true)</span>; fetch e setAtivos no finally setAtivosLoading(false).</span></p>
+
+<h3>3.3 Perfis de Acesso</h3>
+<div class="story"><strong>Como</strong> operador, <strong>quero</strong> criar perfis com nome e matriz de módulos/funcionalidades, <strong>para que</strong> eu reutilize o mesmo conjunto de permissões em vários usuários e altere regras em um único lugar.</div>
+<p><strong>CA-P01:</strong> O nome do perfil é obrigatório. Na API, retorno 400 "Nome do perfil é obrigatório" se nome for vazio ou só espaços; no modal Criar perfil, setError('Informe o nome do perfil.'). <span class="trace"><span class="code">src/app/api/perfis/route.ts</span> POST ~L21-26; <span class="code">src/components/ModalCriarPerfil.tsx</span> ~L33.</span></p>
+<p><strong>CA-P02:</strong> Perfis são persistidos no arquivo .data/store.json (junto com usuarios e grupos). Ao fechar e reabrir a aplicação, os perfis continuam disponíveis. saveToFile é chamado após criarPerfil; loadFromFile recarrega perfis na inicialização e reloadStoreFromFile() é usado nas rotas da API. <span class="trace"><span class="code">src/lib/store.ts</span>: STORE_FILE, saveToFile, loadFromFile, criarPerfil → saveToFile. <span class="code">src/app/api/perfis/route.ts</span>: reloadStoreFromFile() no GET e POST.</span></p>
+<p><strong>CA-P03:</strong> Na tela "Criar perfil" a matriz de permissões é editável (MatrizPermissoes sem readOnly). Nas telas de usuário (novo e editar), a matriz é somente leitura (readOnly). <span class="trace">ModalCriarPerfil não passa readOnly para MatrizPermissoes; novo/page e [id]/page passam readOnly. MatrizPermissoes.tsx implementa desabilitar toggles e estilo quando readOnly.</span></p>
+
+<h3>3.4 Ativos e Placas</h3>
+<div class="story"><strong>Como</strong> operador, <strong>quero</strong> que ativos com ou sem placa sejam suportados e exibidos sem traço na placa, <strong>para que</strong> equipamentos identificados só por número de série também possam ser vinculados a grupos e divisões.</div>
+<p><strong>CA-A01:</strong> Na listagem de ativos, a coluna de identificação exibe placa quando existir; caso contrário, número de série (a.placa || a.numeroSerie). O tipo Ativo tem placa opcional e numeroSerie obrigatório. <span class="trace"><span class="code">src/types/index.ts</span> Ativo: placa?: string; numeroSerie: string. <span class="code">ModalNovoGrupo.tsx</span> e store: exibição (a.placa || a.numeroSerie). Store: ativos a129–a133 sem placa.</span></p>
+<p><strong>CA-A02:</strong> Placas são armazenadas e exibidas sem hífen (ex.: ABC1D23). Não há formatação que insira traço no código. <span class="trace">Store seed e dados: placa como 'ABC1D23', etc. Tipo string; nenhum replace ou formatação com hífen em exibição ou persistência.</span></p>
+<p><strong>CA-A03:</strong> Ativos sem placa (apenas numeroSerie) participam normalmente da lista de ativos do grupo, podem ser selecionados por checkbox e movimentados para divisões. A movimentação usa ativoIds; não há restrição por presença de placa. <span class="trace">getAtivosByContratoIds retorna todos os ativos dos contratos; ModalNovoGrupo lista todos; moverAtivosEmLoteParaDivisao recebe ativoIds (incluindo de ativos sem placa).</span></p>
+
+<h2>4. Regras de Negócio (Resumo e Referência ao Código)</h2>
+<p>As regras RN-Uxx, RN-Gxx, RN-Pxx e RN-Axx estão descritas na <strong>Matriz de rastreabilidade</strong> (Seção 2) com o arquivo e a referência no código. Abaixo, o resumo de cada regra com ênfase no "o que" e "por quê"; o "onde" está na matriz.</p>
+<ul>
+  <li><strong>RN-U01:</strong> E-mail normalizado (trim e minúsculas) para unicidade e consistência — API usuarios.</li>
+  <li><strong>RN-U02:</strong> Múltiplos grupos (grupoIds) e/ou divisões (divisaoIds); grupoIds tem prioridade sobre grupoId — Store e tipos.</li>
+  <li><strong>RN-U03:</strong> Se só divisões, clienteId = cliente do grupo da primeira divisão — resolveClienteIdFromDivisoes, getGrupoByDivisaoId.</li>
+  <li><strong>RN-U04:</strong> Se só grupos, clienteId = cliente do primeiro contrato do primeiro grupo — resolveClienteIdFromGrupos.</li>
+  <li><strong>RN-U05:</strong> Permissões como Record&lt;string, boolean&gt;; podem vir de perfil e ser persistidas por usuário — Store e API.</li>
+  <li><strong>RN-U06:</strong> perfilId opcional; quando informado, persistido e exibido na listagem e edição — Store, API, page.tsx e [id]/page.</li>
+  <li><strong>RN-U07:</strong> criadoEm, atualizadoEm, ultimoAcessoEm controlados pelo sistema (ISO) — Store; ultimoAcessoEm via API se houver.</li>
+  <li><strong>RN-G01 a RN-G05:</strong> Estrutura do grupo (nome, responsavelId, contratoIds, divisoes); divisão (id, nome, ativoIds); múltiplos contratos e união de ativos; listagem com contagens; Cliente/Contrato como referência com opções (razão social, contrato, CNPJ) — Store, tipos, API grupos e ativos, getGruposList, DropdownClientesMultiplo.</li>
+  <li><strong>RN-P01 a RN-P04:</strong> Perfil (id, nome, permissoes); aplicar perfil na matriz sem sobrescrever na primeira carga na edição; catálogo MODULOS_PORTAL; matriz somente leitura fora de Criar perfil — tipos, store, [id]/page (skipNextPerfilApply), MatrizPermissoes readOnly.</li>
+  <li><strong>RN-A01 a RN-A03:</strong> Ativo com placa opcional e numeroSerie; placa sem hífen; movimentação em lote apenas dos selecionados, com persistência — tipos, store, ModalNovoGrupo moverAtivosEmLoteParaDivisao e onSalvar.</li>
+</ul>
+
+<h2>5. Módulos e Funcionalidades do Portal</h2>
+<table>
+  <thead>
+    <tr><th>Módulo</th><th>Funcionalidades</th><th>Referência no código</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Cobrança</td><td>Visualizar, Exportar</td><td>src/types/index.ts MODULOS_PORTAL (cobranca_visualizar, cobranca_exportar)</td></tr>
+    <tr><td>Cobrança de Avaria</td><td>Visualizar, Registrar, Aprovar</td><td>MODULOS_PORTAL avaria_*</td></tr>
+    <tr><td>Entregas</td><td>Visualizar, Rastrear</td><td>MODULOS_PORTAL entregas_*</td></tr>
+    <tr><td>Relatórios</td><td>Visualizar, Exportar</td><td>MODULOS_PORTAL relatorios_*</td></tr>
+    <tr><td>Cadastros</td><td>Visualizar, Editar</td><td>MODULOS_PORTAL cadastros_*</td></tr>
+    <tr><td>Configurações</td><td>Visualizar, Editar</td><td>MODULOS_PORTAL config_*</td></tr>
+  </tbody>
+</table>
+
+<h2>6. Mensagens de Erro (API / Interface) com Referência</h2>
+<table>
+  <thead>
+    <tr><th>ID / Contexto</th><th>Mensagem</th><th>HTTP</th><th>Onde no código</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>CA-U01 (interface)</td><td>Preencha nome e e-mail.</td><td>—</td><td>novo/page.tsx, [id]/page.tsx setError</td></tr>
+    <tr><td>CA-U01 (API)</td><td>Campos obrigatórios: nome e email</td><td>400</td><td>api/usuarios/route.ts POST, [id]/route.ts PUT</td></tr>
+    <tr><td>CA-U02 (interface)</td><td>Adicione ao menos um grupo ou divisão de cliente.</td><td>—</td><td>novo/page.tsx, [id]/page.tsx setError</td></tr>
+    <tr><td>CA-U02 (API)</td><td>Informe ao menos um grupo de cliente (grupoIds ou grupoId), divisão (divisaoIds) ou cliente (clienteId)</td><td>400</td><td>api/usuarios/route.ts POST</td></tr>
+    <tr><td>CA-U03</td><td>Selecione um perfil de acesso.</td><td>—</td><td>novo/page.tsx setError</td></tr>
+    <tr><td>CA-U04</td><td>Já existe um usuário cadastrado com este e-mail.</td><td>409</td><td>api/usuarios/route.ts POST, [id]/route.ts PUT</td></tr>
+    <tr><td>CA-U09</td><td>Usuário não encontrado / ID inválido</td><td>404/400</td><td>api/usuarios/[id]/route.ts DELETE; page.tsx handleExcluir</td></tr>
+    <tr><td>CA-G01</td><td>Dados inválidos: nomeGrupo, responsavelId e contratoIds são obrigatórios</td><td>400</td><td>api/grupos/route.ts POST</td></tr>
+    <tr><td>CA-G02</td><td>Já existe um grupo com este nome. Escolha outro nome.</td><td>409</td><td>api/grupos/route.ts POST, api/grupos/[id]/route.ts PUT</td></tr>
+    <tr><td>CA-P01 (API)</td><td>Nome do perfil é obrigatório</td><td>400</td><td>api/perfis/route.ts POST</td></tr>
+    <tr><td>CA-P01 (interface)</td><td>Informe o nome do perfil.</td><td>—</td><td>ModalCriarPerfil.tsx setError</td></tr>
+  </tbody>
+</table>
+
+<p style="margin-top: 24pt;"><em>Documento detalhado com rastreabilidade entre IDs (CA-*, RN-*) e o código-fonte. Projeto: Gestão de Usuários – Portal do Cliente. Versão 2.0.</em></p>
+
+</body>
+</html>

@@ -193,57 +193,46 @@ const perfis: Perfil[] = [
     id: 'perf-1',
     nome: 'Administrador',
     permissoes: {
-      cobranca_visualizar: true,
-      cobranca_exportar: true,
-      avaria_visualizar: true,
-      avaria_registrar: true,
-      avaria_aprovar: true,
-      entregas_visualizar: true,
-      entregas_rastrear: true,
-      relatorios_visualizar: true,
-      relatorios_exportar: true,
-      cadastros_visualizar: true,
-      cadastros_editar: true,
-      config_visualizar: true,
-      config_editar: true,
+      faturamento_acesso: true,
+      avaria_acesso: true,
+      vamoscontrole_acesso: true,
+      relatorios_distribuicao_geografica: true,
+      relatorios_manutencao: true,
+      relatorios_modelos: true,
+      relatorios_servicos: true,
+      agendamento_agendar: true,
+      agendamento_relatorio: true,
+      agendamento_lote: true,
+      multas_acesso: true,
+      crlv_acesso: true,
+      comunicados_acesso: true,
+      importbi_acesso: true,
+      logs_acesso: true,
+      faq_acesso: true,
     },
   },
   {
     id: 'perf-2',
     nome: 'Operador',
     permissoes: {
-      cobranca_visualizar: true,
-      cobranca_exportar: false,
-      avaria_visualizar: true,
-      avaria_registrar: true,
-      avaria_aprovar: false,
-      entregas_visualizar: true,
-      entregas_rastrear: true,
-      relatorios_visualizar: true,
-      relatorios_exportar: false,
-      cadastros_visualizar: true,
-      cadastros_editar: false,
-      config_visualizar: false,
-      config_editar: false,
+      faturamento_acesso: true,
+      avaria_acesso: true,
+      relatorios_distribuicao_geografica: true,
+      relatorios_manutencao: true,
+      relatorios_modelos: true,
+      relatorios_servicos: true,
     },
   },
   {
     id: 'perf-3',
     nome: 'Visualizador',
     permissoes: {
-      cobranca_visualizar: true,
-      cobranca_exportar: false,
-      avaria_visualizar: true,
-      avaria_registrar: false,
-      avaria_aprovar: false,
-      entregas_visualizar: true,
-      entregas_rastrear: true,
-      relatorios_visualizar: true,
-      relatorios_exportar: false,
-      cadastros_visualizar: true,
-      cadastros_editar: false,
-      config_visualizar: false,
-      config_editar: false,
+      faturamento_acesso: true,
+      avaria_acesso: true,
+      relatorios_distribuicao_geografica: true,
+      relatorios_manutencao: true,
+      relatorios_modelos: true,
+      relatorios_servicos: true,
     },
   },
 ];
@@ -260,19 +249,12 @@ const usuarios: Usuario[] = [
     atualizadoEm: '2024-03-01T14:30:00Z',
     ultimoAcessoEm: '2024-03-10T09:15:00Z',
     permissoes: {
-      cobranca_visualizar: true,
-      cobranca_exportar: true,
-      avaria_visualizar: true,
-      avaria_registrar: true,
-      avaria_aprovar: false,
-      entregas_visualizar: true,
-      entregas_rastrear: true,
-      relatorios_visualizar: true,
-      relatorios_exportar: false,
-      cadastros_visualizar: true,
-      cadastros_editar: false,
-      config_visualizar: true,
-      config_editar: false,
+      faturamento_acesso: true,
+      avaria_acesso: true,
+      relatorios_distribuicao_geografica: true,
+      relatorios_manutencao: true,
+      relatorios_modelos: true,
+      relatorios_servicos: true,
     },
   },
   {
@@ -286,19 +268,22 @@ const usuarios: Usuario[] = [
     atualizadoEm: '2024-03-05T11:00:00Z',
     ultimoAcessoEm: '2024-03-08T16:45:00Z',
     permissoes: {
-      cobranca_visualizar: true,
-      cobranca_exportar: true,
-      avaria_visualizar: true,
-      avaria_registrar: true,
-      avaria_aprovar: true,
-      entregas_visualizar: true,
-      entregas_rastrear: true,
-      relatorios_visualizar: true,
-      relatorios_exportar: true,
-      cadastros_visualizar: true,
-      cadastros_editar: true,
-      config_visualizar: true,
-      config_editar: true,
+      faturamento_acesso: true,
+      avaria_acesso: true,
+      vamoscontrole_acesso: true,
+      relatorios_distribuicao_geografica: true,
+      relatorios_manutencao: true,
+      relatorios_modelos: true,
+      relatorios_servicos: true,
+      agendamento_agendar: true,
+      agendamento_relatorio: true,
+      agendamento_lote: true,
+      multas_acesso: true,
+      crlv_acesso: true,
+      comunicados_acesso: true,
+      importbi_acesso: true,
+      logs_acesso: true,
+      faq_acesso: true,
     },
   },
   {
@@ -312,19 +297,12 @@ const usuarios: Usuario[] = [
     atualizadoEm: '2024-02-10T08:00:00Z',
     ultimoAcessoEm: null,
     permissoes: {
-      cobranca_visualizar: true,
-      cobranca_exportar: false,
-      avaria_visualizar: true,
-      avaria_registrar: false,
-      avaria_aprovar: false,
-      entregas_visualizar: true,
-      entregas_rastrear: true,
-      relatorios_visualizar: true,
-      relatorios_exportar: false,
-      cadastros_visualizar: true,
-      cadastros_editar: false,
-      config_visualizar: false,
-      config_editar: false,
+      faturamento_acesso: true,
+      avaria_acesso: true,
+      relatorios_distribuicao_geografica: true,
+      relatorios_manutencao: true,
+      relatorios_modelos: true,
+      relatorios_servicos: true,
     },
   },
 ];
@@ -354,6 +332,11 @@ export function getGrupos(): Grupo[] {
 
 export function getGrupoById(id: string): Grupo | undefined {
   return grupos.find((g) => g.id === id);
+}
+
+/** Retorna o grupo que contém a divisão com o id informado. */
+export function getGrupoByDivisaoId(divisaoId: string): Grupo | undefined {
+  return grupos.find((g) => g.divisoes?.some((d) => d.id === divisaoId));
 }
 
 /** Retorna o primeiro grupo cujos contratos pertencem ao clienteId (para exibir nome na listagem). */
@@ -399,6 +382,8 @@ export interface UsuarioInput {
   clienteId: string;
   grupoId?: string;
   grupoIds?: string[];
+  divisaoIds?: string[];
+  perfilId?: string;
   permissoes: PermissaoUsuario;
 }
 
@@ -412,28 +397,47 @@ function resolveClienteIdFromGrupos(grupoIds: string[]): string {
   return '';
 }
 
+function resolveClienteIdFromDivisoes(divisaoIds: string[]): string {
+  if (divisaoIds.length === 0) return '';
+  const g = getGrupoByDivisaoId(divisaoIds[0]);
+  if (g?.contratoIds.length) {
+    const ct = contratos.find((c) => c.id === g.contratoIds[0]);
+    if (ct) return ct.clienteId;
+  }
+  return '';
+}
+
 export function criarUsuario(input: UsuarioInput): Usuario {
   const id = 'u' + (usuarios.length + 1);
   const now = new Date().toISOString();
   const grupoIds = input.grupoIds?.length ? input.grupoIds : input.grupoId ? [input.grupoId] : [];
+  const divisaoIds = Array.isArray(input.divisaoIds) ? input.divisaoIds : [];
   let clienteId = input.clienteId;
   if (grupoIds.length) {
     const cid = resolveClienteIdFromGrupos(grupoIds);
     if (cid) clienteId = cid;
+  } else if (divisaoIds.length) {
+    const cid = resolveClienteIdFromDivisoes(divisaoIds);
+    if (cid) clienteId = cid;
   } else if (clienteId && clienteIdToGrupoId[clienteId]) {
     grupoIds.push(clienteIdToGrupoId[clienteId]);
   }
+  const permissoes = input.permissoes && typeof input.permissoes === 'object'
+    ? { ...input.permissoes }
+    : {};
   const novo: Usuario = {
     id,
     nome: input.nome,
     email: input.email,
     ativo: input.ativo,
     clienteId,
-    permissoes: input.permissoes,
+    permissoes,
     criadoEm: now,
     atualizadoEm: now,
     ultimoAcessoEm: null,
     ...(grupoIds.length > 0 && { grupoIds, grupoId: grupoIds[0] }),
+    ...(divisaoIds.length > 0 && { divisaoIds }),
+    ...(input.perfilId && { perfilId: input.perfilId }),
   };
   usuarios.push(novo);
   saveToFile(usuarios, grupos, perfis);
@@ -450,16 +454,30 @@ export function atualizarUsuario(id: string, input: Partial<UsuarioInput>): Usua
     : input.grupoId !== undefined
       ? [input.grupoId]
       : usuarios[idx].grupoIds ?? (usuarios[idx].grupoId ? [usuarios[idx].grupoId!] : []);
+  const divisaoIds = input.divisaoIds !== undefined
+    ? input.divisaoIds
+    : usuarios[idx].divisaoIds ?? [];
   if (grupoIds.length) {
     const cid = resolveClienteIdFromGrupos(grupoIds);
     if (cid) clienteId = cid;
+  } else if (divisaoIds.length) {
+    const cid = resolveClienteIdFromDivisoes(divisaoIds);
+    if (cid) clienteId = cid;
   }
+  const permissoes = input.permissoes !== undefined && typeof input.permissoes === 'object'
+    ? { ...input.permissoes }
+    : usuarios[idx].permissoes && typeof usuarios[idx].permissoes === 'object'
+      ? { ...usuarios[idx].permissoes }
+      : {};
   usuarios[idx] = {
     ...usuarios[idx],
     ...input,
     clienteId,
     atualizadoEm: now,
+    permissoes,
     ...(grupoIds.length > 0 && { grupoIds, grupoId: grupoIds[0] }),
+    ...(Array.isArray(divisaoIds) && { divisaoIds }),
+    ...(input.perfilId !== undefined && { perfilId: input.perfilId || undefined }),
   };
   saveToFile(usuarios, grupos, perfis);
   return { ...usuarios[idx] };

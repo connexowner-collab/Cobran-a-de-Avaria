@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Plus, Pencil, Trash2, Users, Building2, Search } from 'lucide-react';
-import type { Usuario, GrupoListItem } from '@/types';
+import type { Usuario, GrupoListItem, Grupo, Perfil } from '@/types';
 import type { Cliente } from '@/types';
 import ModalNovoGrupo from '@/components/ModalNovoGrupo';
 import DateRangeFilter, { isDateInRange } from '@/components/DateRangeFilter';
@@ -20,6 +20,9 @@ export default function GestaoUsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [gruposFiltro, setGruposFiltro] = useState<GrupoListItem[]>([]);
+  /** Grupos completos (com divisões) para exibir nome de grupo/divisão na listagem de usuários */
+  const [gruposComDivisoes, setGruposComDivisoes] = useState<Grupo[]>([]);
+  const [perfis, setPerfis] = useState<Perfil[]>([]);
   const [grupos, setGrupos] = useState<GrupoListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingClientes, setLoadingClientes] = useState(false);
@@ -45,6 +48,7 @@ export default function GestaoUsuariosPage() {
   const [filtroColNome, setFiltroColNome] = useState('');
   const [filtroColEmail, setFiltroColEmail] = useState('');
   const [filtroColGrupo, setFiltroColGrupo] = useState('');
+  const [filtroColPerfil, setFiltroColPerfil] = useState('');
   const [filtroColStatus, setFiltroColStatus] = useState('');
   const [filtroCriadoEmRange, setFiltroCriadoEmRange] = useState<DateRange | undefined>(undefined);
   const [filtroUltimoAcessoRange, setFiltroUltimoAcessoRange] = useState<DateRange | undefined>(undefined);
@@ -98,7 +102,7 @@ export default function GestaoUsuariosPage() {
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         autoComplete="off"
-        className={`input-field input-field--no-border py-1.5 pl-2 text-xs ${showSearch ? 'pr-8' : 'pr-2'}`}
+        className={`input-field input-field--filter-line py-1.5 pl-2 text-xs ${showSearch ? 'pr-8' : 'pr-2'}`}
         aria-label={ariaLabel}
       />
       {showSearch && (
@@ -193,17 +197,28 @@ export default function GestaoUsuariosPage() {
   };
 
   const loadGruposParaFiltro = () => {
-    fetch('/api/grupos?pagina=1&itensPorPagina=1000')
-      .then((res) => res.json())
-      .then((data) => {
-        setGruposFiltro(data?.items ?? []);
+    Promise.all([
+      fetch('/api/grupos?pagina=1&itensPorPagina=1000').then((r) => r.json()),
+      fetch('/api/grupos?comDivisoes=1').then((r) => r.json()),
+    ])
+      .then(([dataList, dataFull]) => {
+        setGruposFiltro(dataList?.items ?? []);
+        setGruposComDivisoes(Array.isArray(dataFull) ? dataFull : []);
       })
       .catch(() => {});
+  };
+
+  const loadPerfis = () => {
+    fetch('/api/perfis')
+      .then((r) => r.json())
+      .then((data) => setPerfis(Array.isArray(data) ? data : []))
+      .catch(() => setPerfis([]));
   };
 
   useEffect(() => {
     loadClientes();
     loadGruposParaFiltro();
+    loadPerfis();
   }, []);
 
   useEffect(() => {
@@ -219,9 +234,27 @@ export default function GestaoUsuariosPage() {
   }, [abaParam]);
 
   const getGrupoOuClienteNome = (u: Usuario) => {
-    if (u.grupoId) return gruposFiltro.find((g) => g.id === u.grupoId)?.nome ?? u.grupoId;
+    const partes: string[] = [];
+    const gIds = u.grupoIds ?? (u.grupoId ? [u.grupoId] : []);
+    for (const gid of gIds) {
+      const nome = gruposFiltro.find((g) => g.id === gid)?.nome ?? gruposComDivisoes.find((g) => g.id === gid)?.nome ?? gid;
+      partes.push(nome);
+    }
+    const divIds = u.divisaoIds ?? [];
+    for (const divId of divIds) {
+      const grupo = gruposComDivisoes.find((g) => g.divisoes?.some((d) => d.id === divId));
+      const div = grupo?.divisoes?.find((d) => d.id === divId);
+      partes.push(div && grupo ? `${grupo.nome} › ${div.nome}` : divId);
+    }
+    if (partes.length > 0) return partes.join(', ');
     const c = clientes.find((x) => x.id === u.clienteId);
     return (c?.nomeFantasia || c?.razaoSocial) ?? u.clienteId;
+  };
+
+  const getPerfilNome = (u: Usuario): string => {
+    if (!u.perfilId) return '—';
+    const p = perfis.find((x) => x.id === u.perfilId);
+    return p?.nome ?? u.perfilId;
   };
 
   const handleExcluir = (id: string, nome: string) => {
@@ -311,6 +344,7 @@ export default function GestaoUsuariosPage() {
                       matchCol(filtroColNome, u.nome) &&
                       matchCol(filtroColEmail, u.email) &&
                       matchCol(filtroColGrupo, getGrupoOuClienteNome(u)) &&
+                      matchCol(filtroColPerfil, getPerfilNome(u)) &&
                       matchCol(filtroColStatus, u.ativo ? 'Ativo' : 'Inativo') &&
                       isDateInRange(u.criadoEm, filtroCriadoEmRange) &&
                       isDateInRange(u.ultimoAcessoEm ?? null, filtroUltimoAcessoRange)
@@ -322,6 +356,7 @@ export default function GestaoUsuariosPage() {
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Nome</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">E-mail</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Grupo de cliente</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Perfil de acesso</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Status</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Data da criação</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Data do último acesso</th>
@@ -338,6 +373,9 @@ export default function GestaoUsuariosPage() {
                         <FilterInput value={filtroColGrupo} onChange={setFiltroColGrupo} ariaLabel="Filtrar por grupo" />
                       </th>
                       <th className="px-2 py-1.5">
+                        <FilterInput value={filtroColPerfil} onChange={setFiltroColPerfil} ariaLabel="Filtrar por perfil de acesso" />
+                      </th>
+                      <th className="px-2 py-1.5">
                         <FilterInput value={filtroColStatus} onChange={setFiltroColStatus} placeholder="Ativo/Inativo" ariaLabel="Filtrar por status" />
                       </th>
                       <th className="min-w-[11rem] px-2 py-1.5 overflow-hidden">
@@ -352,7 +390,7 @@ export default function GestaoUsuariosPage() {
                   <tbody className="divide-y divide-slate-200 bg-white">
                     {usuariosFiltered.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-4 py-10 text-center">
+                        <td colSpan={8} className="px-4 py-10 text-center">
                           <p className="text-slate-600 font-medium">Nenhum usuário encontrado.</p>
                           <p className="mt-1 text-sm text-slate-500">Tente ajustar os filtros ou cadastre um novo usuário.</p>
                         </td>
@@ -363,6 +401,7 @@ export default function GestaoUsuariosPage() {
                           <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-900">{u.nome}</td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{u.email}</td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{getGrupoOuClienteNome(u)}</td>
+                          <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{getPerfilNome(u)}</td>
                           <td className="whitespace-nowrap px-4 py-3">
                             <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${u.ativo ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
                               {u.ativo ? 'Ativo' : 'Inativo'}

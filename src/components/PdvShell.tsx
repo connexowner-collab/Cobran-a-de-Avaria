@@ -7,8 +7,10 @@ import { PdvSubHeader } from './PdvSubHeader';
 export function PdvShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isHome = pathname === '/';
+  // O Portal do Cliente (/portal) tem shell próprio (sidebar + header), sem o chrome do PDV.
+  const isPortal = pathname.startsWith('/portal');
 
-  if (isHome) {
+  if (isHome || isPortal) {
     return <>{children}</>;
   }
 

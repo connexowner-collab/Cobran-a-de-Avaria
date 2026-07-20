@@ -39,7 +39,7 @@ export async function PUT(
     reloadStoreFromFile();
     const { id } = await params;
     const body = await request.json();
-    const { nome, email, ativo, clienteId, grupoId, permissoes } = body;
+    const { nome, email, ativo, clienteId, grupoId, grupoIds, divisaoIds, perfilId, permissoes } = body;
     if (email !== undefined && email !== null && String(email).trim()) {
       if (emailJaCadastrado(String(email), id)) {
         return NextResponse.json(
@@ -48,14 +48,23 @@ export async function PUT(
         );
       }
     }
-    const usuario = atualizarUsuario(id, {
+    const update: { nome?: string; email?: string; ativo?: boolean; clienteId?: string; grupoId?: string; grupoIds?: string[]; divisaoIds?: string[]; perfilId?: string; permissoes?: Record<string, boolean> } = {
       ...(nome !== undefined && { nome }),
       ...(email !== undefined && { email }),
       ...(ativo !== undefined && { ativo: Boolean(ativo) }),
       ...(clienteId !== undefined && { clienteId }),
-      ...(grupoId !== undefined && { grupoId }),
       ...(permissoes !== undefined && { permissoes }),
-    });
+      ...(perfilId !== undefined && { perfilId: perfilId ? String(perfilId) : undefined }),
+    };
+    if (grupoIds !== undefined) {
+      update.grupoIds = Array.isArray(grupoIds) ? grupoIds : [];
+    } else if (grupoId !== undefined) {
+      update.grupoId = grupoId;
+    }
+    if (divisaoIds !== undefined) {
+      update.divisaoIds = Array.isArray(divisaoIds) ? divisaoIds : [];
+    }
+    const usuario = atualizarUsuario(id, update);
     if (!usuario) {
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }

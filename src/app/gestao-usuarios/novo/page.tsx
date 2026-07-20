@@ -4,20 +4,21 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Plus } from 'lucide-react';
-import type { GrupoListItem, Perfil } from '@/types';
+import type { Grupo, Perfil } from '@/types';
 import type { PermissaoUsuario } from '@/types';
 import { MatrizPermissoes } from '@/components/MatrizPermissoes';
 import ModalCriarPerfil from '@/components/ModalCriarPerfil';
+import DropdownGruposMultiplo from '@/components/DropdownGruposMultiplo';
 
 export default function NovoUsuarioPage() {
   const router = useRouter();
-  const [grupos, setGrupos] = useState<GrupoListItem[]>([]);
+  const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [perfis, setPerfis] = useState<Perfil[]>([]);
   const [perfilId, setPerfilId] = useState('');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [ativo, setAtivo] = useState(true);
-  const [grupoId, setGrupoId] = useState('');
+  const [grupoIds, setGrupoIds] = useState<string[]>([]);
   const [permissoes, setPermissoes] = useState<PermissaoUsuario>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -29,13 +30,14 @@ export default function NovoUsuarioPage() {
       .then((data) => setPerfis(Array.isArray(data) ? data : []));
   }, []);
 
+  const [divisaoIds, setDivisaoIds] = useState<string[]>([]);
+
   useEffect(() => {
-    fetch('/api/grupos?pagina=1&itensPorPagina=1000')
+    fetch('/api/grupos?comDivisoes=1')
       .then((res) => res.json())
       .then((data) => {
-        const list = data?.items ?? (Array.isArray(data) ? data : []);
+        const list = Array.isArray(data) ? data : [];
         setGrupos(list);
-        if (list.length > 0 && !grupoId) setGrupoId(list[0].id);
       });
     loadPerfis();
   }, [loadPerfis]);
@@ -49,11 +51,33 @@ export default function NovoUsuarioPage() {
     }
   }, [perfilId, perfis]);
 
+  const addGrupo = (id: string) => {
+    if (!id || grupoIds.includes(id)) return;
+    setGrupoIds((prev) => [...prev, id]);
+  };
+
+  const removeGrupo = (id: string) => {
+    setGrupoIds((prev) => prev.filter((g) => g !== id));
+  };
+
+  const addDivisao = (id: string) => {
+    if (!id || divisaoIds.includes(id)) return;
+    setDivisaoIds((prev) => [...prev, id]);
+  };
+
+  const removeDivisao = (id: string) => {
+    setDivisaoIds((prev) => prev.filter((d) => d !== id));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!nome.trim() || !email.trim() || !grupoId) {
-      setError('Preencha nome, e-mail e grupo de cliente.');
+    if (!nome.trim() || !email.trim()) {
+      setError('Preencha nome e e-mail.');
+      return;
+    }
+    if (grupoIds.length === 0 && divisaoIds.length === 0) {
+      setError('Adicione ao menos um grupo ou divisão de cliente.');
       return;
     }
     if (!perfilId) {
@@ -68,8 +92,10 @@ export default function NovoUsuarioPage() {
         nome: nome.trim(),
         email: email.trim().toLowerCase(),
         ativo,
-        grupoId,
-        permissoes,
+        grupoIds,
+        divisaoIds,
+        perfilId: perfilId || undefined,
+        permissoes: permissoes && typeof permissoes === 'object' ? permissoes : {},
       }),
     })
       .then((res) => {
@@ -84,7 +110,7 @@ export default function NovoUsuarioPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 md:max-w-4xl md:px-8 lg:max-w-5xl lg:px-8 space-y-6">
       <div className="flex items-center gap-4">
         <Link
           href="/gestao-usuarios?aba=usuarios"
@@ -94,7 +120,7 @@ export default function NovoUsuarioPage() {
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-2xl font-bold text-slate-900">Novo usuário</h1>
+        <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Novo usuário</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -104,100 +130,101 @@ export default function NovoUsuarioPage() {
           </div>
         )}
 
-        <div className="card p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Dados do usuário</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-slate-700">Nome *</label>
-              <input
-                type="text"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                className="input-field"
-                placeholder="Nome completo"
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">E-mail *</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input-field"
-                placeholder="email@cliente.com"
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Grupo de cliente *</label>
-              <select
-                value={grupoId}
-                onChange={(e) => setGrupoId(e.target.value)}
-                className="input-field"
-                required
-              >
-                <option value="">Selecione</option>
-                {grupos.filter((g) => g.ativo).map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-slate-700">Perfil de acesso</label>
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={perfilId}
-                  onChange={(e) => setPerfilId(e.target.value)}
-                  className="input-field min-w-[200px] flex-1"
-                  aria-label="Perfil de acesso"
-                >
-                  <option value="">Selecione um perfil</option>
-                  {perfis.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setModalCriarPerfilOpen(true)}
-                  className="btn-secondary inline-flex items-center gap-1.5"
-                >
-                  <Plus className="h-4 w-4" />
-                  Criar perfil
-                </button>
+        <div className="grid gap-6 lg:grid-cols-2 lg:items-start lg:gap-8">
+          <div className="card space-y-4 p-4 sm:p-6 lg:p-6">
+            <h2 className="text-lg font-semibold text-slate-900">Dados do usuário</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Nome *</label>
+                <input
+                  type="text"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  className="input-field"
+                  placeholder="Nome completo"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">E-mail *</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="input-field"
+                  placeholder="email@cliente.com"
+                  required
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-slate-700">Grupo de cliente *</label>
+                <DropdownGruposMultiplo
+                  grupos={grupos}
+                  grupoIds={grupoIds}
+                  divisaoIds={divisaoIds}
+                  onAddGrupo={addGrupo}
+                  onRemoveGrupo={removeGrupo}
+                  onAddDivisao={addDivisao}
+                  onRemoveDivisao={removeDivisao}
+                  ariaLabel="Adicionar grupo ou divisão de cliente"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-slate-700">Perfil de acesso</label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={perfilId}
+                    onChange={(e) => setPerfilId(e.target.value)}
+                    className="input-field min-w-0 flex-1 sm:min-w-[200px]"
+                    aria-label="Perfil de acesso"
+                  >
+                    <option value="">Selecione um perfil</option>
+                    {perfis.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nome}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setModalCriarPerfilOpen(true)}
+                    className="btn-secondary inline-flex shrink-0 items-center gap-1.5"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Criar perfil
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <input
+                  type="checkbox"
+                  id="ativo"
+                  checked={ativo}
+                  onChange={(e) => setAtivo(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                />
+                <label htmlFor="ativo" className="text-sm font-medium text-slate-700">
+                  Usuário ativo
+                </label>
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:col-span-2">
-              <input
-                type="checkbox"
-                id="ativo"
-                checked={ativo}
-                onChange={(e) => setAtivo(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-              />
-              <label htmlFor="ativo" className="text-sm font-medium text-slate-700">
-                Usuário ativo
-              </label>
-            </div>
+          </div>
+
+          <div className="lg:min-h-[280px]">
+            {perfilId ? (
+              <div className="card p-4 sm:p-6 lg:p-6 lg:sticky lg:top-4">
+                <p className="mb-4 text-sm text-slate-600">
+                  Módulos e funcionalidades do perfil selecionado. Ajuste se necessário.
+                </p>
+                <MatrizPermissoes permissoes={permissoes} onChange={setPermissoes} readOnly />
+              </div>
+            ) : (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500 lg:min-h-[200px] lg:flex lg:items-center lg:justify-center">
+                Selecione um perfil de acesso à esquerda para definir os módulos que este usuário poderá acessar.
+              </div>
+            )}
           </div>
         </div>
-
-        {perfilId ? (
-          <div className="card p-6">
-            <p className="mb-4 text-sm text-slate-600">
-              Módulos e funcionalidades do perfil selecionado. Você pode ajustar as permissões abaixo se necessário.
-            </p>
-            <MatrizPermissoes permissoes={permissoes} onChange={setPermissoes} />
-          </div>
-        ) : (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
-            Selecione um perfil de acesso acima para definir os módulos que este usuário poderá acessar.
-          </div>
-        )}
 
         <ModalCriarPerfil
           open={modalCriarPerfilOpen}
@@ -209,7 +236,7 @@ export default function NovoUsuarioPage() {
           }}
         />
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3 border-t border-slate-200 pt-4">
           <button type="submit" disabled={submitting} className="btn-primary">
             {submitting ? 'Salvando...' : 'Salvar usuário'}
           </button>

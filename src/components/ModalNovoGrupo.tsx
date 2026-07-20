@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Check, Maximize2, Minimize2, Pencil } from 'lucide-react';
 import type { ClienteContratoOption, ResponsavelOption, Ativo } from '@/types';
+import DropdownClientesMultiplo from './DropdownClientesMultiplo';
 
 interface ModalNovoGrupoProps {
   open: boolean;
@@ -20,9 +21,8 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
   const [responsavelOpen, setResponsavelOpen] = useState(false);
 
   const [clienteOptionsAll, setClienteOptionsAll] = useState<ClienteContratoOption[]>([]);
-  const [clienteBusca, setClienteBusca] = useState('');
-  const [clienteSelected, setClienteSelected] = useState<ClienteContratoOption | null>(null);
-  const [clienteDropdownOpen, setClienteDropdownOpen] = useState(false);
+  /** IDs dos contratos (clientes) selecionados — múltipla seleção. */
+  const [selectedContratoIds, setSelectedContratoIds] = useState<string[]>([]);
   const [clienteLoading, setClienteLoading] = useState(false);
 
   const [ativos, setAtivos] = useState<Ativo[]>([]);
@@ -51,7 +51,6 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
   const [batchMoveDestino, setBatchMoveDestino] = useState('');
 
   const responsavelRef = useRef<HTMLDivElement>(null);
-  const clienteRef = useRef<HTMLDivElement>(null);
 
   const loadResponsaveis = useCallback(() => {
     fetch('/api/responsaveis')
@@ -89,8 +88,7 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
       setNomeGrupo('');
       setResponsavelId('');
       setResponsavelTexto('');
-      setClienteSelected(null);
-      setClienteBusca('');
+      setSelectedContratoIds([]);
       setAtivos([]);
       setMostrarDivisaoFrota(false);
       setSelectedAtivoIds(new Set());
@@ -106,7 +104,7 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
         setNomeGrupo(grupo.nome || '');
         setResponsavelId(grupo.responsavelId || '');
         setResponsavelTexto('');
-        setClienteSelected(null);
+        setSelectedContratoIds(grupo.contratoIds ?? []);
         if (grupo.responsavelId) {
           fetch('/api/responsaveis')
             .then((r) => r.json())
@@ -115,14 +113,11 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
               setResponsavelTexto(r?.nome || '');
             });
         }
-        if (grupo.contratoIds?.length) {
+        if ((grupo.contratoIds?.length ?? 0) > 0) {
           fetch('/api/clientes/opcoes')
             .then((r) => r.json())
             .then((opts: ClienteContratoOption[]) => {
-              const all = Array.isArray(opts) ? opts : [];
-              setClienteOptionsAll(all);
-              const opt = all.find((o) => o.contratoId === grupo.contratoIds[0]);
-              setClienteSelected(opt || null);
+              setClienteOptionsAll(Array.isArray(opts) ? opts : []);
             });
         }
         setDivisoes(Array.isArray(grupo.divisoes) ? grupo.divisoes : []);
@@ -134,7 +129,6 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (responsavelRef.current && !responsavelRef.current.contains(e.target as Node)) setResponsavelOpen(false);
-      if (clienteRef.current && !clienteRef.current.contains(e.target as Node)) setClienteDropdownOpen(false);
     };
     document.addEventListener('click', onDocClick);
     return () => document.removeEventListener('click', onDocClick);
@@ -151,18 +145,19 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
       .finally(() => setClienteLoading(false));
   }, []);
 
-  const openClienteDropdown = () => {
-    setClienteDropdownOpen(true);
-    if (clienteOptionsAll.length === 0) loadClienteOpcoes();
-  };
+  useEffect(() => {
+    if (open && clienteOptionsAll.length === 0) loadClienteOpcoes();
+  }, [open, clienteOptionsAll.length, loadClienteOpcoes]);
 
-  const contratoIds = clienteSelected ? [clienteSelected.contratoId] : [];
+  const contratoIds = selectedContratoIds;
   useEffect(() => {
     if (contratoIds.length === 0) {
       setAtivos([]);
+      setAtivosLoading(false);
       return;
     }
-    setAtivosLoading(true);
+    const isRefetch = ativos.length > 0;
+    if (!isRefetch) setAtivosLoading(true);
     fetch(`/api/ativos?contratoIds=${contratoIds.join(',')}`)
       .then((res) => res.json())
       .then((data) => setAtivos(Array.isArray(data) ? data : []))
@@ -170,25 +165,15 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
       .finally(() => setAtivosLoading(false));
   }, [contratoIds.join(',')]);
 
-  const selectClienteOption = (opt: ClienteContratoOption) => {
-    setClienteSelected(opt);
-    setClienteBusca('');
-    setClienteDropdownOpen(false);
+  const addCliente = (opt: ClienteContratoOption) => {
+    if (!selectedContratoIds.includes(opt.contratoId)) {
+      setSelectedContratoIds((prev) => [...prev, opt.contratoId]);
+    }
   };
 
-  const clearClienteSelection = () => {
-    setClienteSelected(null);
+  const removeCliente = (contratoId: string) => {
+    setSelectedContratoIds((prev) => prev.filter((id) => id !== contratoId));
   };
-
-  const clienteOptionsFiltered = clienteBusca.trim()
-    ? clienteOptionsAll.filter(
-        (opt) =>
-          (opt.cnpj || '').replace(/\D/g, '').includes(clienteBusca.replace(/\D/g, '')) ||
-          (opt.razaoSocial || '').toLowerCase().includes(clienteBusca.toLowerCase()) ||
-          (opt.nomeFantasia || '').toLowerCase().includes(clienteBusca.toLowerCase()) ||
-          (opt.numeroContrato || '').toLowerCase().includes(clienteBusca.toLowerCase())
-      )
-    : clienteOptionsAll;
 
   const filteredResponsaveis = responsavelTexto.trim()
     ? responsaveis.filter((r) =>
@@ -197,7 +182,7 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
     : responsaveis;
 
   const handleSalvar = () => {
-    if (!nomeGrupo.trim() || !responsavelId) return;
+    if (!nomeGrupo.trim() || !responsavelId || selectedContratoIds.length === 0) return;
     const isEdit = !!grupoId;
     onSalvar?.({
       nomeGrupo: nomeGrupo.trim(),
@@ -209,8 +194,7 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
     setNomeGrupo('');
     setResponsavelId('');
     setResponsavelTexto('');
-    setClienteSelected(null);
-    setClienteBusca('');
+    setSelectedContratoIds([]);
     setAtivos([]);
     // Edição: fecha o modal. Novo: mantém aberto com formulário limpo para outro cadastro.
     if (isEdit) onClose();
@@ -220,8 +204,7 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
     setNomeGrupo('');
     setResponsavelId('');
     setResponsavelTexto('');
-    setClienteSelected(null);
-    setClienteBusca('');
+    setSelectedContratoIds([]);
     setClienteOptionsAll([]);
     setAtivos([]);
     setMostrarDivisaoFrota(false);
@@ -243,9 +226,7 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
 
   /** Retorna contrato, CNPJ e nome do cliente para um ativo (pelo contratoId). */
   const getContratoInfo = (contratoId: string) => {
-    const opt =
-      clienteOptionsAll.find((o) => o.contratoId === contratoId) ||
-      (clienteSelected?.contratoId === contratoId ? clienteSelected : null);
+    const opt = clienteOptionsAll.find((o) => o.contratoId === contratoId);
     return {
       contrato: opt?.numeroContrato ?? '-',
       cnpj: opt?.cnpj ?? '-',
@@ -461,74 +442,16 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
             )}
           </div>
 
-          <div ref={clienteRef} className="relative">
+          <div>
             <label className={label}>Cliente</label>
-            <button
-              type="button"
-              onClick={openClienteDropdown}
-              className={`${input} text-left flex items-center justify-between cursor-pointer bg-white`}
-              aria-haspopup="listbox"
-              aria-expanded={clienteDropdownOpen}
-            >
-              <span className={clienteSelected ? 'text-slate-900' : 'text-slate-500'}>
-                {clienteSelected
-                  ? `${clienteSelected.nomeFantasia || clienteSelected.razaoSocial} — ${clienteSelected.numeroContrato} — ${clienteSelected.cnpj}`
-                  : 'Clique para selecionar (CNPJ)'}
-              </span>
-              {clienteSelected && (
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    clearClienteSelection();
-                  }}
-                  className="rounded p-0.5 hover:bg-slate-200 text-slate-500"
-                  aria-label="Limpar"
-                >
-                  <X className="h-4 w-4" />
-                </span>
-              )}
-            </button>
-            {clienteDropdownOpen && (
-              <div className="absolute z-20 mt-1 w-full rounded-md border border-slate-200 bg-white shadow-lg overflow-hidden">
-                <div className="p-2 border-b border-slate-200 bg-slate-50">
-                  <input
-                    type="text"
-                    value={clienteBusca}
-                    onChange={(e) => setClienteBusca(e.target.value)}
-                    placeholder="Buscar por CNPJ, nome ou contrato..."
-                    className="input-field w-full text-sm"
-                    autoComplete="off"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-                <ul
-                  className="max-h-48 overflow-auto py-1"
-                  role="listbox"
-                >
-                  {clienteLoading ? (
-                    <li className="px-3 py-4 text-sm text-slate-500 text-center">Carregando...</li>
-                  ) : clienteOptionsFiltered.length === 0 ? (
-                    <li className="px-3 py-4 text-sm text-slate-500 text-center">Nenhum resultado</li>
-                  ) : (
-                    clienteOptionsFiltered.map((opt) => (
-                      <li
-                        key={opt.contratoId}
-                        role="option"
-                        aria-selected={clienteSelected?.contratoId === opt.contratoId}
-                        className="cursor-pointer px-3 py-2 text-sm text-slate-900 hover:bg-slate-100 border-b border-slate-100 last:border-0"
-                        onClick={() => selectClienteOption(opt)}
-                      >
-                        <span className="font-medium">{opt.nomeFantasia || opt.razaoSocial}</span>
-                        {' — '}
-                        <span>{opt.numeroContrato}</span>
-                        {' — '}
-                        <span className="text-slate-600">{opt.cnpj}</span>
-                      </li>
-                    ))
-                  )}
-                </ul>
-              </div>
-            )}
+            <DropdownClientesMultiplo
+              opcoes={clienteOptionsAll}
+              selectedContratoIds={selectedContratoIds}
+              onAdd={addCliente}
+              onRemove={removeCliente}
+              loading={clienteLoading}
+              ariaLabel="Selecionar cliente(s) / contrato(s)"
+            />
           </div>
 
           {(contratoIds.length > 0 || ativosLoading) && (
@@ -583,13 +506,13 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
                         </tr>
                         <tr className="border-t border-slate-200 bg-slate-100/80">
                           {mostrarDivisaoFrota && <th className="px-2 py-1" />}
-                          <th className="px-2 py-1"><input type="text" value={filtroPlaca} onChange={(e) => setFiltroPlaca(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar placa" /></th>
-                          <th className="px-2 py-1"><input type="text" value={filtroChassi} onChange={(e) => setFiltroChassi(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar chassi" /></th>
-                          <th className="px-2 py-1"><input type="text" value={filtroNumeroSerie} onChange={(e) => setFiltroNumeroSerie(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar nº série" /></th>
-                          <th className="px-2 py-1"><input type="text" value={filtroModelo} onChange={(e) => setFiltroModelo(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar modelo" /></th>
-                          <th className="px-2 py-1"><input type="text" value={filtroContrato} onChange={(e) => setFiltroContrato(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar contrato" /></th>
-                          <th className="px-2 py-1"><input type="text" value={filtroCnpj} onChange={(e) => setFiltroCnpj(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar CNPJ" /></th>
-                          <th className="px-2 py-1"><input type="text" value={filtroNomeCliente} onChange={(e) => setFiltroNomeCliente(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar nome cliente" /></th>
+                          <th className="px-2 py-1"><input type="text" value={filtroPlaca} onChange={(e) => setFiltroPlaca(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar placa" /></th>
+                          <th className="px-2 py-1"><input type="text" value={filtroChassi} onChange={(e) => setFiltroChassi(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar chassi" /></th>
+                          <th className="px-2 py-1"><input type="text" value={filtroNumeroSerie} onChange={(e) => setFiltroNumeroSerie(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar nº série" /></th>
+                          <th className="px-2 py-1"><input type="text" value={filtroModelo} onChange={(e) => setFiltroModelo(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar modelo" /></th>
+                          <th className="px-2 py-1"><input type="text" value={filtroContrato} onChange={(e) => setFiltroContrato(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar contrato" /></th>
+                          <th className="px-2 py-1"><input type="text" value={filtroCnpj} onChange={(e) => setFiltroCnpj(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar CNPJ" /></th>
+                          <th className="px-2 py-1"><input type="text" value={filtroNomeCliente} onChange={(e) => setFiltroNomeCliente(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar nome cliente" /></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 bg-white">
@@ -674,13 +597,13 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
                             </tr>
                             <tr className="border-t border-slate-200 bg-slate-100/80">
                               {mostrarDivisaoFrota && <th className="px-2 py-1" />}
-                              <th className="px-2 py-1"><input type="text" value={filtroPlaca} onChange={(e) => setFiltroPlaca(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar placa" /></th>
-                              <th className="px-2 py-1"><input type="text" value={filtroChassi} onChange={(e) => setFiltroChassi(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar chassi" /></th>
-                              <th className="px-2 py-1"><input type="text" value={filtroNumeroSerie} onChange={(e) => setFiltroNumeroSerie(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar nº série" /></th>
-                              <th className="px-2 py-1"><input type="text" value={filtroModelo} onChange={(e) => setFiltroModelo(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar modelo" /></th>
-                              <th className="px-2 py-1"><input type="text" value={filtroContrato} onChange={(e) => setFiltroContrato(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar contrato" /></th>
-                              <th className="px-2 py-1"><input type="text" value={filtroCnpj} onChange={(e) => setFiltroCnpj(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar CNPJ" /></th>
-                              <th className="px-2 py-1"><input type="text" value={filtroNomeCliente} onChange={(e) => setFiltroNomeCliente(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar nome cliente" /></th>
+                              <th className="px-2 py-1"><input type="text" value={filtroPlaca} onChange={(e) => setFiltroPlaca(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar placa" /></th>
+                              <th className="px-2 py-1"><input type="text" value={filtroChassi} onChange={(e) => setFiltroChassi(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar chassi" /></th>
+                              <th className="px-2 py-1"><input type="text" value={filtroNumeroSerie} onChange={(e) => setFiltroNumeroSerie(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar nº série" /></th>
+                              <th className="px-2 py-1"><input type="text" value={filtroModelo} onChange={(e) => setFiltroModelo(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar modelo" /></th>
+                              <th className="px-2 py-1"><input type="text" value={filtroContrato} onChange={(e) => setFiltroContrato(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar contrato" /></th>
+                              <th className="px-2 py-1"><input type="text" value={filtroCnpj} onChange={(e) => setFiltroCnpj(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar CNPJ" /></th>
+                              <th className="px-2 py-1"><input type="text" value={filtroNomeCliente} onChange={(e) => setFiltroNomeCliente(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar nome cliente" /></th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-200 bg-white">
@@ -740,13 +663,13 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
                       </tr>
                       <tr className="border-t border-slate-200 bg-slate-100/80">
                         {mostrarDivisaoFrota && <th className="px-2 py-1" />}
-                        <th className="px-2 py-1"><input type="text" value={filtroPlaca} onChange={(e) => setFiltroPlaca(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar placa" /></th>
-                        <th className="px-2 py-1"><input type="text" value={filtroChassi} onChange={(e) => setFiltroChassi(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar chassi" /></th>
-                        <th className="px-2 py-1"><input type="text" value={filtroNumeroSerie} onChange={(e) => setFiltroNumeroSerie(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar nº série" /></th>
-                        <th className="px-2 py-1"><input type="text" value={filtroModelo} onChange={(e) => setFiltroModelo(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar modelo" /></th>
-                        <th className="px-2 py-1"><input type="text" value={filtroContrato} onChange={(e) => setFiltroContrato(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar contrato" /></th>
-                        <th className="px-2 py-1"><input type="text" value={filtroCnpj} onChange={(e) => setFiltroCnpj(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar CNPJ" /></th>
-                        <th className="px-2 py-1"><input type="text" value={filtroNomeCliente} onChange={(e) => setFiltroNomeCliente(e.target.value)} placeholder="Filtrar" className="w-full rounded px-2 py-1 text-xs" aria-label="Filtrar nome cliente" /></th>
+                        <th className="px-2 py-1"><input type="text" value={filtroPlaca} onChange={(e) => setFiltroPlaca(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar placa" /></th>
+                        <th className="px-2 py-1"><input type="text" value={filtroChassi} onChange={(e) => setFiltroChassi(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar chassi" /></th>
+                        <th className="px-2 py-1"><input type="text" value={filtroNumeroSerie} onChange={(e) => setFiltroNumeroSerie(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar nº série" /></th>
+                        <th className="px-2 py-1"><input type="text" value={filtroModelo} onChange={(e) => setFiltroModelo(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar modelo" /></th>
+                        <th className="px-2 py-1"><input type="text" value={filtroContrato} onChange={(e) => setFiltroContrato(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar contrato" /></th>
+                        <th className="px-2 py-1"><input type="text" value={filtroCnpj} onChange={(e) => setFiltroCnpj(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar CNPJ" /></th>
+                        <th className="px-2 py-1"><input type="text" value={filtroNomeCliente} onChange={(e) => setFiltroNomeCliente(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar nome cliente" /></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 bg-white">

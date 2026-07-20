@@ -44,16 +44,18 @@ export async function POST(request: NextRequest) {
   try {
     reloadStoreFromFile();
     const body = await request.json();
-    const { nome, email, ativo = true, clienteId, grupoId, permissoes = {} } = body;
+    const { nome, email, ativo = true, clienteId, grupoId, grupoIds, divisaoIds, perfilId, permissoes = {} } = body;
     if (!nome || !email) {
       return NextResponse.json(
         { error: 'Campos obrigatórios: nome e email' },
         { status: 400 }
       );
     }
-    if (!grupoId && !clienteId) {
+    const ids = Array.isArray(grupoIds) && grupoIds.length > 0 ? grupoIds : grupoId ? [grupoId] : [];
+    const divIds = Array.isArray(divisaoIds) ? divisaoIds : [];
+    if (ids.length === 0 && divIds.length === 0 && !clienteId) {
       return NextResponse.json(
-        { error: 'Informe grupo de cliente (grupoId) ou cliente (clienteId)' },
+        { error: 'Informe ao menos um grupo de cliente (grupoIds ou grupoId), divisão (divisaoIds) ou cliente (clienteId)' },
         { status: 400 }
       );
     }
@@ -69,8 +71,10 @@ export async function POST(request: NextRequest) {
       email: emailNorm,
       ativo: Boolean(ativo),
       clienteId: clienteId || '',
-      ...(grupoId && { grupoId }),
-      permissoes: permissoes || {},
+      ...(ids.length > 0 && { grupoIds: ids }),
+      ...(divIds.length > 0 && { divisaoIds: divIds }),
+      ...(perfilId && { perfilId: String(perfilId) }),
+      permissoes: permissoes && typeof permissoes === 'object' ? permissoes : {},
     });
     return NextResponse.json(usuario, { status: 201 });
   } catch (e) {

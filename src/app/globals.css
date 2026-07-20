@@ -25,6 +25,13 @@ body {
   .input-field.input-field--no-border {
     @apply border-0 shadow-none focus:ring-0;
   }
+  /* Campos de filtro nas listagens: sem borda de caixa, apenas uma linha (sublinhado) para indicar onde digitar */
+  .input-field.input-field--filter-line {
+    @apply border-0 rounded-none shadow-none bg-transparent border-b border-slate-300 focus:ring-0 focus:border-primary-500 px-0;
+  }
+  .filter-input-line {
+    @apply w-full border-0 rounded-none shadow-none bg-transparent border-b border-slate-300 py-1 text-slate-900 placeholder:text-slate-400 focus:ring-0 focus:outline-none focus:border-primary-500;
+  }
   .card {
     @apply rounded-xl border border-slate-200 bg-white shadow-sm;
   }

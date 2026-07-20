@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getGruposList, criarGrupo, reloadStoreFromFile, grupoNomeEmUso } from '@/lib/store';
+import { getGruposList, getGrupos, criarGrupo, reloadStoreFromFile, grupoNomeEmUso } from '@/lib/store';
 
 const DEFAULT_ITENS_POR_PAGINA = 25;
 
@@ -8,6 +8,13 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    const comDivisoes = searchParams.get('comDivisoes') === '1' || searchParams.get('comDivisoes') === 'true';
+
+    if (comDivisoes) {
+      const grupos = getGrupos();
+      return NextResponse.json(grupos);
+    }
+
     const pagina = Math.max(1, parseInt(searchParams.get('pagina') ?? '1', 10) || 1);
     const itensPorPagina = Math.min(100, Math.max(1, parseInt(searchParams.get('itensPorPagina') ?? String(DEFAULT_ITENS_POR_PAGINA), 10) || DEFAULT_ITENS_POR_PAGINA));
 

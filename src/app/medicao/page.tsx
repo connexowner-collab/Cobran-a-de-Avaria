@@ -105,7 +105,7 @@ export default function MedicaoPage() {
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         autoComplete="off"
-        className={`input-field input-field--no-border py-1.5 pl-2 text-xs ${showSearch ? 'pr-8' : 'pr-2'}`}
+        className={`input-field input-field--filter-line py-1.5 pl-2 text-xs ${showSearch ? 'pr-8' : 'pr-2'}`}
         aria-label={ariaLabel}
       />
       {showSearch && (

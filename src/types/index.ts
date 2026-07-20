@@ -1,14 +1,24 @@
 /**
  * Módulos disponíveis no Portal do Cliente.
  * Cada módulo pode ter funcionalidades específicas (sub-permissões).
+ *
+ * Baseado nas rotas reais de permissão do Portal do Cliente (`PermissionDto.Rota`
+ * em Gvm.Pdc-Core/src/@types/Dto/authDto.d.ts). "avaria" e "vamoscontrole" são exceção:
+ * existem como funcionalidades reais em produção, mas ainda não estão presentes na
+ * enum oficial de permissões do Pdc-Core — mantidas aqui por já serem usadas no portal.
  */
 export type ModuloId =
-  | 'cobranca'
+  | 'faturamento'
   | 'avaria'
-  | 'entregas'
+  | 'vamoscontrole'
   | 'relatorios'
-  | 'cadastros'
-  | 'configuracoes';
+  | 'agendamento'
+  | 'multas'
+  | 'crlv'
+  | 'comunicados'
+  | 'importbi'
+  | 'logsacesso'
+  | 'faq';
 
 export interface Modulo {
   id: ModuloId;
@@ -26,58 +36,96 @@ export interface Funcionalidade {
 /** Configuração estática dos módulos e funcionalidades do portal */
 export const MODULOS_PORTAL: Modulo[] = [
   {
-    id: 'cobranca',
-    nome: 'Cobrança',
-    descricao: 'Gestão de cobranças e faturamento',
+    id: 'faturamento',
+    nome: 'Faturamento',
+    descricao: 'Consulta de faturas e cobranças do contrato',
     funcionalidades: [
-      { id: 'cobranca_visualizar', nome: 'Visualizar', descricao: 'Consultar cobranças' },
-      { id: 'cobranca_exportar', nome: 'Exportar', descricao: 'Exportar relatórios' },
+      { id: 'faturamento_acesso', nome: 'Acesso', descricao: 'Visualizar faturamento' },
     ],
   },
   {
     id: 'avaria',
     nome: 'Cobrança de Avaria',
-    descricao: 'Registro e acompanhamento de avarias',
+    descricao: 'Consulta de cobranças por avaria em ativos',
     funcionalidades: [
-      { id: 'avaria_visualizar', nome: 'Visualizar', descricao: 'Consultar avarias' },
-      { id: 'avaria_registrar', nome: 'Registrar', descricao: 'Registrar novas avarias' },
-      { id: 'avaria_aprovar', nome: 'Aprovar', descricao: 'Aprovar/rejeitar avarias' },
+      { id: 'avaria_acesso', nome: 'Acesso', descricao: 'Visualizar cobranças de avaria' },
     ],
   },
   {
-    id: 'entregas',
-    nome: 'Entregas',
-    descricao: 'Acompanhamento de entregas',
+    id: 'vamoscontrole',
+    nome: 'Vamos Controle',
+    descricao: 'Torre de controle e monitoramento da frota',
     funcionalidades: [
-      { id: 'entregas_visualizar', nome: 'Visualizar', descricao: 'Consultar entregas' },
-      { id: 'entregas_rastrear', nome: 'Rastrear', descricao: 'Rastreamento em tempo real' },
+      { id: 'vamoscontrole_acesso', nome: 'Acesso', descricao: 'Visualizar Vamos Controle' },
     ],
   },
   {
     id: 'relatorios',
     nome: 'Relatórios',
-    descricao: 'Relatórios gerenciais',
+    descricao: 'Relatórios operacionais da frota',
     funcionalidades: [
-      { id: 'relatorios_visualizar', nome: 'Visualizar', descricao: 'Acessar relatórios' },
-      { id: 'relatorios_exportar', nome: 'Exportar', descricao: 'Exportar em PDF/Excel' },
+      { id: 'relatorios_distribuicao_geografica', nome: 'Distribuição Geográfica', descricao: 'Distribuição geográfica da frota' },
+      { id: 'relatorios_manutencao', nome: 'Manutenção', descricao: 'Relatório de manutenção' },
+      { id: 'relatorios_modelos', nome: 'Modelos', descricao: 'Relatório de modelos' },
+      { id: 'relatorios_servicos', nome: 'Serviços', descricao: 'Relatório de serviços' },
     ],
   },
   {
-    id: 'cadastros',
-    nome: 'Cadastros',
-    descricao: 'Cadastros gerais do cliente',
+    id: 'agendamento',
+    nome: 'Agendamento',
+    descricao: 'Agendamento de serviços e manutenções',
     funcionalidades: [
-      { id: 'cadastros_visualizar', nome: 'Visualizar', descricao: 'Consultar cadastros' },
-      { id: 'cadastros_editar', nome: 'Editar', descricao: 'Alterar cadastros' },
+      { id: 'agendamento_agendar', nome: 'Agendar', descricao: 'Criar agendamento' },
+      { id: 'agendamento_relatorio', nome: 'Relatório de agendamentos', descricao: 'Consultar agendamentos' },
+      { id: 'agendamento_lote', nome: 'Agendamento em lote', descricao: 'Agendar múltiplos ativos de uma vez' },
     ],
   },
   {
-    id: 'configuracoes',
-    nome: 'Configurações',
-    descricao: 'Configurações da conta',
+    id: 'multas',
+    nome: 'Multas',
+    descricao: 'Consulta de multas dos ativos',
     funcionalidades: [
-      { id: 'config_visualizar', nome: 'Visualizar', descricao: 'Ver configurações' },
-      { id: 'config_editar', nome: 'Editar', descricao: 'Alterar configurações' },
+      { id: 'multas_acesso', nome: 'Acesso', descricao: 'Visualizar multas' },
+    ],
+  },
+  {
+    id: 'crlv',
+    nome: 'CRLV',
+    descricao: 'Consulta de documentos CRLV dos ativos',
+    funcionalidades: [
+      { id: 'crlv_acesso', nome: 'Acesso', descricao: 'Visualizar CRLV' },
+    ],
+  },
+  {
+    id: 'comunicados',
+    nome: 'Comunicados',
+    descricao: 'Comunicados enviados pelo Grupo Vamos',
+    funcionalidades: [
+      { id: 'comunicados_acesso', nome: 'Acesso', descricao: 'Visualizar comunicados' },
+    ],
+  },
+  {
+    id: 'importbi',
+    nome: 'Import BI',
+    descricao: 'Importação de dados para BI',
+    funcionalidades: [
+      { id: 'importbi_acesso', nome: 'Acesso', descricao: 'Importar dados para BI' },
+    ],
+  },
+  {
+    id: 'logsacesso',
+    nome: 'Logs de Acesso',
+    descricao: 'Histórico de acessos ao portal',
+    funcionalidades: [
+      { id: 'logs_acesso', nome: 'Acesso', descricao: 'Visualizar logs de acesso' },
+    ],
+  },
+  {
+    id: 'faq',
+    nome: 'FAQ',
+    descricao: 'Perguntas frequentes',
+    funcionalidades: [
+      { id: 'faq_acesso', nome: 'Acesso', descricao: 'Visualizar FAQ' },
     ],
   },
 ];
@@ -172,6 +220,10 @@ export interface Usuario {
   grupoId?: string;
   /** IDs dos grupos vinculados (seleção múltipla). */
   grupoIds?: string[];
+  /** IDs das divisões de ativo vinculadas (acesso apenas à divisão, não ao grupo inteiro). */
+  divisaoIds?: string[];
+  /** ID do perfil de acesso vinculado (opcional). */
+  perfilId?: string;
   permissoes: PermissaoUsuario;
   /** Data e hora de criação do usuário (ISO). */
   criadoEm: string;
@@ -198,6 +250,9 @@ export interface UsuarioInput {
   grupoId?: string;
   /** Múltiplos grupos (prioridade sobre grupoId). */
   grupoIds?: string[];
+  /** IDs das divisões de ativo (acesso apenas à divisão). */
+  divisaoIds?: string[];
+  perfilId?: string;
   permissoes: PermissaoUsuario;
 }
 

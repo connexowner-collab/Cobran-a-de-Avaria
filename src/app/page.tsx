@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Users, FileText, Search } from 'lucide-react';
+import { Users, FileText, Search, Truck } from 'lucide-react';
 
 const STAR_SVG = (
   <svg viewBox="0 0 24 24" fill="currentColor">
@@ -16,7 +16,7 @@ const STAR_OUTLINE_SVG = (
   </svg>
 );
 
-type ModuleId = 'gestao-usuarios' | 'api-docs';
+type ModuleId = 'gestao-usuarios' | 'portal-cliente' | 'api-docs';
 
 const MODULES: { id: ModuleId; title: string; desc: string; href: string; icon: React.ReactNode }[] = [
   {
@@ -25,6 +25,13 @@ const MODULES: { id: ModuleId; title: string; desc: string; href: string; icon: 
     desc: 'Cadastre e edite usuários por cliente e defina módulos e funcionalidades de acesso.',
     href: '/gestao-usuarios',
     icon: <Users className="w-[22px] h-[22px]" />,
+  },
+  {
+    id: 'portal-cliente',
+    title: 'Portal do Cliente (novo)',
+    desc: 'Protótipo do novo portal: login, dashboard, chamados, faturamento, veículos e mais.',
+    href: '/portal',
+    icon: <Truck className="w-[22px] h-[22px]" />,
   },
   {
     id: 'api-docs',

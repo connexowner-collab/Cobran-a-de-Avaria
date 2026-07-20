@@ -125,7 +125,7 @@ export default function DateRangeFilter({
           ref={buttonRef}
           type="button"
           onClick={handleOpen}
-          className="input-field input-field--no-border py-1.5 pl-2 text-left text-xs flex-1 min-w-0 pr-7"
+          className="input-field input-field--filter-line py-1.5 pl-2 text-left text-xs flex-1 min-w-0 pr-7"
           aria-label={ariaLabel}
           aria-expanded={open}
           aria-haspopup="dialog"

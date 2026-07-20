@@ -1,0 +1,499 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Cenários de Teste - Gestão de Usuários Portal do Cliente</title>
+<style>
+  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.4; margin: 2cm; }
+  h1 { font-size: 18pt; margin-top: 24pt; margin-bottom: 12pt; border-bottom: 1pt solid #000; }
+  h2 { font-size: 14pt; margin-top: 18pt; margin-bottom: 8pt; }
+  h3 { font-size: 12pt; margin-top: 14pt; margin-bottom: 6pt; }
+  p { margin: 0 0 6pt; }
+  table { border-collapse: collapse; width: 100%; margin: 12pt 0; font-size: 10.5pt; }
+  th, td { border: 1pt solid #333; padding: 6pt 8pt; text-align: left; vertical-align: top; }
+  th { background: #f0f0f0; font-weight: bold; }
+  ul, ol { margin: 6pt 0 6pt 20pt; }
+  li { margin-bottom: 4pt; }
+  .scenario { border: 1pt solid #ccc; margin: 12pt 0; padding: 12pt; background: #fafafa; }
+  .scenario-id { font-weight: bold; color: #0563c1; font-size: 11pt; }
+  .precond, .steps, .expected { margin-top: 8pt; }
+  .ca-ref { font-size: 9.5pt; color: #555; margin-top: 4pt; }
+  .note { background: #fff9e6; padding: 8pt; margin: 8pt 0; border-left: 4pt solid #f0c000; }
+</style>
+</head>
+<body>
+
+<h1>Cenários de Teste</h1>
+<p><strong>Projeto:</strong> Gestão de Usuários – Portal do Cliente</p>
+<p><strong>Objetivo:</strong> Lista de cenários de teste possíveis para validar o módulo de gestão de usuários, grupos, perfis e ativos, alinhados aos critérios de aceite (CA-*) e regras de negócio.</p>
+<p><strong>Convenção:</strong> CT-Uxx (usuários), CT-Gxx (grupos), CT-Pxx (perfis), CT-Axx (ativos), CT-Ixx (integração/API).</p>
+
+<div class="note"><strong>Como obter .docx:</strong> Abra este arquivo no Word (Arquivo &gt; Abrir) e use Arquivo &gt; Salvar como &gt; Documento do Word (*.docx).</div>
+
+<h2>1. Usuários</h2>
+
+<div class="scenario">
+  <p class="scenario-id">CT-U01 – Impedir salvar usuário sem nome</p>
+  <p><strong>Pré-condições:</strong> Operador na tela de novo usuário ou de edição.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Deixar o campo Nome vazio (e-mail e demais campos preenchidos, incluindo ao menos um grupo/divisão/cliente e perfil na criação).</li>
+    <li>Clicar em Salvar.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> O sistema impede o envio e exibe a mensagem "Preencha nome e e-mail." (ou equivalente na API: 400 com "Campos obrigatórios: nome e email").</p>
+  <p class="ca-ref">Critério de aceite: CA-U01.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-U02 – Impedir salvar usuário sem e-mail</p>
+  <p><strong>Pré-condições:</strong> Operador na tela de novo usuário ou de edição.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Preencher o nome e deixar o e-mail vazio; preencher ao menos um vínculo (grupo/divisão/cliente) e, na criação, um perfil.</li>
+    <li>Clicar em Salvar.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> O sistema impede o envio e exibe "Preencha nome e e-mail." (ou API 400 "Campos obrigatórios: nome e email").</p>
+  <p class="ca-ref">Critério de aceite: CA-U01.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-U03 – Impedir salvar sem vínculo (grupo, divisão ou cliente)</p>
+  <p><strong>Pré-condições:</strong> Operador na tela de novo usuário ou de edição.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Preencher nome e e-mail; não selecionar nenhum grupo, nenhuma divisão nem cliente; na criação, selecionar um perfil.</li>
+    <li>Clicar em Salvar.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> O sistema impede o envio e exibe "Adicione ao menos um grupo ou divisão de cliente." (ou API 400 com mensagem informando grupoIds/divisaoIds/clienteId).</p>
+  <p class="ca-ref">Critério de aceite: CA-U02.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-U04 – Impedir criar usuário sem perfil</p>
+  <p><strong>Pré-condições:</strong> Operador na tela de <strong>novo</strong> usuário.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Preencher nome, e-mail e ao menos um grupo ou divisão; deixar "Selecione um perfil" (ou vazio).</li>
+    <li>Clicar em Salvar.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> O sistema impede o envio e exibe "Selecione um perfil de acesso."</p>
+  <p class="ca-ref">Critério de aceite: CA-U03.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-U05 – Rejeitar e-mail duplicado na criação</p>
+  <p><strong>Pré-condições:</strong> Já existe um usuário cadastrado com o e-mail joao@empresa.com (normalizado).</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Na tela de novo usuário, preencher nome, e-mail "Joao@Empresa.com", um grupo e um perfil.</li>
+    <li>Clicar em Salvar.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> O sistema rejeita e retorna mensagem "Já existe um usuário cadastrado com este e-mail." (API: HTTP 409).</p>
+  <p class="ca-ref">Critério de aceite: CA-U04. Regra: RN-U01 (normalização trim e minúsculas).</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-U06 – Rejeitar e-mail duplicado na edição (outro usuário)</p>
+  <p><strong>Pré-condições:</strong> Usuário A com e-mail a@x.com; Usuário B com e-mail b@x.com.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Editar o Usuário B e alterar o e-mail para "A@X.COM".</li>
+    <li>Salvar.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> O sistema rejeita com "Já existe um usuário cadastrado com este e-mail." (HTTP 409). O usuário B não é alterado.</p>
+  <p class="ca-ref">Critério de aceite: CA-U04.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-U07 – Permitir salvar mesmo e-mail ao editar o próprio usuário</p>
+  <p><strong>Pré-condições:</strong> Usuário cadastrado com e-mail joao@empresa.com.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Abrir a edição desse usuário (e-mail já preenchido como joao@empresa.com).</li>
+    <li>Alterar apenas o nome; manter o e-mail. Salvar.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> O sistema aceita e persiste a alteração (HTTP 200 ou 204). Não retorna 409.</p>
+  <p class="ca-ref">Critério de aceite: CA-U04 (unicidade excluindo o próprio usuário na edição).</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-U08 – Perfil persistido e exibido na reabertura</p>
+  <p><strong>Pré-condições:</strong> Existe pelo menos um perfil "Operador Frota"; não há usuário com esse perfil ainda ou há um usuário que será editado.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Criar um novo usuário com nome, e-mail, grupo e perfil "Operador Frota"; salvar.</li>
+    <li>Reabrir esse usuário para edição.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> O dropdown de perfil exibe "Operador Frota" selecionado; a matriz de permissões reflete as permissões do usuário (herdadas do perfil ou customizadas), sem sobrescrever na primeira carga.</p>
+  <p class="ca-ref">Critério de aceite: CA-U05.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-U09 – Matriz de permissões somente leitura na tela de usuário</p>
+  <p><strong>Pré-condições:</strong> Operador na tela de novo usuário ou de edição de usuário (não na tela "Criar perfil").</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Visualizar a matriz de módulos e funcionalidades.</li>
+    <li>Tentar marcar ou desmarcar um checkbox de permissão.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> A matriz está somente leitura: checkboxes desabilitados, área com aparência de desabilitada (opacidade/pointer-events-none) e texto orientando o uso de "Criar perfil" para alterar.</p>
+  <p class="ca-ref">Critério de aceite: CA-U06.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-U10 – Coluna Perfil de acesso na listagem</p>
+  <p><strong>Pré-condições:</strong> Existem usuários com e sem perfil; existem perfis cadastrados.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Acessar a listagem de usuários (Gestão de usuários).</li>
+    <li>Verificar a tabela: colunas Nome, E-mail, Grupo(s), Perfil de acesso, Status, etc.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> A coluna "Perfil de acesso" existe (antes da coluna Status); exibe o nome do perfil quando houver perfilId, ou "—" quando não houver.</p>
+  <p class="ca-ref">Critério de aceite: CA-U07.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-U11 – Filtros na listagem (nome, e-mail, grupo, perfil, status, datas)</p>
+  <p><strong>Pré-condições:</strong> Listagem de usuários com vários registros e perfis diferentes.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Preencher o filtro da coluna "Perfil de acesso" com parte do nome de um perfil.</li>
+    <li>Preencher o filtro de "Nome" com parte de um nome.</li>
+    <li>Alterar filtro de data de criação (intervalo) e de último acesso, se existirem.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> A lista é filtrada em tempo real (ou ao aplicar): apenas usuários que atendem aos critérios de nome, perfil e datas são exibidos.</p>
+  <p class="ca-ref">Critério de aceite: CA-U08.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-U12 – Exclusão com ID inválido</p>
+  <p><strong>Pré-condições:</strong> Operador na listagem de usuários.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Disparar exclusão para um ID inválido (ex.: vazio, "undefined", "null") — por inspeção de rede ou botão quebrado.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> A interface exibe mensagem de erro adequada (ex.: "ID do usuário inválido. Recarregue a página e tente novamente."); a API pode retornar 400 com mensagem de ID inválido.</p>
+  <p class="ca-ref">Critério de aceite: CA-U09.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-U13 – Exclusão de usuário inexistente (404)</p>
+  <p><strong>Pré-condições:</strong> ID de usuário que não existe (ex.: já excluído ou UUID inexistente).</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Enviar DELETE /api/usuarios/[id] para esse ID.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> API retorna 404 com mensagem do tipo "Usuário não encontrado"; a interface exibe mensagem de erro ao usuário.</p>
+  <p class="ca-ref">Critério de aceite: CA-U09.</p>
+</div>
+
+<h2>2. Grupos de Cliente</h2>
+
+<div class="scenario">
+  <p class="scenario-id">CT-G01 – Impedir criar grupo sem nome, responsável ou contrato</p>
+  <p><strong>Pré-condições:</strong> Modal de novo grupo aberto.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Deixar nome em branco (ou só espaços), ou responsável não selecionado, ou nenhum cliente/contrato selecionado.</li>
+    <li>Clicar em Salvar.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> O botão Salvar pode estar desabilitado; ou ao tentar salvar a API retorna 400 "Dados inválidos: nomeGrupo, responsavelId e contratoIds são obrigatórios".</p>
+  <p class="ca-ref">Critério de aceite: CA-G01.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-G02 – Rejeitar nome de grupo duplicado (409)</p>
+  <p><strong>Pré-condições:</strong> Já existe um grupo com o nome "Alpha".</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Criar um novo grupo com nome "Alpha", responsável e ao menos um contrato preenchidos.</li>
+    <li>Salvar.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> API retorna 409 com "Já existe um grupo com este nome. Escolha outro nome."</p>
+  <p class="ca-ref">Critério de aceite: CA-G02.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-G03 – Rejeitar nome duplicado na edição de outro grupo</p>
+  <p><strong>Pré-condições:</strong> Grupo "Alpha" e grupo "Beta" existem.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Editar o grupo "Beta" e alterar o nome para "Alpha". Salvar.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> API retorna 409 "Já existe um grupo com este nome. Escolha outro nome." O grupo Beta não é alterado.</p>
+  <p class="ca-ref">Critério de aceite: CA-G02.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-G04 – Seleção múltipla de clientes (dropdown, busca, chips)</p>
+  <p><strong>Pré-condições:</strong> Modal de novo/editar grupo; existem opções de cliente/contrato.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Abrir o dropdown de Cliente; buscar por parte do nome ou CNPJ.</li>
+    <li>Selecionar mais de um cliente (contrato); verificar que os itens aparecem como chips e que o dropdown permanece utilizável.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> Comportamento alinhado ao campo Grupo de cliente na aba Usuário: múltipla seleção, busca e chips visíveis.</p>
+  <p class="ca-ref">Critério de aceite: CA-G03.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-G05 – Clientes/contratos carregados ao reabrir grupo para edição</p>
+  <p><strong>Pré-condições:</strong> Grupo salvo com dois contratos (clientes) selecionados.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Fechar o modal e reabrir o mesmo grupo para edição.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> A lista de clientes/contratos do grupo é exibida (chips ou seleção múltipla preenchida com os contratoIds do grupo).</p>
+  <p class="ca-ref">Critério de aceite: CA-G04.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-G06 – Checkboxes em ativos e botões Gerar divisão / Movimentar lado a lado</p>
+  <p><strong>Pré-condições:</strong> Modal de grupo aberto; há ativos listados (após selecionar ao menos um contrato).</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Marcar um ou mais ativos pelo checkbox.</li>
+    <li>Verificar a posição dos botões "Gerar divisão" e "Movimentar".</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> Cada ativo tem checkbox; ao marcar ao menos um ativo, os botões "Gerar divisão" e "Movimentar" aparecem lado a lado (mesmo bloco).</p>
+  <p class="ca-ref">Critério de aceite: CA-G05.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-G07 – Campo "Nome da divisão" só após clicar em "Gerar divisão"</p>
+  <p><strong>Pré-condições:</strong> Modal de grupo com ativos listados; nenhum clique ainda em "Gerar divisão".</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Verificar se o campo "Nome da divisão" (label + input) está visível.</li>
+    <li>Clicar no botão "Gerar divisão".</li>
+    <li>Verificar novamente a visibilidade do campo "Nome da divisão".</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> Antes do clique, o campo "Nome da divisão" não é exibido. Após o clique em "Gerar divisão", o campo é exibido.</p>
+  <p class="ca-ref">Critério de aceite: CA-G06.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-G08 – Movimentar ativos em lote para divisão existente</p>
+  <p><strong>Pré-condições:</strong> Grupo com pelo menos uma divisão criada; lista de ativos com checkboxes.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Marcar dois ou mais ativos.</li>
+    <li>No select "Movimentar N ativo(s) para", escolher uma divisão existente e aplicar.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> Os ativos selecionados passam a pertencer à divisão de destino; a lista/estado é atualizado; ao salvar o grupo, as divisões persistem com os ativoIds corretos.</p>
+  <p class="ca-ref">Critério de aceite: CA-G07.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-G09 – Checkboxes visíveis na visualização "Divisão de frota"</p>
+  <p><strong>Pré-condições:</strong> Grupo com ativos e opção de visualização por "Divisão de frota" ativada.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Ativar a visualização de divisão de frota (se houver toggle ou aba).</li>
+    <li>Verificar se os checkboxes dos ativos continuam visíveis e utilizáveis.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> Os checkboxes permanecem visíveis para permitir movimentação em lote mesmo nessa visualização.</p>
+  <p class="ca-ref">Critério de aceite: CA-G07.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-G10 – Adicionar cliente ao grupo sem "piscar" a lista de ativos</p>
+  <p><strong>Pré-condições:</strong> Modal de grupo já com um contrato selecionado e ativos carregados na tela.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Adicionar um segundo cliente (contrato) ao grupo pelo dropdown.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> A lista de ativos não é substituída por "Carregando..." de forma que a tela "pisque"; o carregamento ocorre em segundo plano e a lista é atualizada quando a resposta chegar (união dos ativos dos contratos).</p>
+  <p class="ca-ref">Critério de aceite: CA-G08.</p>
+</div>
+
+<h2>3. Perfis de Acesso</h2>
+
+<div class="scenario">
+  <p class="scenario-id">CT-P01 – Impedir criar perfil sem nome</p>
+  <p><strong>Pré-condições:</strong> Modal ou tela "Criar perfil" aberta.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Deixar o campo "Nome do perfil" vazio (ou só espaços).</li>
+    <li>Clicar em Salvar/Criar.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> O sistema impede e exibe "Informe o nome do perfil." (interface) ou a API retorna 400 "Nome do perfil é obrigatório".</p>
+  <p class="ca-ref">Critério de aceite: CA-P01.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-P02 – Perfil persistido após fechar e reabrir a aplicação</p>
+  <p><strong>Pré-condições:</strong> Aplicação com store persistido (.data/store.json).</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Criar um novo perfil com nome e matriz de permissões; salvar.</li>
+    <li>Fechar a aplicação (ou reiniciar o servidor que usa o store).</li>
+    <li>Abrir novamente e acessar a listagem de perfis ou o dropdown de perfil na tela de usuário.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> O perfil criado continua disponível (persistido em store.json).</p>
+  <p class="ca-ref">Critério de aceite: CA-P02.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-P03 – Matriz editável apenas em "Criar perfil"</p>
+  <p><strong>Pré-condições:</strong> Operador na tela "Criar perfil".</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Marcar e desmarcar módulos e funcionalidades na matriz.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> A matriz é editável (checkboxes habilitados). Em seguida, ao abrir a tela de novo ou edição de usuário, a mesma matriz aparece somente leitura.</p>
+  <p class="ca-ref">Critério de aceite: CA-P03.</p>
+</div>
+
+<h2>4. Ativos e Placas</h2>
+
+<div class="scenario">
+  <p class="scenario-id">CT-A01 – Exibir placa quando existir; caso contrário número de série</p>
+  <p><strong>Pré-condições:</strong> Existem ativos com placa (ex.: ABC1D23) e ativos sem placa (apenas numeroSerie, ex.: SN-S001).</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Abrir o modal de grupo e carregar ativos (lista por contrato).</li>
+    <li>Verificar a coluna de identificação do ativo.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> Para ativos com placa, exibe a placa; para ativos sem placa, exibe o número de série. Nenhum ativo fica sem identificador visível.</p>
+  <p class="ca-ref">Critério de aceite: CA-A01.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-A02 – Placas armazenadas e exibidas sem traço</p>
+  <p><strong>Pré-condições:</strong> Dados de ativos com placa no formato sem hífen (ex.: ABC1D23).</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Listar ativos que possuem placa (na tela de grupo ou onde forem exibidos).</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> Nenhuma placa é exibida com hífen (ex.: ABC-1D23). Formato único sem traço.</p>
+  <p class="ca-ref">Critério de aceite: CA-A02; Regra: RN-A02.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-A03 – Ativos sem placa vinculáveis a grupo e divisão</p>
+  <p><strong>Pré-condições:</strong> Existem ativos sem placa (apenas numeroSerie) no contrato do grupo.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Abrir o grupo e carregar ativos.</li>
+    <li>Selecionar um ativo sem placa (identificado por número de série) e criar uma nova divisão ou movimentar para divisão existente.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> O ativo sem placa aparece na lista, pode ser selecionado e movimentado normalmente; a vinculação à divisão é persistida.</p>
+  <p class="ca-ref">Critério de aceite: CA-A03.</p>
+</div>
+
+<h2>5. Integração / API</h2>
+
+<div class="scenario">
+  <p class="scenario-id">CT-I01 – POST /api/usuarios sem nome ou e-mail retorna 400</p>
+  <p><strong>Pré-condições:</strong> Nenhuma.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Enviar POST /api/usuarios com body sem "nome" ou sem "email" (ou vazios), com grupoIds/divisaoIds/clienteId e perfilId preenchidos.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> Status 400; body com error "Campos obrigatórios: nome e email".</p>
+  <p class="ca-ref">CA-U01.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-I02 – POST /api/usuarios sem vínculo retorna 400</p>
+  <p><strong>Pré-condições:</strong> Nenhuma.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>Enviar POST /api/usuarios com nome, e-mail válidos, mas sem grupoIds, divisaoIds nem clienteId.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> Status 400; mensagem informando ao menos um grupo, divisão ou cliente.</p>
+  <p class="ca-ref">CA-U02.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-I03 – POST /api/usuarios com e-mail duplicado retorna 409</p>
+  <p><strong>Pré-condições:</strong> Usuário já existe com e-mail teste@mail.com.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>POST /api/usuarios com email "Teste@Mail.com", nome e vínculos válidos.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> Status 409; body com error "Já existe um usuário cadastrado com este e-mail."</p>
+  <p class="ca-ref">CA-U04, RN-U01.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-I04 – POST /api/grupos sem nomeGrupo, responsavelId ou contratoIds retorna 400</p>
+  <p><strong>Pré-condições:</strong> Nenhuma.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>POST /api/grupos com body incompleto (falta nomeGrupo, ou responsavelId, ou contratoIds não array/vazio).</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> Status 400; "Dados inválidos: nomeGrupo, responsavelId e contratoIds são obrigatórios".</p>
+  <p class="ca-ref">CA-G01.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-I05 – POST /api/perfis sem nome retorna 400</p>
+  <p><strong>Pré-condições:</strong> Nenhuma.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>POST /api/perfis com body { nome: "" } ou sem nome.</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> Status 400; "Nome do perfil é obrigatório".</p>
+  <p class="ca-ref">CA-P01.</p>
+</div>
+
+<div class="scenario">
+  <p class="scenario-id">CT-I06 – GET /api/ativos?contratoIds= retorna união dos ativos dos contratos</p>
+  <p><strong>Pré-condições:</strong> Dois contratos c1 e c2 com ativos no store.</p>
+  <p class="steps"><strong>Passos:</strong></p>
+  <ol>
+    <li>GET /api/ativos?contratoIds=c1,c2</li>
+  </ol>
+  <p class="expected"><strong>Resultado esperado:</strong> Resposta com lista de ativos que pertencem a c1 ou c2 (união), sem duplicar por contrato.</p>
+  <p class="ca-ref">RN-G03.</p>
+</div>
+
+<h2>6. Resumo – Tabela de Cenários</h2>
+<table>
+  <thead>
+    <tr><th>ID</th><th>Cenário (resumo)</th><th>CA / Regra</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>CT-U01</td><td>Impedir salvar sem nome</td><td>CA-U01</td></tr>
+    <tr><td>CT-U02</td><td>Impedir salvar sem e-mail</td><td>CA-U01</td></tr>
+    <tr><td>CT-U03</td><td>Impedir salvar sem vínculo</td><td>CA-U02</td></tr>
+    <tr><td>CT-U04</td><td>Impedir criar sem perfil</td><td>CA-U03</td></tr>
+    <tr><td>CT-U05</td><td>Rejeitar e-mail duplicado (criação)</td><td>CA-U04, RN-U01</td></tr>
+    <tr><td>CT-U06</td><td>Rejeitar e-mail duplicado (edição outro usuário)</td><td>CA-U04</td></tr>
+    <tr><td>CT-U07</td><td>Permitir mesmo e-mail ao editar próprio usuário</td><td>CA-U04</td></tr>
+    <tr><td>CT-U08</td><td>Perfil persistido e exibido na reabertura</td><td>CA-U05</td></tr>
+    <tr><td>CT-U09</td><td>Matriz somente leitura na tela de usuário</td><td>CA-U06</td></tr>
+    <tr><td>CT-U10</td><td>Coluna Perfil na listagem</td><td>CA-U07</td></tr>
+    <tr><td>CT-U11</td><td>Filtros (nome, perfil, datas)</td><td>CA-U08</td></tr>
+    <tr><td>CT-U12</td><td>Exclusão ID inválido</td><td>CA-U09</td></tr>
+    <tr><td>CT-U13</td><td>Exclusão usuário inexistente (404)</td><td>CA-U09</td></tr>
+    <tr><td>CT-G01</td><td>Grupo sem nome/responsável/contrato</td><td>CA-G01</td></tr>
+    <tr><td>CT-G02</td><td>Nome de grupo duplicado (criação)</td><td>CA-G02</td></tr>
+    <tr><td>CT-G03</td><td>Nome duplicado na edição</td><td>CA-G02</td></tr>
+    <tr><td>CT-G04</td><td>Seleção múltipla clientes</td><td>CA-G03</td></tr>
+    <tr><td>CT-G05</td><td>Clientes carregados na edição do grupo</td><td>CA-G04</td></tr>
+    <tr><td>CT-G06</td><td>Checkboxes e botões Gerar divisão / Movimentar</td><td>CA-G05</td></tr>
+    <tr><td>CT-G07</td><td>Campo Nome da divisão após Gerar divisão</td><td>CA-G06</td></tr>
+    <tr><td>CT-G08</td><td>Movimentar ativos em lote</td><td>CA-G07</td></tr>
+    <tr><td>CT-G09</td><td>Checkboxes visíveis em Divisão de frota</td><td>CA-G07</td></tr>
+    <tr><td>CT-G10</td><td>Adicionar cliente sem piscar lista</td><td>CA-G08</td></tr>
+    <tr><td>CT-P01</td><td>Perfil sem nome</td><td>CA-P01</td></tr>
+    <tr><td>CT-P02</td><td>Perfil persistido</td><td>CA-P02</td></tr>
+    <tr><td>CT-P03</td><td>Matriz editável só em Criar perfil</td><td>CA-P03</td></tr>
+    <tr><td>CT-A01</td><td>Placa ou número de série na identificação</td><td>CA-A01</td></tr>
+    <tr><td>CT-A02</td><td>Placa sem traço</td><td>CA-A02, RN-A02</td></tr>
+    <tr><td>CT-A03</td><td>Ativos sem placa vinculáveis</td><td>CA-A03</td></tr>
+    <tr><td>CT-I01</td><td>API usuários sem nome/e-mail → 400</td><td>CA-U01</td></tr>
+    <tr><td>CT-I02</td><td>API usuários sem vínculo → 400</td><td>CA-U02</td></tr>
+    <tr><td>CT-I03</td><td>API e-mail duplicado → 409</td><td>CA-U04</td></tr>
+    <tr><td>CT-I04</td><td>API grupo dados obrigatórios → 400</td><td>CA-G01</td></tr>
+    <tr><td>CT-I05</td><td>API perfil sem nome → 400</td><td>CA-P01</td></tr>
+    <tr><td>CT-I06</td><td>API ativos por contratoIds (união)</td><td>RN-G03</td></tr>
+  </tbody>
+</table>
+
+<p style="margin-top: 24pt;"><em>Documento de cenários de teste – Gestão de Usuários Portal do Cliente. Utilize em conjunto com o documento de Critérios de Aceite e Regras de Negócio para rastreabilidade.</em></p>
+
+</body>
+</html>
