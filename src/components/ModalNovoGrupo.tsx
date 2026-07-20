@@ -335,7 +335,7 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
       }
       return prev.map((d) =>
         d.id === divisaoDestinoId
-          ? { ...d, ativoIds: [...new Set([...d.ativoIds, ...ativoIds])] }
+          ? { ...d, ativoIds: Array.from(new Set([...d.ativoIds, ...ativoIds])) }
           : { ...d, ativoIds: d.ativoIds.filter((id) => !ativoIds.includes(id)) }
       );
     });
