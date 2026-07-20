@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Plus, Pencil, Trash2, Users, Building2, Search } from 'lucide-react';
@@ -12,7 +12,7 @@ import type { DateRange } from 'react-day-picker';
 
 type Aba = 'usuarios' | 'clientes';
 
-export default function GestaoUsuariosPage() {
+function GestaoUsuariosContent() {
   const searchParams = useSearchParams();
   const abaParam = searchParams.get('aba');
   const [aba, setAba] = useState<Aba>(abaParam === 'clientes' ? 'clientes' : 'usuarios');
@@ -679,5 +679,13 @@ export default function GestaoUsuariosPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function GestaoUsuariosPage() {
+  return (
+    <Suspense>
+      <GestaoUsuariosContent />
+    </Suspense>
   );
 }
