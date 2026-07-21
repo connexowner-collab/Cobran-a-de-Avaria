@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 
 /** Peças visuais compartilhadas das telas do Portal do Cliente. */
@@ -237,7 +238,8 @@ export function SearchInput({
   );
 }
 
-/** Tabela padronizada: cabeçalho, estado vazio e rodapé (paginação) consistentes. */
+/** Tabela padronizada: cabeçalho, estado vazio e rodapé (paginação) consistentes.
+ *  Só a tabela rola horizontalmente; o rodapé fica fixo (fora da área de scroll). */
 export function DataTable({
   head, children, vazio, vazioLabel = 'Nenhum registro encontrado.', colSpan = 1, footer,
 }: {
@@ -249,25 +251,27 @@ export function DataTable({
   footer?: React.ReactNode;
 }) {
   return (
-    <div className="table-container">
-      <table className="w-full text-left text-[13px]">
-        <thead>
-          <tr className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
-            {head}
-          </tr>
-        </thead>
-        <tbody>
-          {vazio ? (
-            <tr>
-              <td colSpan={colSpan} className="px-4 py-10 text-center text-sm text-slate-400">
-                {vazioLabel}
-              </td>
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-x-auto overflow-y-hidden">
+        <table className="w-full text-left text-[13px]">
+          <thead>
+            <tr className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
+              {head}
             </tr>
-          ) : (
-            children
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {vazio ? (
+              <tr>
+                <td colSpan={colSpan} className="px-4 py-10 text-center text-sm text-slate-400">
+                  {vazioLabel}
+                </td>
+              </tr>
+            ) : (
+              children
+            )}
+          </tbody>
+        </table>
+      </div>
       {footer}
     </div>
   );
@@ -278,19 +282,83 @@ export function Th({ children, className = '' }: { children?: React.ReactNode; c
   return <th className={`px-4 py-3 font-bold ${className}`}>{children}</th>;
 }
 
-/** Rodapé de paginação padrão (padrão Cobrança Avaria). */
+/**
+ * Hook de paginação client-side: fatia a lista e controla página/itens por página.
+ * A página volta para 1 automaticamente quando a lista encolhe (ex.: ao filtrar).
+ */
+export function usePaginacao<T>(itens: T[], itensPorPaginaInicial = 10) {
+  const [pagina, setPagina] = useState(1);
+  const [itensPorPagina, setItensPorPaginaState] = useState(itensPorPaginaInicial);
+
+  const totalItens = itens.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalItens / itensPorPagina));
+  const paginaSegura = Math.min(pagina, totalPaginas);
+
+  useEffect(() => {
+    if (pagina > totalPaginas) setPagina(totalPaginas);
+  }, [pagina, totalPaginas]);
+
+  const pageItens = useMemo(() => {
+    const inicio = (paginaSegura - 1) * itensPorPagina;
+    return itens.slice(inicio, inicio + itensPorPagina);
+  }, [itens, paginaSegura, itensPorPagina]);
+
+  const setItensPorPagina = (n: number) => {
+    setItensPorPaginaState(n);
+    setPagina(1);
+  };
+
+  return { pagina: paginaSegura, setPagina, itensPorPagina, setItensPorPagina, totalPaginas, totalItens, pageItens };
+}
+
+/**
+ * Rodapé de paginação padrão (padrão Cobrança Avaria), controlado, com números de página.
+ * Aceita também a forma antiga (`info`) apenas como texto informativo, sem controles.
+ */
 export function TablePagination({
-  info, opcoes = [5, 10, 25], valor = 5,
+  pagina, totalPaginas, totalItens, itensPorPagina,
+  onPaginaChange, onItensPorPaginaChange,
+  opcoes = [5, 10, 25, 50], rotulo = 'registros', info,
 }: {
-  info: string;
+  pagina?: number;
+  totalPaginas?: number;
+  totalItens?: number;
+  itensPorPagina?: number;
+  onPaginaChange?: (p: number) => void;
+  onItensPorPaginaChange?: (n: number) => void;
   opcoes?: number[];
-  valor?: number;
+  rotulo?: string;
+  info?: string;
 }) {
+  // Forma antiga (só texto): mantém compatibilidade.
+  if (pagina === undefined || totalPaginas === undefined || totalItens === undefined || itensPorPagina === undefined) {
+    return (
+      <div className="pagination">
+        <span className="pagination-info">{info}</span>
+      </div>
+    );
+  }
+
+  const inicio = totalItens === 0 ? 0 : (pagina - 1) * itensPorPagina + 1;
+  const fim = Math.min(pagina * itensPorPagina, totalItens);
+  const janela = Array.from({ length: Math.min(5, totalPaginas) }, (_, i) =>
+    Math.max(1, Math.min(pagina - 2, totalPaginas - 4)) + i,
+  ).filter((p) => p >= 1 && p <= totalPaginas);
+
   return (
     <div className="pagination">
-      <span className="pagination-info">{info}</span>
+      <span className="pagination-info">
+        Mostrando {inicio}–{fim} de {totalItens} {rotulo}
+      </span>
       <div className="pagination-controls">
-        <select defaultValue={String(valor)}>
+        <button type="button" disabled={pagina <= 1} onClick={() => onPaginaChange?.(1)} aria-label="Primeira página">&laquo;</button>
+        <button type="button" disabled={pagina <= 1} onClick={() => onPaginaChange?.(pagina - 1)} aria-label="Página anterior">&lsaquo;</button>
+        {janela.map((p) => (
+          <button key={p} type="button" className={pagina === p ? 'active' : ''} onClick={() => onPaginaChange?.(p)}>{p}</button>
+        ))}
+        <button type="button" disabled={pagina >= totalPaginas} onClick={() => onPaginaChange?.(pagina + 1)} aria-label="Próxima página">&rsaquo;</button>
+        <button type="button" disabled={pagina >= totalPaginas} onClick={() => onPaginaChange?.(totalPaginas)} aria-label="Última página">&raquo;</button>
+        <select value={itensPorPagina} onChange={(e) => onItensPorPaginaChange?.(Number(e.target.value))} aria-label="Itens por página">
           {opcoes.map((o) => (
             <option key={o} value={o}>{o} linhas</option>
           ))}

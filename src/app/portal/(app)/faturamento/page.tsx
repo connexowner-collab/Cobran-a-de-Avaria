@@ -5,7 +5,7 @@ import { Download, FileText } from 'lucide-react';
 import { FATURAS, type FaturaStatus } from '@/lib/portalData';
 import {
   PageTitle, StatusBadge, FilterChip, KpiCard, KpiRow, Toolbar, ToolbarSpacer,
-  DataTable, Th, TablePagination,
+  DataTable, Th, TablePagination, usePaginacao,
 } from '@/components/portal/ui';
 
 const STATUS_LABEL: Record<FaturaStatus, string> = {
@@ -24,6 +24,7 @@ const FILTROS: Array<{ key: FaturaStatus | 'todos'; label: string }> = [
 export default function FaturamentoPage() {
   const [filtro, setFiltro] = useState<FaturaStatus | 'todos'>('todos');
   const faturas = FATURAS.filter((f) => filtro === 'todos' || f.status === filtro);
+  const pag = usePaginacao(faturas, 10);
 
   return (
     <div>
@@ -63,9 +64,19 @@ export default function FaturamentoPage() {
             <Th />
           </>
         }
-        footer={<TablePagination info={`Mostrando ${faturas.length} de ${FATURAS.length} faturas`} />}
+        footer={
+          <TablePagination
+            pagina={pag.pagina}
+            totalPaginas={pag.totalPaginas}
+            totalItens={pag.totalItens}
+            itensPorPagina={pag.itensPorPagina}
+            onPaginaChange={pag.setPagina}
+            onItensPorPaginaChange={pag.setItensPorPagina}
+            rotulo="faturas"
+          />
+        }
       >
-        {faturas.map((f) => (
+        {pag.pageItens.map((f) => (
           <tr key={f.nf} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
             <td className="px-4 py-3.5 font-mono font-semibold text-slate-800">{f.nf}</td>
             <td className="px-4 py-3.5 font-mono text-xs text-slate-500">{f.competencia}</td>

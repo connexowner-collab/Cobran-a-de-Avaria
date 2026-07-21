@@ -9,7 +9,7 @@ import {
 import { AVARIAS, type Avaria, type AvariaStatus, type AvariaMotivo } from '@/lib/portalData';
 import {
   PageTitle, StatusBadge, FilterChip, Toolbar, ToolbarSpacer,
-  DataTable, Th, TablePagination,
+  DataTable, Th, TablePagination, usePaginacao,
 } from '@/components/portal/ui';
 import DateRangeFilter from '@/components/DateRangeFilter';
 
@@ -231,6 +231,8 @@ export default function AvariasPage() {
       );
   }, [avarias, filtro, busca]);
 
+  const pag = usePaginacao(linhas, 10);
+
   // Resumo (calculado sobre a base completa, não sobre o filtro atual).
   const totalCAs = avarias.length;
   const porStatus = (['analise', 'aprovada', 'contestada', 'paga'] as AvariaStatus[]).map((s) => ({
@@ -413,9 +415,19 @@ export default function AvariasPage() {
             <Th />
           </>
         }
-        footer={<TablePagination info={`Mostrando ${linhas.length} de ${avarias.length} cobranças`} />}
+        footer={
+          <TablePagination
+            pagina={pag.pagina}
+            totalPaginas={pag.totalPaginas}
+            totalItens={pag.totalItens}
+            itensPorPagina={pag.itensPorPagina}
+            onPaginaChange={pag.setPagina}
+            onItensPorPaginaChange={pag.setItensPorPagina}
+            rotulo="cobranças"
+          />
+        }
       >
-        {linhas.map((a) => {
+        {pag.pageItens.map((a) => {
           const prazo = prazoContestacao(a);
           return (
             <tr key={a.id} className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 ${selecionados.has(a.id) ? 'bg-primary-50/30' : ''}`}>

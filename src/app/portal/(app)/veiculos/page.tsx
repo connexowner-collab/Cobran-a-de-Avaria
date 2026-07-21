@@ -5,7 +5,7 @@ import { Download, FileDown, Search, X, List, FileSearch } from 'lucide-react';
 import { VEICULOS, type VeiculoSituacao, type CrlvStatus, type VeiculoFrota } from '@/lib/portalData';
 import {
   PageTitle, StatusBadge, FilterChip, KpiCard, KpiRow, Toolbar, ToolbarSpacer,
-  DataTable, Th, TablePagination,
+  DataTable, Th, TablePagination, usePaginacao,
 } from '@/components/portal/ui';
 
 const SITUACAO_LABEL: Record<VeiculoSituacao, string> = {
@@ -130,6 +130,8 @@ export default function VeiculosPage() {
     return base.filter((v) => filtro === 'todos' || v.crlvStatus === filtro);
   }, [buscou, verTudo, termos, filtro]);
 
+  const pag = usePaginacao(veiculos, 10);
+
   const kpis = useMemo(() => {
     const count = (s: CrlvStatus) => VEICULOS.filter((v) => v.crlvStatus === s).length;
     return { vigente: count('vigente'), aVencer: count('a_vencer'), vencido: count('vencido'), sem: count('sem') };
@@ -253,9 +255,19 @@ export default function VeiculosPage() {
                 <Th />
               </>
             }
-            footer={<TablePagination info={`Mostrando ${veiculos.length} de 42 veículos`} />}
+            footer={
+              <TablePagination
+                pagina={pag.pagina}
+                totalPaginas={pag.totalPaginas}
+                totalItens={pag.totalItens}
+                itensPorPagina={pag.itensPorPagina}
+                onPaginaChange={pag.setPagina}
+                onItensPorPaginaChange={pag.setItensPorPagina}
+                rotulo="veículos"
+              />
+            }
           >
-            {veiculos.map((v) => (
+            {pag.pageItens.map((v) => (
               <tr key={v.placa} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                 <td className="px-4 py-3.5 text-xs text-slate-500">{v.frota}</td>
                 <td className="px-4 py-3.5">

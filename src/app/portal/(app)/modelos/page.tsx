@@ -5,7 +5,7 @@ import { Download } from 'lucide-react';
 import { VEICULOS } from '@/lib/portalData';
 import {
   PageTitle, KpiCard, KpiRow, BarraProgresso, FilterChip, Toolbar, ToolbarSpacer,
-  SearchInput, DataTable, Th, TablePagination, SectionCard,
+  SearchInput, DataTable, Th, TablePagination, SectionCard, usePaginacao,
 } from '@/components/portal/ui';
 
 const FROTA_TOTAL = 42;
@@ -40,6 +40,8 @@ export default function ModelosPage() {
   }, [categoria, modeloAtivo, busca]);
 
   const modelosVisiveis = MODELOS.filter((m) => categoria === 'Todas' || m.categoria === categoria);
+
+  const pag = usePaginacao(veiculos, 10);
 
   return (
     <div>
@@ -134,9 +136,19 @@ export default function ModelosPage() {
             <Th>Contrato</Th>
           </>
         }
-        footer={<TablePagination info={`Mostrando ${veiculos.length} de ${VEICULOS.length} veículos`} />}
+        footer={
+          <TablePagination
+            pagina={pag.pagina}
+            totalPaginas={pag.totalPaginas}
+            totalItens={pag.totalItens}
+            itensPorPagina={pag.itensPorPagina}
+            onPaginaChange={pag.setPagina}
+            onItensPorPaginaChange={pag.setItensPorPagina}
+            rotulo="veículos"
+          />
+        }
       >
-        {veiculos.map((v) => (
+        {pag.pageItens.map((v) => (
           <tr key={v.placa} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
             <td className="px-4 py-3.5">
               <span className="rounded-md border border-slate-200 px-2 py-1 font-mono text-xs font-semibold">{v.placa}</span>

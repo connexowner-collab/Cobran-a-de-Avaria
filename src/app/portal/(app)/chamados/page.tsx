@@ -6,7 +6,7 @@ import { Plus, Send, X, Eye } from 'lucide-react';
 import { CHAMADOS, type Chamado, type ChamadoStatus } from '@/lib/portalData';
 import {
   PageTitle, StatusBadge, FilterChip, KpiCard, KpiRow, Toolbar, ToolbarSpacer,
-  SearchInput, DataTable, Th, TablePagination,
+  SearchInput, DataTable, Th, TablePagination, usePaginacao,
 } from '@/components/portal/ui';
 
 const STATUS_LABEL: Record<ChamadoStatus, string> = {
@@ -125,6 +125,8 @@ export default function ChamadosPage() {
       );
   }, [chamadosEmAberto, filtro, busca]);
 
+  const pag = usePaginacao(lista, 10);
+
   const kpis = useMemo(() => {
     const abertos = chamadosEmAberto;
     const foraDoSla = abertos.filter((c) => c.slaMin < 0).length;
@@ -183,9 +185,19 @@ export default function ChamadosPage() {
             <Th>Status</Th>
           </>
         }
-        footer={<TablePagination info={`Mostrando ${lista.length} de ${chamadosEmAberto.length} chamados em aberto`} />}
+        footer={
+          <TablePagination
+            pagina={pag.pagina}
+            totalPaginas={pag.totalPaginas}
+            totalItens={pag.totalItens}
+            itensPorPagina={pag.itensPorPagina}
+            onPaginaChange={pag.setPagina}
+            onItensPorPaginaChange={pag.setItensPorPagina}
+            rotulo="chamados em aberto"
+          />
+        }
       >
-        {lista.map((c) => {
+        {pag.pageItens.map((c) => {
           const sla = slaInfo(c.slaMin);
           return (
             <tr

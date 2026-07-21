@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import {
   PageTitle, StatusBadge, KpiCard, FilterChip, KpiRow, SectionCard, SectionHeader,
-  Toolbar, ToolbarDivider, SearchInput, DataTable, Th, TablePagination,
+  Toolbar, ToolbarDivider, SearchInput, DataTable, Th, TablePagination, usePaginacao,
 } from '@/components/portal/ui';
 
 /* Data de referência do protótipo (para calcular imobilização/atrasos). */
@@ -301,10 +301,15 @@ export default function ServicosPage() {
       .map(([motivo, qtd]) => ({ motivo, qtd, pct: Math.round((qtd / total) * 100) }));
   }, []);
 
-  const linhas = ATENDIMENTOS_SERVICO
-    .filter((a) => filtroStatus === 'todos' || a.status === filtroStatus)
-    .filter((a) => filtroTipo === 'todos' || a.tipo === filtroTipo)
-    .filter((a) => !busca || a.placa.toLowerCase().includes(busca.toLowerCase()) || a.numero.includes(busca));
+  const linhas = useMemo(
+    () =>
+      ATENDIMENTOS_SERVICO
+        .filter((a) => filtroStatus === 'todos' || a.status === filtroStatus)
+        .filter((a) => filtroTipo === 'todos' || a.tipo === filtroTipo)
+        .filter((a) => !busca || a.placa.toLowerCase().includes(busca.toLowerCase()) || a.numero.includes(busca)),
+    [filtroStatus, filtroTipo, busca],
+  );
+  const pag = usePaginacao(linhas, 10);
 
   return (
     <div>
@@ -468,9 +473,19 @@ export default function ServicosPage() {
             <Th className="whitespace-nowrap">Mais detalhes</Th>
           </>
         }
-        footer={<TablePagination info={`Mostrando de 1 até ${linhas.length} de 202.638 registros`} />}
+        footer={
+          <TablePagination
+            pagina={pag.pagina}
+            totalPaginas={pag.totalPaginas}
+            totalItens={pag.totalItens}
+            itensPorPagina={pag.itensPorPagina}
+            onPaginaChange={pag.setPagina}
+            onItensPorPaginaChange={pag.setItensPorPagina}
+            rotulo="atendimentos"
+          />
+        }
       >
-        {linhas.map((a) => {
+        {pag.pageItens.map((a) => {
               const dias = diasEmManutencao(a);
               const emAberto = a.status === 'aberta';
               return (

@@ -5,7 +5,7 @@ import { ChevronRight, Download } from 'lucide-react';
 import { MULTAS, VEICULOS, type Multa } from '@/lib/portalData';
 import {
   PageTitle, StatusBadge, KpiCard, KpiRow, FilterChip, Toolbar, ToolbarSpacer,
-  SearchInput, DataTable, Th, TablePagination, SectionCard,
+  SearchInput, DataTable, Th, TablePagination, SectionCard, usePaginacao,
 } from '@/components/portal/ui';
 
 /** Quantos veículos aparecem no ranking — fixo, independente do tamanho da frota. */
@@ -97,6 +97,8 @@ export default function MultasPage() {
       })
       .sort((a, b) => b.multas.length - a.multas.length);
   }, [linhasFiltradas]);
+
+  const pag = usePaginacao(grupos, 10);
 
   // Com filtro de status ou busca ativos, expande automaticamente os grupos com resultado.
   const filtroAtivo = filtro !== 'todos' || busca.trim() !== '';
@@ -229,9 +231,19 @@ export default function MultasPage() {
             <Th />
           </>
         }
-        footer={<TablePagination info={`Mostrando ${grupos.length} de ${placasComMulta} veículos`} />}
+        footer={
+          <TablePagination
+            pagina={pag.pagina}
+            totalPaginas={pag.totalPaginas}
+            totalItens={pag.totalItens}
+            itensPorPagina={pag.itensPorPagina}
+            onPaginaChange={pag.setPagina}
+            onItensPorPaginaChange={pag.setItensPorPagina}
+            rotulo="veículos"
+          />
+        }
       >
-        {grupos.map((g) => {
+        {pag.pageItens.map((g) => {
           const aberto = estaExpandido(g.placa);
           const grupoSelecionado = g.multas.every((m) => selecionados.has(m.auto));
           return (

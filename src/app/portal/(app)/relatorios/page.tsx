@@ -6,7 +6,7 @@ import { Download } from 'lucide-react';
 import { VEICULOS } from '@/lib/portalData';
 import {
   PageTitle, KpiCard, BarraProgresso, KpiRow, SectionCard, DataTable, Th, TablePagination,
-  Toolbar, ToolbarSpacer, FilterChip, SearchInput,
+  Toolbar, ToolbarSpacer, FilterChip, SearchInput, usePaginacao,
 } from '@/components/portal/ui';
 
 const ABAS = [
@@ -51,6 +51,8 @@ function AbaIdade() {
       .filter((v) => !faixaAtiva || faixaIdade(v.anoModelo) === faixaAtiva)
       .filter((v) => !busca || v.placa.toLowerCase().includes(busca.toLowerCase()) || v.modelo.toLowerCase().includes(busca.toLowerCase()));
   }, [faixaAtiva, busca]);
+
+  const pag = usePaginacao(veiculos, 10);
 
   return (
     <>
@@ -99,9 +101,19 @@ function AbaIdade() {
             <Th>Idade</Th>
           </>
         }
-        footer={<TablePagination info={`Mostrando ${veiculos.length} de ${VEICULOS.length} veículos`} />}
+        footer={
+          <TablePagination
+            pagina={pag.pagina}
+            totalPaginas={pag.totalPaginas}
+            totalItens={pag.totalItens}
+            itensPorPagina={pag.itensPorPagina}
+            onPaginaChange={pag.setPagina}
+            onItensPorPaginaChange={pag.setItensPorPagina}
+            rotulo="veículos"
+          />
+        }
       >
-        {veiculos.map((v) => (
+        {pag.pageItens.map((v) => (
           <tr key={v.placa} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
             <td className="px-4 py-3.5 font-mono font-semibold">{v.placa}</td>
             <td className="px-4 py-3.5">{v.modelo}</td>
@@ -137,6 +149,8 @@ function AbaKm() {
       .filter((v) => !busca || v.placa.toLowerCase().includes(busca.toLowerCase()) || v.modelo.toLowerCase().includes(busca.toLowerCase()));
   }, [medidos, filtro, busca]);
 
+  const pag = usePaginacao(veiculos, 10);
+
   return (
     <>
       <KpiRow cols={3}>
@@ -165,9 +179,19 @@ function AbaKm() {
             <Th>Km médio/mês</Th>
           </>
         }
-        footer={<TablePagination info={`Mostrando ${veiculos.length} de ${medidos.length} veículos medidos em km`} />}
+        footer={
+          <TablePagination
+            pagina={pag.pagina}
+            totalPaginas={pag.totalPaginas}
+            totalItens={pag.totalItens}
+            itensPorPagina={pag.itensPorPagina}
+            onPaginaChange={pag.setPagina}
+            onItensPorPaginaChange={pag.setItensPorPagina}
+            rotulo="veículos"
+          />
+        }
       >
-        {veiculos.map((v) => (
+        {pag.pageItens.map((v) => (
           <tr key={v.placa} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
             <td className="px-4 py-3.5 font-mono font-semibold">{v.placa}</td>
             <td className="px-4 py-3.5">{v.modelo}</td>
@@ -189,6 +213,8 @@ function AbaRegiao() {
       .filter((v) => !regiaoAtiva || v.regiao === regiaoAtiva)
       .filter((v) => !busca || v.placa.toLowerCase().includes(busca.toLowerCase()) || v.modelo.toLowerCase().includes(busca.toLowerCase()));
   }, [regiaoAtiva, busca]);
+
+  const pag = usePaginacao(veiculos, 10);
 
   return (
     <>
@@ -238,9 +264,19 @@ function AbaRegiao() {
             <Th>Centro de custo</Th>
           </>
         }
-        footer={<TablePagination info={`Mostrando ${veiculos.length} de ${VEICULOS.length} veículos`} />}
+        footer={
+          <TablePagination
+            pagina={pag.pagina}
+            totalPaginas={pag.totalPaginas}
+            totalItens={pag.totalItens}
+            itensPorPagina={pag.itensPorPagina}
+            onPaginaChange={pag.setPagina}
+            onItensPorPaginaChange={pag.setItensPorPagina}
+            rotulo="veículos"
+          />
+        }
       >
-        {veiculos.map((v) => (
+        {pag.pageItens.map((v) => (
           <tr key={v.placa} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
             <td className="px-4 py-3.5 font-mono font-semibold">{v.placa}</td>
             <td className="px-4 py-3.5">{v.modelo}</td>
