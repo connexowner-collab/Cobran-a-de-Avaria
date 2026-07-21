@@ -6,15 +6,19 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, BarChart3, DollarSign, Headset, MapPin, Wrench, Boxes,
   Truck, Users, HelpCircle, ChevronDown, Search, Bell, LogOut, AlertTriangle,
-  AlertCircle, Info, ListFilter, ChevronLeft, ChevronRight,
+  AlertCircle, Info, ListFilter, ChevronLeft, ChevronRight, Check, Loader2,
 } from 'lucide-react';
-import { NOTIFICACOES } from '@/lib/portalData';
+import { NOTIFICACOES, GRUPOS_DISTRIBUICAO } from '@/lib/portalData';
 import { LogoVamos } from '@/components/portal/ui';
+
+const GRUPO_STORAGE_KEY = 'portal_grupo_selecionado';
 
 interface NavLeaf {
   label: string;
   href: string;
   novo?: boolean;
+  /** Quando true, abre o href em nova aba (link externo). */
+  externo?: boolean;
 }
 
 interface NavItem extends NavLeaf {
@@ -36,7 +40,7 @@ const NAV: { grupo: string; itens: NavItem[] }[] = [
           { label: 'Distribuição da frota', href: '/portal/relatorios?aba=regiao' },
         ],
       },
-      { label: 'Vamos Controle', href: '/portal/vamos-controle', icon: <MapPin size={18} /> },
+      { label: 'Vamos Controle', href: 'https://www.vamoscontrole.com.br/iweb2/loginvamoscontrole.aspx', icon: <MapPin size={18} />, externo: true },
     ],
   },
   {
@@ -80,15 +84,42 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const router = useRouter();
   const [notifOpen, setNotifOpen] = useState(false);
   const [colapsado, setColapsado] = useState(false);
+  const [grupoOpen, setGrupoOpen] = useState(false);
+  const [grupoId, setGrupoId] = useState(GRUPOS_DISTRIBUICAO[0].id);
+  const [trocandoGrupo, setTrocandoGrupo] = useState(false);
+  const [grupoAlvoId, setGrupoAlvoId] = useState<string | null>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+  const grupoRef = useRef<HTMLDivElement>(null);
+
+  const grupoAtual = GRUPOS_DISTRIBUICAO.find((g) => g.id === grupoId) ?? GRUPOS_DISTRIBUICAO[0];
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+      if (grupoRef.current && !grupoRef.current.contains(e.target as Node)) setGrupoOpen(false);
     };
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
+
+  // Restaura o grupo selecionado.
+  useEffect(() => {
+    try {
+      const salvo = localStorage.getItem(GRUPO_STORAGE_KEY);
+      if (salvo && GRUPOS_DISTRIBUICAO.some((g) => g.id === salvo)) setGrupoId(salvo);
+    } catch { /* ignora */ }
+  }, []);
+
+  /** Troca o grupo/distribuição: mostra o overlay de carregamento e recarrega o portal. */
+  const selecionarGrupo = (id: string) => {
+    setGrupoOpen(false);
+    if (id === grupoId) return;
+    try { localStorage.setItem(GRUPO_STORAGE_KEY, id); } catch { /* ignora */ }
+    setGrupoAlvoId(id);
+    setTrocandoGrupo(true);
+    // Recarrega o portal inteiro com os ativos do novo grupo.
+    window.setTimeout(() => window.location.reload(), 1100);
+  };
 
   // Restaura a preferência de menu recolhido.
   useEffect(() => {
@@ -153,6 +184,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                     <Link
                       href={item.href}
                       title={colapsado ? item.label : undefined}
+                      {...(item.externo && { target: '_blank', rel: 'noopener noreferrer' })}
                       className={`group relative mb-0.5 flex items-center gap-3 rounded-lg py-2.5 text-[13.5px] font-semibold transition ${
                         colapsado ? 'justify-center px-0' : 'px-3'
                       } ${
@@ -239,11 +271,46 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
           <div className="flex-1" />
 
-          <button className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50">
-            <ListFilter size={15} />
-            Frota Sul · Distribuição SP
-            <ChevronDown size={13} />
-          </button>
+          {/* Seletor de grupo/distribuição da frota vinculada ao perfil */}
+          <div className="relative" ref={grupoRef}>
+            <button
+              onClick={() => setGrupoOpen((v) => !v)}
+              className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-[13px] font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <ListFilter size={15} />
+              <span className="hidden sm:inline">{grupoAtual.nome} · </span>{grupoAtual.distribuicao}
+              <ChevronDown size={13} className={`transition-transform ${grupoOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {grupoOpen && (
+              <div className="absolute right-0 top-11 z-30 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                <div className="border-b border-slate-100 px-4 py-2.5">
+                  <p className="text-[13px] font-bold text-slate-800">Grupos de cliente</p>
+                  <p className="text-xs text-slate-500">Selecione a frota que deseja visualizar</p>
+                </div>
+                <div className="max-h-80 overflow-y-auto py-1">
+                  {GRUPOS_DISTRIBUICAO.map((g) => {
+                    const ativoSel = g.id === grupoId;
+                    return (
+                      <button
+                        key={g.id}
+                        onClick={() => selecionarGrupo(g.id)}
+                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-slate-50 ${ativoSel ? 'bg-primary-50/60' : ''}`}
+                      >
+                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${ativoSel ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                          {g.distribuicao.replace('Distribuição ', '')}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[13px] font-semibold text-slate-800">{g.nome} · {g.distribuicao}</span>
+                          <span className="block text-xs text-slate-500">{g.ativos} ativos · {g.regiao}</span>
+                        </span>
+                        {ativoSel && <Check size={16} className="shrink-0 text-primary-600" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Notificações */}
           <div className="relative" ref={notifRef}>
@@ -299,6 +366,25 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
         <main className="flex-1 px-8 py-7">{children}</main>
       </div>
+
+      {/* ===== Overlay de carregamento ao trocar de grupo/distribuição =====
+          Placeholder — o conteúdo/visual definitivo será ajustado depois. */}
+      {trocandoGrupo && (
+        <div
+          className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-4 bg-[#0e2233]/95 text-white backdrop-blur-sm"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="rounded-2xl bg-white px-5 py-4 shadow-lg">
+            <LogoVamos altura={40} />
+          </div>
+          <Loader2 size={30} className="animate-spin text-primary-400" />
+          <div className="text-center">
+            <p className="text-base font-bold">Carregando {(GRUPOS_DISTRIBUICAO.find((g) => g.id === grupoAlvoId) ?? grupoAtual).nome} · {(GRUPOS_DISTRIBUICAO.find((g) => g.id === grupoAlvoId) ?? grupoAtual).distribuicao}</p>
+            <p className="mt-0.5 text-sm text-white/60">Atualizando os ativos do grupo selecionado...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

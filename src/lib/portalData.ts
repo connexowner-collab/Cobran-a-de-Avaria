@@ -5,6 +5,30 @@
  * Faturamento self-service.
  */
 
+/**
+ * Grupos de cliente / distribuições de frota vinculados ao perfil logado.
+ * O seletor do topo do portal permite alternar entre eles; ao trocar, o portal
+ * recarrega com os ativos do grupo selecionado.
+ */
+export interface GrupoDistribuicao {
+  id: string;
+  /** Nome do grupo de cliente (ex.: "Frota Sul"). */
+  nome: string;
+  /** Distribuição/base do grupo (ex.: "Distribuição SP"). */
+  distribuicao: string;
+  /** Quantidade de ativos do grupo (exibido no dropdown). */
+  ativos: number;
+  regiao: string;
+}
+
+export const GRUPOS_DISTRIBUICAO: GrupoDistribuicao[] = [
+  { id: 'g-sp', nome: 'Frota Sul', distribuicao: 'Distribuição SP', ativos: 42, regiao: 'Sudeste' },
+  { id: 'g-rj', nome: 'Frota Sudeste', distribuicao: 'Distribuição RJ', ativos: 28, regiao: 'Sudeste' },
+  { id: 'g-rs', nome: 'Frota Sul', distribuicao: 'Distribuição RS', ativos: 35, regiao: 'Sul' },
+  { id: 'g-ba', nome: 'Frota Nordeste', distribuicao: 'Distribuição BA', ativos: 19, regiao: 'Nordeste' },
+  { id: 'g-go', nome: 'Frota Centro-Oeste', distribuicao: 'Distribuição GO', ativos: 24, regiao: 'Centro-Oeste' },
+];
+
 export type ChamadoStatus = 'aberto' | 'atendimento' | 'aguardando' | 'escalonado' | 'resolvido';
 
 export interface ChamadoResposta {
