@@ -23,13 +23,16 @@ function slaInfo(min: number) {
   return { label: `${Math.round(min / 60)}h restantes`, cls: 'text-emerald-600', bar: 'bg-emerald-500', pct: Math.max(10, 100 - min / 10) };
 }
 
+/** Status considerados "em aberto" — os únicos exibidos na Central de Chamados.
+ *  Chamados resolvidos/finalizados ficam na aba Serviços. */
+const STATUS_EM_ABERTO: ChamadoStatus[] = ['aberto', 'atendimento', 'aguardando', 'escalonado'];
+
 const FILTROS: Array<{ key: ChamadoStatus | 'todos'; label: string }> = [
   { key: 'todos', label: 'Todos' },
   { key: 'aberto', label: 'Aberto' },
   { key: 'atendimento', label: 'Em atendimento' },
   { key: 'aguardando', label: 'Aguardando' },
   { key: 'escalonado', label: 'Escalonado' },
-  { key: 'resolvido', label: 'Resolvido' },
 ];
 
 function ModalChamado({ chamado, onFechar }: { chamado: Chamado; onFechar: () => void }) {
@@ -104,8 +107,14 @@ export default function ChamadosPage() {
   const [busca, setBusca] = useState('');
   const [aberto, setAberto] = useState<Chamado | null>(null);
 
+  /** Base da Central de Chamados: somente chamados em aberto. */
+  const chamadosEmAberto = useMemo(
+    () => CHAMADOS.filter((c) => STATUS_EM_ABERTO.includes(c.status)),
+    [],
+  );
+
   const lista = useMemo(() => {
-    return CHAMADOS
+    return chamadosEmAberto
       .filter((c) => filtro === 'todos' || c.status === filtro)
       .filter(
         (c) =>
@@ -114,21 +123,21 @@ export default function ChamadosPage() {
           c.categoria.toLowerCase().includes(busca.toLowerCase()) ||
           c.placa.toLowerCase().includes(busca.toLowerCase()),
       );
-  }, [filtro, busca]);
+  }, [chamadosEmAberto, filtro, busca]);
 
   const kpis = useMemo(() => {
-    const abertos = CHAMADOS.filter((c) => c.status !== 'resolvido');
-    const foraDoSla = CHAMADOS.filter((c) => c.slaMin < 0 && c.status !== 'resolvido').length;
-    const resolvidos = CHAMADOS.filter((c) => c.status === 'resolvido').length;
+    const abertos = chamadosEmAberto;
+    const foraDoSla = abertos.filter((c) => c.slaMin < 0).length;
+    const escalonados = abertos.filter((c) => c.status === 'escalonado').length;
     const mediaMin = abertos.length ? Math.round(abertos.reduce((s, c) => s + c.slaMin, 0) / abertos.length) : 0;
-    return { abertos: abertos.length, foraDoSla, resolvidos, mediaSla: slaInfo(mediaMin) };
-  }, []);
+    return { abertos: abertos.length, foraDoSla, escalonados, mediaSla: slaInfo(mediaMin) };
+  }, [chamadosEmAberto]);
 
   return (
     <div>
       <PageTitle
         titulo="Central de Chamados"
-        subtitulo="Suporte e SLA de atendimento para sua frota"
+        subtitulo="Chamados de manutenção em aberto · o histórico de finalizados fica em Serviços"
         novo
         acao={
           <Link href="/portal/agendamentos" className="btn-primary gap-1.5 text-[13px]">
@@ -147,7 +156,7 @@ export default function ChamadosPage() {
           cor="border-l-amber-500"
           detalheCor={kpis.mediaSla.cls}
         />
-        <KpiCard label="Resolvidos" valor={String(kpis.resolvidos)} detalhe="no período" cor="border-l-emerald-500" detalheCor="text-emerald-600" />
+        <KpiCard label="Escalonados" valor={String(kpis.escalonados)} detalhe="requerem acompanhamento" cor="border-l-rose-500" detalheCor="text-rose-600" />
       </KpiRow>
 
       <Toolbar>
@@ -174,7 +183,7 @@ export default function ChamadosPage() {
             <Th>Status</Th>
           </>
         }
-        footer={<TablePagination info={`Mostrando ${lista.length} de ${CHAMADOS.length} chamados`} />}
+        footer={<TablePagination info={`Mostrando ${lista.length} de ${chamadosEmAberto.length} chamados em aberto`} />}
       >
         {lista.map((c) => {
           const sla = slaInfo(c.slaMin);
