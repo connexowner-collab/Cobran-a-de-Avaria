@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, BarChart3, DollarSign, Headset, MapPin, Wrench, Boxes,
   Truck, Users, HelpCircle, ChevronDown, Search, Bell, LogOut, AlertTriangle,
-  AlertCircle, Info, ListFilter, PanelLeftClose, PanelLeftOpen,
+  AlertCircle, Info, ListFilter, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { NOTIFICACOES } from '@/lib/portalData';
 import { LogoVamos } from '@/components/portal/ui';
@@ -120,27 +120,20 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         <div className={`flex items-center pb-2 pt-5 ${colapsado ? 'justify-center px-2' : 'px-4'}`}>
           <Link
             href="/portal/inicio"
-            className={`flex items-center justify-center rounded-xl bg-white ${colapsado ? 'h-10 w-10 px-0' : 'flex-1 px-4 py-2.5'}`}
+            className={`flex items-center justify-center rounded-xl bg-white ${colapsado ? 'h-11 w-11 p-1.5' : 'flex-1 px-4 py-2.5'}`}
             title="Início"
           >
-            <LogoVamos altura={colapsado ? 22 : 32} />
+            {colapsado ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src="/grupo-vamos-squarelogo-1642582508943.webp"
+                alt="Grupo Vamos"
+                className="h-full w-full object-contain"
+              />
+            ) : (
+              <LogoVamos altura={32} />
+            )}
           </Link>
-        </div>
-
-        {/* Botão recolher/expandir */}
-        <div className={`px-3 pb-1 ${colapsado ? 'flex justify-center' : ''}`}>
-          <button
-            type="button"
-            onClick={toggleColapsado}
-            aria-label={colapsado ? 'Expandir menu' : 'Recolher menu'}
-            title={colapsado ? 'Expandir menu' : 'Recolher menu'}
-            className={`flex items-center gap-2 rounded-lg py-2 text-white/60 transition hover:bg-white/5 hover:text-white ${
-              colapsado ? 'w-10 justify-center' : 'w-full px-3'
-            }`}
-          >
-            {colapsado ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-            {!colapsado && <span className="text-[12px] font-semibold">Recolher menu</span>}
-          </button>
         </div>
 
         <nav className="flex-1 px-3 py-3">
@@ -220,6 +213,18 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </div>
         )}
       </aside>
+
+      {/* Botão recolher/expandir — pequeno, redondo, na divisa entre o menu e o conteúdo */}
+      <button
+        type="button"
+        onClick={toggleColapsado}
+        aria-label={colapsado ? 'Expandir menu' : 'Recolher menu'}
+        title={colapsado ? 'Expandir menu' : 'Recolher menu'}
+        style={{ left: colapsado ? '3.15rem' : '15.15rem' }}
+        className="fixed top-[4.5rem] z-40 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-[#0e2233] text-white/80 shadow-md transition-[left,background-color] duration-200 hover:bg-primary-600 hover:text-white"
+      >
+        {colapsado ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+      </button>
 
       {/* ===== Conteúdo ===== */}
       <div className={`flex min-h-screen flex-1 flex-col transition-[margin] duration-200 ${colapsado ? 'ml-16' : 'ml-64'}`}>
