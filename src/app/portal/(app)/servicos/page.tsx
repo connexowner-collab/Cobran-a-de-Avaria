@@ -34,24 +34,35 @@ const TIPOS_ORDEM: TipoServico[] = ['preventiva', 'corretiva', 'sinistro', 'outr
 
 interface AtendimentoServico {
   numero: string;
-  placa: string;
   status: 'finalizado' | 'aberta';
   motivo: string;
   tipo: TipoServico;
+  /** Ordem de Serviço vinculada ao atendimento. */
+  osNumero: string;
+  osMotivo: string;
+  osStatus: string;
+  placa: string;
+  /** Chassi OU nº de série identificam o ativo (sempre um dos dois). */
+  chassi: string;
+  numeroSerie: string;
+  marcaModelo: string;
   agendamento: string;
+  dataEntrada: string;
   previsao: string;
   saida: string;
+  dataConclusao: string;
   situacao: string;
 }
 
 const ATENDIMENTOS_SERVICO: AtendimentoServico[] = [
-  { numero: '972972', placa: 'JBL5B25', status: 'finalizado', motivo: 'PNEU', tipo: 'corretiva', agendamento: '25/06/2026', previsao: '—', saida: '13/07/2026', situacao: 'Rodando' },
-  { numero: '957964', placa: 'JBL5B27', status: 'finalizado', motivo: 'CORRETIVA', tipo: 'corretiva', agendamento: '15/11/2025', previsao: '—', saida: '21/11/2025', situacao: 'Rodando' },
-  { numero: '951200', placa: 'SHQ6B80', status: 'finalizado', motivo: 'REVISÃO PREVENTIVA', tipo: 'preventiva', agendamento: '10/05/2026', previsao: '—', saida: '12/05/2026', situacao: 'Rodando' },
-  { numero: '948877', placa: 'JBL5E88', status: 'finalizado', motivo: 'SINISTRO', tipo: 'sinistro', agendamento: '02/04/2026', previsao: '—', saida: '25/04/2026', situacao: 'Rodando' },
-  { numero: '2066903', placa: 'SIE8F02', status: 'aberta', motivo: 'DESMOBILIZAÇÃO', tipo: 'outros', agendamento: '02/07/2026', previsao: '20/07/2026', saida: '—', situacao: 'Em oficina' },
-  { numero: '2066895', placa: 'BXW9D72', status: 'aberta', motivo: 'AFERIÇÃO TACÓGRAFO', tipo: 'preventiva', agendamento: '08/07/2026', previsao: '18/07/2026', saida: '—', situacao: 'Aguardando peça' },
-  { numero: '2066894', placa: 'TXI3F16', status: 'aberta', motivo: 'PNEU', tipo: 'corretiva', agendamento: '10/07/2026', previsao: '17/07/2026', saida: '—', situacao: 'Em oficina' },
+  { numero: '972972', status: 'finalizado', motivo: 'PNEU', tipo: 'corretiva', osNumero: 'OS-338271', osMotivo: 'Troca de pneu dianteiro', osStatus: 'Finalizada', placa: 'JBL5B25', chassi: '9535V6TB0PR009032', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '25/06/2026', dataEntrada: '26/06/2026', previsao: '28/06/2026', saida: '13/07/2026', dataConclusao: '13/07/2026', situacao: 'Rodando' },
+  { numero: '957964', status: 'finalizado', motivo: 'CORRETIVA', tipo: 'corretiva', osNumero: 'OS-330145', osMotivo: 'Reparo sistema elétrico', osStatus: 'Finalizada', placa: 'JBL5B27', chassi: '9535V6TB0PR009127', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '15/11/2025', dataEntrada: '15/11/2025', previsao: '20/11/2025', saida: '21/11/2025', dataConclusao: '21/11/2025', situacao: 'Rodando' },
+  { numero: '951200', status: 'finalizado', motivo: 'REVISÃO PREVENTIVA', tipo: 'preventiva', osNumero: 'OS-325509', osMotivo: 'Revisão 130.000 km', osStatus: 'Finalizada', placa: 'SHQ6B80', chassi: '9535V6TB0PR009242', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '10/05/2026', dataEntrada: '10/05/2026', previsao: '12/05/2026', saida: '12/05/2026', dataConclusao: '12/05/2026', situacao: 'Rodando' },
+  { numero: '948877', status: 'finalizado', motivo: 'SINISTRO', tipo: 'sinistro', osNumero: 'OS-321880', osMotivo: 'Reparo de lataria (sinistro)', osStatus: 'Finalizada', placa: 'JBL5E88', chassi: 'YV2RT40A8LB456789', numeroSerie: '—', marcaModelo: 'Volvo FH 460', agendamento: '02/04/2026', dataEntrada: '03/04/2026', previsao: '20/04/2026', saida: '25/04/2026', dataConclusao: '25/04/2026', situacao: 'Rodando' },
+  { numero: '2066903', status: 'aberta', motivo: 'DESMOBILIZAÇÃO', tipo: 'outros', osNumero: 'OS-344012', osMotivo: 'Vistoria de desmobilização', osStatus: 'Em execução', placa: 'SIE8F02', chassi: '9BM958074HB778812', numeroSerie: '—', marcaModelo: 'Mercedes Accelo 815', agendamento: '02/07/2026', dataEntrada: '03/07/2026', previsao: '20/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
+  { numero: '2066895', status: 'aberta', motivo: 'AFERIÇÃO TACÓGRAFO', tipo: 'preventiva', osNumero: 'OS-343988', osMotivo: 'Aferição de tacógrafo', osStatus: 'Aguardando peça', placa: 'BXW9D72', chassi: '9535V6TB0PR010455', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '08/07/2026', dataEntrada: '09/07/2026', previsao: '18/07/2026', saida: '—', dataConclusao: '—', situacao: 'Aguardando peça' },
+  { numero: '2066894', status: 'aberta', motivo: 'PNEU', tipo: 'corretiva', osNumero: 'OS-343970', osMotivo: 'Troca de pneu (eixo traseiro)', osStatus: 'Em execução', placa: 'TXI3F16', chassi: '9BM958074HB779340', numeroSerie: '—', marcaModelo: 'Mercedes Accelo 815', agendamento: '10/07/2026', dataEntrada: '11/07/2026', previsao: '17/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
+  { numero: '2066880', status: 'aberta', motivo: 'CORRETIVA', tipo: 'corretiva', osNumero: 'OS-343900', osMotivo: 'Vazamento hidráulico', osStatus: 'Aberta', placa: '—', chassi: '—', numeroSerie: 'SN-JCB-099887', marcaModelo: 'JCB 3CX', agendamento: '12/07/2026', dataEntrada: '12/07/2026', previsao: '19/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
 ];
 
 /** Dias de imobilização + atraso frente à previsão (para abertos). */
@@ -66,6 +77,14 @@ function imobilizacao(a: AtendimentoServico): { dias: number | null; atrasoDias:
     dias: ag ? diasEntre(ag, HOJE) : null,
     atrasoDias: prev ? Math.max(0, diasEntre(prev, HOJE)) : 0,
   };
+}
+
+/** Dias em manutenção: da data de entrada até a saída (ou até hoje, se ainda em aberto). */
+function diasEmManutencao(a: AtendimentoServico): number | null {
+  const entrada = parseBR(a.dataEntrada);
+  if (!entrada) return null;
+  const fim = parseBR(a.saida) ?? HOJE;
+  return Math.max(0, diasEntre(entrada, fim));
 }
 
 /* Evolução mensal por tipo (empilhado). */
@@ -99,6 +118,7 @@ function ModalDetalheAtendimento({
   onFechar: () => void;
 }) {
   const imob = imobilizacao(atendimento);
+  const dias = diasEmManutencao(atendimento);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
       <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -115,13 +135,20 @@ function ModalDetalheAtendimento({
         {tipo === 'info' && (
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
             <div><dt className="text-xs font-bold uppercase text-slate-400">Placa</dt><dd className="font-mono font-semibold">{atendimento.placa}</dd></div>
+            <div><dt className="text-xs font-bold uppercase text-slate-400">{atendimento.numeroSerie !== '—' ? 'Nº de Série' : 'Chassi'}</dt><dd className="font-mono font-semibold">{atendimento.numeroSerie !== '—' ? atendimento.numeroSerie : atendimento.chassi}</dd></div>
+            <div><dt className="text-xs font-bold uppercase text-slate-400">Marca/Modelo</dt><dd className="font-semibold">{atendimento.marcaModelo}</dd></div>
             <div><dt className="text-xs font-bold uppercase text-slate-400">Tipo</dt><dd className="font-semibold">{TIPO_INFO[atendimento.tipo].label}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Motivo</dt><dd className="font-semibold">{atendimento.motivo}</dd></div>
+            <div><dt className="text-xs font-bold uppercase text-slate-400">Motivo do atendimento</dt><dd className="font-semibold">{atendimento.motivo}</dd></div>
             <div><dt className="text-xs font-bold uppercase text-slate-400">Situação do veículo</dt><dd>{atendimento.situacao}</dd></div>
+            <div><dt className="text-xs font-bold uppercase text-slate-400">Nº da OS</dt><dd className="font-mono font-semibold">{atendimento.osNumero}</dd></div>
+            <div><dt className="text-xs font-bold uppercase text-slate-400">Status da OS</dt><dd className="font-semibold">{atendimento.osStatus}</dd></div>
+            <div className="col-span-2"><dt className="text-xs font-bold uppercase text-slate-400">Motivo da OS</dt><dd>{atendimento.osMotivo}</dd></div>
             <div><dt className="text-xs font-bold uppercase text-slate-400">Data de agendamento</dt><dd className="font-mono">{atendimento.agendamento}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Data de previsão</dt><dd className="font-mono">{atendimento.previsao}</dd></div>
+            <div><dt className="text-xs font-bold uppercase text-slate-400">Data de entrada</dt><dd className="font-mono">{atendimento.dataEntrada}</dd></div>
+            <div><dt className="text-xs font-bold uppercase text-slate-400">Previsão de saída</dt><dd className="font-mono">{atendimento.previsao}</dd></div>
             <div><dt className="text-xs font-bold uppercase text-slate-400">Data de saída</dt><dd className="font-mono">{atendimento.saida}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Imobilização</dt><dd className="font-semibold">{imob.dias != null ? `${imob.dias} dias` : '—'}</dd></div>
+            <div><dt className="text-xs font-bold uppercase text-slate-400">Data de conclusão</dt><dd className="font-mono">{atendimento.dataConclusao}</dd></div>
+            <div><dt className="text-xs font-bold uppercase text-slate-400">Dias em manutenção</dt><dd className="font-semibold">{dias != null ? `${dias} dias${atendimento.status === 'aberta' ? ' (em curso)' : ''}` : '—'}</dd></div>
           </dl>
         )}
 
@@ -385,8 +412,8 @@ export default function ServicosPage() {
 
       {/* Relatório de veículos */}
       <SectionHeader
-        titulo="Relatório de Veículos"
-        subtitulo="Listagem de veículos que passaram por serviços"
+        titulo="Relatório de Serviços"
+        subtitulo="Atendimentos e ordens de serviço da frota"
         className="mb-3"
         acao={
           <div className="flex items-center gap-2.5">
@@ -414,58 +441,69 @@ export default function ServicosPage() {
       </Toolbar>
 
       <DataTable
-        colSpan={10}
+        colSpan={18}
         vazio={linhas.length === 0}
         vazioLabel="Nenhum atendimento encontrado com os filtros atuais."
         head={
           <>
-            <Th>Nº de atendimento</Th>
-            <Th>Placa</Th>
-            <Th>Status</Th>
-            <Th>Motivo</Th>
-            <Th>Tipo</Th>
-            <Th>Agendamento</Th>
-            <Th>Previsão</Th>
-            <Th>Saída</Th>
-            <Th>Imobilização</Th>
-            <Th>Mais detalhes</Th>
+            <Th className="whitespace-nowrap">Nº de atendimento</Th>
+            <Th className="whitespace-nowrap">Status do atendimento</Th>
+            <Th className="whitespace-nowrap">Motivo do atendimento</Th>
+            <Th className="whitespace-nowrap">Nº da OS</Th>
+            <Th className="whitespace-nowrap">Motivo da OS</Th>
+            <Th className="whitespace-nowrap">Status da OS</Th>
+            <Th className="whitespace-nowrap">Placa</Th>
+            <Th className="whitespace-nowrap">Chassi</Th>
+            <Th className="whitespace-nowrap">Nº de Série</Th>
+            <Th className="whitespace-nowrap">Marca/Modelo</Th>
+            <Th className="whitespace-nowrap">Agendamento</Th>
+            <Th className="whitespace-nowrap">Entrada</Th>
+            <Th className="whitespace-nowrap">Previsão de Saída</Th>
+            <Th className="whitespace-nowrap">Saída</Th>
+            <Th className="whitespace-nowrap">Conclusão</Th>
+            <Th className="whitespace-nowrap">Dias em Manutenção</Th>
+            <Th className="whitespace-nowrap">Situação do Veículo</Th>
+            <Th className="whitespace-nowrap">Mais detalhes</Th>
           </>
         }
         footer={<TablePagination info={`Mostrando de 1 até ${linhas.length} de 202.638 registros`} />}
       >
         {linhas.map((a) => {
-              const imob = imobilizacao(a);
-              const atrasado = imob.atrasoDias > 0;
+              const dias = diasEmManutencao(a);
+              const emAberto = a.status === 'aberta';
               return (
                 <tr key={a.numero} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                  <td className="px-4 py-3.5 font-mono font-semibold text-slate-800">{a.numero}</td>
-                  <td className="px-4 py-3.5 font-mono text-xs">{a.placa}</td>
-                  <td className="px-4 py-3.5">
+                  <td className="whitespace-nowrap px-4 py-3.5 font-mono font-semibold text-slate-800">{a.numero}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5">
                     <StatusBadge
                       status={a.status === 'finalizado' ? 'resolvido' : 'aberto'}
-                      label={a.status === 'finalizado' ? 'Atendimento Finalizado' : 'Aberta'}
+                      label={a.status === 'finalizado' ? 'Finalizado' : 'Em aberto'}
                     />
                   </td>
-                  <td className="px-4 py-3.5 text-xs font-semibold">{a.motivo}</td>
-                  <td className="px-4 py-3.5">
-                    <span className="flex items-center gap-1.5 text-xs">
-                      <i className={`h-2 w-2 rounded-full ${TIPO_INFO[a.tipo].dot}`} />
-                      {TIPO_INFO[a.tipo].label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 font-mono text-xs">{a.agendamento}</td>
-                  <td className="px-4 py-3.5 font-mono text-xs">{a.previsao}</td>
-                  <td className="px-4 py-3.5 font-mono text-xs">{a.saida}</td>
-                  <td className="px-4 py-3.5">
-                    {imob.dias != null ? (
-                      <span className={`font-mono text-xs font-semibold ${atrasado ? 'text-primary-700' : 'text-slate-600'}`}>
-                        {imob.dias}d{atrasado ? ` · atraso ${imob.atrasoDias}d` : ''}
+                  <td className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold">{a.motivo}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs text-slate-600">{a.osNumero}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 text-xs">{a.osMotivo}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-slate-600">{a.osStatus}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.placa}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs text-slate-600">{a.chassi}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs text-slate-600">{a.numeroSerie}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 text-xs">{a.marcaModelo}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.agendamento}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.dataEntrada}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.previsao}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.saida}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.dataConclusao}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5">
+                    {dias != null ? (
+                      <span className={`font-mono text-xs font-semibold ${emAberto ? 'text-primary-700' : 'text-slate-600'}`}>
+                        {dias}d{emAberto ? ' · em curso' : ''}
                       </span>
                     ) : (
                       <span className="text-xs text-slate-400">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className="whitespace-nowrap px-4 py-3.5 text-xs text-slate-500">{a.situacao}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5">
                     <div className="flex gap-1">
                       <button
                         title="Informação"
