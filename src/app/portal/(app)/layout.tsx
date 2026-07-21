@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, BarChart3, DollarSign, Headset, MapPin, Wrench, Boxes,
   Truck, Users, HelpCircle, ChevronDown, Search, Bell, LogOut, AlertTriangle,
-  AlertCircle, Info, ListFilter,
+  AlertCircle, Info, ListFilter, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import { NOTIFICACOES } from '@/lib/portalData';
 import { LogoVamos } from '@/components/portal/ui';
@@ -79,6 +79,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const router = useRouter();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [colapsado, setColapsado] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -89,6 +90,21 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
+  // Restaura a preferência de menu recolhido.
+  useEffect(() => {
+    try {
+      setColapsado(localStorage.getItem('portal_sidebar_colapsado') === '1');
+    } catch { /* ignora */ }
+  }, []);
+
+  const toggleColapsado = () => {
+    setColapsado((v) => {
+      const novo = !v;
+      try { localStorage.setItem('portal_sidebar_colapsado', novo ? '1' : '0'); } catch { /* ignora */ }
+      return novo;
+    });
+  };
+
   const isActive = (href: string) => pathname === href.split('?')[0];
   const isBranchActive = (item: NavItem) =>
     isActive(item.href) || (item.children ?? []).some((c) => isActive(c.href));
@@ -96,26 +112,57 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   return (
     <div className="flex min-h-screen bg-slate-100">
       {/* ===== Sidebar ===== */}
-      <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col overflow-y-auto bg-[#0e2233] text-white">
-        <div className="px-4 pb-2 pt-5">
-          <Link href="/portal/inicio" className="flex items-center justify-center rounded-xl bg-white px-4 py-2.5">
-            <LogoVamos altura={32} />
+      <aside
+        className={`fixed inset-y-0 left-0 z-30 flex flex-col overflow-y-auto bg-[#0e2233] text-white transition-[width] duration-200 ${
+          colapsado ? 'w-16' : 'w-64'
+        }`}
+      >
+        <div className={`flex items-center pb-2 pt-5 ${colapsado ? 'justify-center px-2' : 'px-4'}`}>
+          <Link
+            href="/portal/inicio"
+            className={`flex items-center justify-center rounded-xl bg-white ${colapsado ? 'h-10 w-10 px-0' : 'flex-1 px-4 py-2.5'}`}
+            title="Início"
+          >
+            <LogoVamos altura={colapsado ? 22 : 32} />
           </Link>
+        </div>
+
+        {/* Botão recolher/expandir */}
+        <div className={`px-3 pb-1 ${colapsado ? 'flex justify-center' : ''}`}>
+          <button
+            type="button"
+            onClick={toggleColapsado}
+            aria-label={colapsado ? 'Expandir menu' : 'Recolher menu'}
+            title={colapsado ? 'Expandir menu' : 'Recolher menu'}
+            className={`flex items-center gap-2 rounded-lg py-2 text-white/60 transition hover:bg-white/5 hover:text-white ${
+              colapsado ? 'w-10 justify-center' : 'w-full px-3'
+            }`}
+          >
+            {colapsado ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            {!colapsado && <span className="text-[12px] font-semibold">Recolher menu</span>}
+          </button>
         </div>
 
         <nav className="flex-1 px-3 py-3">
           {NAV.map(({ grupo, itens }) => (
             <div key={grupo} className="mb-4">
-              <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">
-                {grupo}
-              </p>
+              {colapsado ? (
+                <div className="mx-2 mb-2 border-t border-white/10" />
+              ) : (
+                <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-white/40">
+                  {grupo}
+                </p>
+              )}
               {itens.map((item) => {
                 const branchActive = isBranchActive(item);
                 return (
                   <div key={item.label}>
                     <Link
                       href={item.href}
-                      className={`group relative mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-semibold transition ${
+                      title={colapsado ? item.label : undefined}
+                      className={`group relative mb-0.5 flex items-center gap-3 rounded-lg py-2.5 text-[13.5px] font-semibold transition ${
+                        colapsado ? 'justify-center px-0' : 'px-3'
+                      } ${
                         branchActive
                           ? 'bg-white/10 text-white'
                           : 'text-white/70 hover:bg-white/5 hover:text-white'
@@ -124,21 +171,26 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                       {branchActive && (
                         <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-primary-500" />
                       )}
-                      <span className="opacity-90">{item.icon}</span>
-                      <span className="flex-1">{item.label}</span>
-                      {item.novo && (
+                      <span className="relative opacity-90">
+                        {item.icon}
+                        {colapsado && item.novo && (
+                          <span className="absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full bg-primary-500" />
+                        )}
+                      </span>
+                      {!colapsado && <span className="flex-1">{item.label}</span>}
+                      {!colapsado && item.novo && (
                         <span className="rounded-full bg-primary-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide">
                           NOVO
                         </span>
                       )}
-                      {item.children && (
+                      {!colapsado && item.children && (
                         <ChevronDown
                           size={14}
                           className={`transition-transform ${branchActive ? 'rotate-180' : ''}`}
                         />
                       )}
                     </Link>
-                    {item.children && branchActive && (
+                    {!colapsado && item.children && branchActive && (
                       <div className="mb-1 ml-[26px] border-l border-white/10 pl-3">
                         {item.children.map((sub) => (
                           <Link
@@ -162,13 +214,15 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           ))}
         </nav>
 
-        <div className="border-t border-white/10 px-6 py-4 text-[11px] text-white/40">
-          Grupo JSL · Vamos Locação
-        </div>
+        {!colapsado && (
+          <div className="border-t border-white/10 px-6 py-4 text-[11px] text-white/40">
+            Grupo JSL · Vamos Locação
+          </div>
+        )}
       </aside>
 
       {/* ===== Conteúdo ===== */}
-      <div className="ml-64 flex min-h-screen flex-1 flex-col">
+      <div className={`flex min-h-screen flex-1 flex-col transition-[margin] duration-200 ${colapsado ? 'ml-16' : 'ml-64'}`}>
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-6">
           <div className="flex w-full max-w-md items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
             <Search size={15} className="text-slate-400" />

@@ -5,7 +5,7 @@ import { Download } from 'lucide-react';
 import { VEICULOS } from '@/lib/portalData';
 import {
   PageTitle, KpiCard, KpiRow, BarraProgresso, FilterChip, Toolbar, ToolbarSpacer,
-  SearchInput, DataTable, Th, TablePagination,
+  SearchInput, DataTable, Th, TablePagination, SectionCard,
 } from '@/components/portal/ui';
 
 const FROTA_TOTAL = 42;
@@ -66,37 +66,50 @@ export default function ModelosPage() {
         ))}
       </Toolbar>
 
-      {/* Cards por modelo — clicáveis para filtrar a listagem abaixo */}
-      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {modelosVisiveis.map((m) => {
-          const pct = Math.round((m.qtd / FROTA_TOTAL) * 100);
-          const ativo = modeloAtivo === m.nome;
-          return (
-            <button
-              key={m.nome}
-              onClick={() => setModeloAtivo(ativo ? null : m.nome)}
-              className={`card p-5 text-left transition ${ativo ? 'border-primary-500 ring-1 ring-primary-500' : 'hover:border-slate-300'}`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-bold text-slate-800">{m.nome}</p>
-                  <p className="text-xs text-slate-500">{m.categoria}</p>
-                </div>
-                <span className="rounded-md bg-slate-100 px-2 py-1 font-mono text-[10px] font-bold text-slate-500">
-                  ano médio {m.anoMedio}
-                </span>
-              </div>
-              <p className="mt-4 text-2xl font-extrabold text-slate-900">
-                {m.qtd}
-                <span className="ml-1.5 text-xs font-semibold text-slate-400">unidades · {pct}% da frota</span>
-              </p>
-              <div className="mt-2">
-                <BarraProgresso pct={pct} />
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      {/* Composição por modelo — tabela compacta que escala com muitas variações.
+          Cada linha é clicável para filtrar a listagem de veículos abaixo. */}
+      <SectionCard titulo="Composição por modelo" subtitulo="Clique em um modelo para filtrar os veículos" className="mb-6 !p-0 overflow-hidden">
+        <div className="max-h-[420px] overflow-y-auto">
+          <table className="w-full text-left text-[13px]">
+            <thead className="sticky top-0 z-10 bg-slate-50">
+              <tr className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
+                <Th>Modelo</Th>
+                <Th className="hidden sm:table-cell">Categoria</Th>
+                <Th className="hidden md:table-cell text-center">Ano médio</Th>
+                <Th className="text-right">Unidades</Th>
+                <Th className="w-[34%] min-w-[9rem]">% da frota</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {modelosVisiveis.map((m) => {
+                const pct = Math.round((m.qtd / FROTA_TOTAL) * 100);
+                const ativo = modeloAtivo === m.nome;
+                return (
+                  <tr
+                    key={m.nome}
+                    onClick={() => setModeloAtivo(ativo ? null : m.nome)}
+                    className={`cursor-pointer border-b border-slate-100 last:border-0 transition ${ativo ? 'bg-primary-50' : 'hover:bg-slate-50'}`}
+                  >
+                    <td className="px-4 py-3">
+                      <span className={`font-semibold ${ativo ? 'text-primary-700' : 'text-slate-800'}`}>{m.nome}</span>
+                      <span className="mt-0.5 block text-xs text-slate-500 sm:hidden">{m.categoria}</span>
+                    </td>
+                    <td className="hidden px-4 py-3 text-slate-500 sm:table-cell">{m.categoria}</td>
+                    <td className="hidden px-4 py-3 text-center font-mono text-xs text-slate-500 md:table-cell">{m.anoMedio}</td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-900">{m.qtd}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1"><BarraProgresso pct={pct} cor={ativo ? 'bg-primary-600' : 'bg-[#0e2233]'} /></div>
+                        <span className="w-9 shrink-0 text-right font-mono text-xs font-semibold text-slate-500">{pct}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </SectionCard>
 
       {/* Listagem individual de veículos */}
       <Toolbar>
