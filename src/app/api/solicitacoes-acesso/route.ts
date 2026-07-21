@@ -4,6 +4,7 @@ import {
   getSolicitacoesByCpf,
   criarSolicitacao,
   motivoBloqueioSolicitacao,
+  reconciliarSolicitacoesConcluidas,
   reloadStoreFromFile,
 } from '@/lib/store';
 
@@ -17,6 +18,8 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     reloadStoreFromFile();
+    // Concilia: solicitações cujo CPF/e-mail já têm acesso no portal viram "concluido".
+    reconciliarSolicitacoesConcluidas();
     const cpf = request.nextUrl.searchParams.get('cpf');
     if (cpf !== null) {
       return NextResponse.json({ items: getSolicitacoesByCpf(cpf) });

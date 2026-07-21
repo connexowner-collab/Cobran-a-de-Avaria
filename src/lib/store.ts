@@ -713,6 +713,37 @@ export function getSolicitacoesByCpf(cpf: string): SolicitacaoAcesso[] {
     .sort((a, b) => (b.criadoEm > a.criadoEm ? 1 : -1));
 }
 
+/**
+ * Verifica se já existe um acesso (usuário) no portal para o CPF ou e-mail informado.
+ */
+export function existeAcessoParaCpfOuEmail(cpf: string, email: string): boolean {
+  const cpfDig = soDigitos(cpf);
+  const mail = emailNorm(email);
+  return usuarios.some(
+    (u) =>
+      (cpfDig.length === 11 && u.cpf && soDigitos(u.cpf) === cpfDig) ||
+      (!!mail && emailNorm(u.email) === mail)
+  );
+}
+
+/**
+ * Concilia os status: qualquer solicitação em aberto cujo CPF ou e-mail já possua
+ * um acesso cadastrado no portal passa para "concluido". Cobre acessos criados por
+ * fora do fluxo ou usuários que já existiam antes da solicitação. Persiste se mudar.
+ */
+export function reconciliarSolicitacoesConcluidas(): void {
+  let mudou = false;
+  const now = new Date().toISOString();
+  solicitacoes.forEach((s, i) => {
+    if (s.status === 'concluido') return;
+    if (existeAcessoParaCpfOuEmail(s.cpf, s.emailCorporativo)) {
+      solicitacoes[i] = { ...s, status: 'concluido', atualizadoEm: now };
+      mudou = true;
+    }
+  });
+  if (mudou) saveToFile(usuarios, grupos, perfis);
+}
+
 export type MotivoBloqueioSolicitacao = 'cpf' | 'email' | null;
 
 /**
