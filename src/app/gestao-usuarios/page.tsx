@@ -3,22 +3,28 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Pencil, Trash2, Users, Building2, Search, Inbox, UserPlus } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Building2, Search, Inbox, UserPlus, LayoutDashboard, ShieldAlert } from 'lucide-react';
 import type { Usuario, GrupoListItem, Grupo, Perfil } from '@/types';
 import type { Cliente, SolicitacaoAcesso, StatusSolicitacaoAcesso } from '@/types';
 import { STATUS_SOLICITACAO_LABEL } from '@/types';
 import ModalNovoGrupo from '@/components/ModalNovoGrupo';
+import DashboardAcessos from '@/components/DashboardAcessos';
 import DateRangeFilter, { isDateInRange } from '@/components/DateRangeFilter';
 import type { DateRange } from 'react-day-picker';
 
-type Aba = 'usuarios' | 'clientes' | 'solicitacoes';
+type Aba = 'solicitacoes' | 'dashboard' | 'usuarios' | 'clientes';
+
+function abaInicial(param: string | null): Aba {
+  if (param === 'clientes') return 'clientes';
+  if (param === 'usuarios') return 'usuarios';
+  if (param === 'dashboard') return 'dashboard';
+  return 'solicitacoes';
+}
 
 function GestaoUsuariosContent() {
   const searchParams = useSearchParams();
   const abaParam = searchParams.get('aba');
-  const [aba, setAba] = useState<Aba>(
-    abaParam === 'clientes' ? 'clientes' : abaParam === 'solicitacoes' ? 'solicitacoes' : 'usuarios'
-  );
+  const [aba, setAba] = useState<Aba>(abaInicial(abaParam));
 
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -273,8 +279,7 @@ function GestaoUsuariosContent() {
   }, [aba]);
 
   useEffect(() => {
-    if (abaParam === 'clientes') setAba('clientes');
-    else if (abaParam === 'solicitacoes') setAba('solicitacoes');
+    if (abaParam) setAba(abaInicial(abaParam));
   }, [abaParam]);
 
   const getGrupoOuClienteNome = (u: Usuario) => {
@@ -327,7 +332,36 @@ function GestaoUsuariosContent() {
     <div className="space-y-6">
       {/* Abas */}
       <div className="border-b border-slate-200">
-        <nav className="flex gap-1" aria-label="Abas">
+        <nav className="flex flex-wrap gap-1" aria-label="Abas">
+          <button
+            type="button"
+            onClick={() => setAba('solicitacoes')}
+            className={`inline-flex items-center gap-2 rounded-t-lg border border-b-0 px-4 py-2.5 text-sm font-medium transition ${
+              aba === 'solicitacoes'
+                ? 'border-slate-200 bg-white text-slate-900 shadow-sm'
+                : 'border-transparent bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <Inbox className="h-4 w-4" />
+            Solicitação de Acessos
+            {solicitacoes.some((s) => s.status === 'pendente') && (
+              <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-bold text-white">
+                {solicitacoes.filter((s) => s.status === 'pendente').length}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setAba('dashboard')}
+            className={`inline-flex items-center gap-2 rounded-t-lg border border-b-0 px-4 py-2.5 text-sm font-medium transition ${
+              aba === 'dashboard'
+                ? 'border-slate-200 bg-white text-slate-900 shadow-sm'
+                : 'border-transparent bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            Dashboard
+          </button>
           <button
             type="button"
             onClick={() => setAba('usuarios')}
@@ -352,23 +386,6 @@ function GestaoUsuariosContent() {
             <Building2 className="h-4 w-4" />
             Grupo de cliente
           </button>
-          <button
-            type="button"
-            onClick={() => setAba('solicitacoes')}
-            className={`inline-flex items-center gap-2 rounded-t-lg border border-b-0 px-4 py-2.5 text-sm font-medium transition ${
-              aba === 'solicitacoes'
-                ? 'border-slate-200 bg-white text-slate-900 shadow-sm'
-                : 'border-transparent bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            }`}
-          >
-            <Inbox className="h-4 w-4" />
-            Solicitação de Acessos
-            {solicitacoes.some((s) => s.status === 'pendente') && (
-              <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-bold text-white">
-                {solicitacoes.filter((s) => s.status === 'pendente').length}
-              </span>
-            )}
-          </button>
         </nav>
       </div>
 
@@ -382,6 +399,8 @@ function GestaoUsuariosContent() {
         </div>
       )}
 
+      {aba === 'dashboard' && <DashboardAcessos />}
+
       {aba === 'usuarios' && (
         <>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -390,6 +409,17 @@ function GestaoUsuariosContent() {
               <Plus className="h-4 w-4" />
               Novo usuário
             </Link>
+          </div>
+
+          <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-[13px] text-amber-900">
+            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <span>
+              Gestão automática: usuários de clientes com mais de <b>90 dias sem acessar</b> o portal são
+              bloqueados automaticamente.{' '}
+              <button type="button" onClick={() => setAba('dashboard')} className="font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700">
+                Ver Dashboard de acessos
+              </button>.
+            </span>
           </div>
 
           <div className="table-container" aria-busy={loading || !inicialUsuariosCarregado}>
