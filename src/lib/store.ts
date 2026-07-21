@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import type { Cliente, Usuario, PermissaoUsuario, Contrato, Ativo, ClienteContratoOption, ResponsavelOption, GrupoListItem, Grupo, Divisao, Perfil, SolicitacaoAcesso, SolicitacaoAcessoInput, StatusSolicitacaoAcesso } from '@/types';
+import { ACESSOS_CLIENTES, usuariosDoCliente } from '@/lib/acessosData';
 
 const STORE_DIR = path.join(process.cwd(), '.data');
 const STORE_FILE = path.join(STORE_DIR, 'store.json');
@@ -242,75 +243,60 @@ const perfis: Perfil[] = [
   },
 ];
 
-const usuarios: Usuario[] = [
-  {
-    id: 'u1',
-    nome: 'João Silva',
-    email: 'joao.silva@alpha.com',
-    ativo: true,
-    clienteId: '1',
-    grupoId: 'grp-1',
-    criadoEm: '2024-01-15T10:00:00Z',
-    atualizadoEm: '2024-03-01T14:30:00Z',
-    ultimoAcessoEm: '2024-03-10T09:15:00Z',
-    permissoes: {
-      faturamento_acesso: true,
-      avaria_acesso: true,
-      relatorios_distribuicao_geografica: true,
-      relatorios_manutencao: true,
-      relatorios_modelos: true,
-      relatorios_servicos: true,
-    },
-  },
-  {
-    id: 'u2',
-    nome: 'Maria Santos',
-    email: 'maria.santos@alpha.com',
-    ativo: true,
-    clienteId: '1',
-    grupoId: 'grp-1',
-    criadoEm: '2024-02-01T09:00:00Z',
-    atualizadoEm: '2024-03-05T11:00:00Z',
-    ultimoAcessoEm: '2024-03-08T16:45:00Z',
-    permissoes: {
-      faturamento_acesso: true,
-      avaria_acesso: true,
-      vamoscontrole_acesso: true,
-      relatorios_distribuicao_geografica: true,
-      relatorios_manutencao: true,
-      relatorios_modelos: true,
-      relatorios_servicos: true,
-      agendamento_agendar: true,
-      agendamento_relatorio: true,
-      agendamento_lote: true,
-      multas_acesso: true,
-      crlv_acesso: true,
-      comunicados_acesso: true,
-      importbi_acesso: true,
-      logs_acesso: true,
-      faq_acesso: true,
-    },
-  },
-  {
-    id: 'u3',
-    nome: 'Pedro Oliveira',
-    email: 'pedro@beta.com',
-    ativo: true,
-    clienteId: '2',
-    grupoId: 'grp-2',
-    criadoEm: '2024-02-10T08:00:00Z',
-    atualizadoEm: '2024-02-10T08:00:00Z',
-    ultimoAcessoEm: null,
-    permissoes: {
-      faturamento_acesso: true,
-      avaria_acesso: true,
-      relatorios_distribuicao_geografica: true,
-      relatorios_manutencao: true,
-      relatorios_modelos: true,
-      relatorios_servicos: true,
-    },
-  },
-];
+function perfilIdPorNome(nome: string): string {
+  if (nome === 'Administrador') return 'perf-1';
+  if (nome === 'Operador') return 'perf-2';
+  return 'perf-3';
+}
+
+/** CPF determinístico (apenas para o protótipo) a partir de um índice. */
+function cpfDeterministico(seed: number): string {
+  const base = String((seed * 7654321 + 1234567) % 100_000_000_000).padStart(11, '0').slice(0, 11);
+  return `${base.slice(0, 3)}.${base.slice(3, 6)}.${base.slice(6, 9)}-${base.slice(9, 11)}`;
+}
+
+/**
+ * Gera os usuários do seed a partir dos clientes do Dashboard (ACESSOS_CLIENTES),
+ * mantendo UMA fonte de verdade: os mesmos clientes/usuários aparecem no Dashboard
+ * e na aba Usuários. Datas de último acesso são relativas a "hoje" e o bloqueio
+ * automático (>90 dias sem acesso) é aplicado via ativo=false.
+ */
+function gerarUsuariosSeed(): Usuario[] {
+  const DIA = 86_400_000;
+  const agora = Date.now();
+  const lista: Usuario[] = [];
+  let n = 0;
+  for (const cliente of ACESSOS_CLIENTES) {
+    const grupoId = clienteIdToGrupoId[cliente.clienteId];
+    for (const u of usuariosDoCliente(cliente)) {
+      n++;
+      const bloqueado = u.diasSemAcesso === null
+        ? cliente.criadoDiasAtras >= 90
+        : u.diasSemAcesso >= 90;
+      const perfilId = perfilIdPorNome(u.perfil);
+      const perfil = perfis.find((p) => p.id === perfilId);
+      const ultimoAcessoEm = u.diasSemAcesso === null ? null : new Date(agora - u.diasSemAcesso * DIA).toISOString();
+      const criadoEm = new Date(agora - cliente.criadoDiasAtras * DIA).toISOString();
+      lista.push({
+        id: `u${n}`,
+        nome: u.nome,
+        email: u.email,
+        ativo: !bloqueado,
+        clienteId: cliente.clienteId,
+        cpf: cpfDeterministico(n),
+        permissoes: perfil ? { ...perfil.permissoes } : {},
+        criadoEm,
+        atualizadoEm: criadoEm,
+        ultimoAcessoEm,
+        perfilId,
+        ...(grupoId && { grupoId, grupoIds: [grupoId] }),
+      });
+    }
+  }
+  return lista;
+}
+
+const usuarios: Usuario[] = gerarUsuariosSeed();
 
 /** Solicitações de acesso ao portal (chamados do botão "Solicite seu cadastro"). Sem seed. */
 const solicitacoes: SolicitacaoAcesso[] = [];
