@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
   try {
     reloadStoreFromFile();
     const body = await request.json();
-    const { nome, email, ativo = true, clienteId, grupoId, grupoIds, divisaoIds, perfilId, permissoes = {} } = body;
+    const { nome, email, ativo = true, clienteId, cpf, grupoId, grupoIds, divisaoIds, perfilId, permissoes = {} } = body;
     if (!nome || !email) {
       return NextResponse.json(
         { error: 'Campos obrigatórios: nome e email' },
@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
       email: emailNorm,
       ativo: Boolean(ativo),
       clienteId: clienteId || '',
+      ...(cpf && { cpf: String(cpf) }),
       ...(ids.length > 0 && { grupoIds: ids }),
       ...(divIds.length > 0 && { divisaoIds: divIds }),
       ...(perfilId && { perfilId: String(perfilId) }),

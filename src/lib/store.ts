@@ -1,15 +1,15 @@
 import fs from 'fs';
 import path from 'path';
-import type { Cliente, Usuario, PermissaoUsuario, Contrato, Ativo, ClienteContratoOption, ResponsavelOption, GrupoListItem, Grupo, Divisao, Perfil } from '@/types';
+import type { Cliente, Usuario, PermissaoUsuario, Contrato, Ativo, ClienteContratoOption, ResponsavelOption, GrupoListItem, Grupo, Divisao, Perfil, SolicitacaoAcesso, SolicitacaoAcessoInput, StatusSolicitacaoAcesso } from '@/types';
 
 const STORE_DIR = path.join(process.cwd(), '.data');
 const STORE_FILE = path.join(STORE_DIR, 'store.json');
 
-function loadFromFile(usuariosRef: Usuario[], gruposRef: Grupo[], perfisRef: Perfil[]): void {
+function loadFromFile(usuariosRef: Usuario[], gruposRef: Grupo[], perfisRef: Perfil[], solicitacoesRef: SolicitacaoAcesso[]): void {
   try {
     if (!fs.existsSync(STORE_FILE)) return;
     const raw = fs.readFileSync(STORE_FILE, 'utf-8');
-    const data = JSON.parse(raw) as { usuarios?: Usuario[]; grupos?: Grupo[]; perfis?: Perfil[] };
+    const data = JSON.parse(raw) as { usuarios?: Usuario[]; grupos?: Grupo[]; perfis?: Perfil[]; solicitacoes?: SolicitacaoAcesso[] };
     // Só sobrescreve se o arquivo tiver dados; arquivo vazio não apaga os dados em memória (seed)
     if (Array.isArray(data.usuarios) && data.usuarios.length > 0) {
       usuariosRef.length = 0;
@@ -23,14 +23,19 @@ function loadFromFile(usuariosRef: Usuario[], gruposRef: Grupo[], perfisRef: Per
       perfisRef.length = 0;
       data.perfis.forEach((p) => perfisRef.push(p));
     }
+    // Solicitações: sempre reflete o arquivo (inclusive lista vazia), pois não há seed.
+    if (Array.isArray(data.solicitacoes)) {
+      solicitacoesRef.length = 0;
+      data.solicitacoes.forEach((s) => solicitacoesRef.push(s));
+    }
   } catch {
     // Ignora erro de leitura (arquivo corrompido ou inexistente); mantém dados em memória
   }
 }
 
-/** Recarrega usuários, grupos e perfis do arquivo (garante dados atualizados ao ler). */
+/** Recarrega usuários, grupos, perfis e solicitações do arquivo (garante dados atualizados ao ler). */
 export function reloadStoreFromFile(): void {
-  loadFromFile(usuarios, grupos, perfis);
+  loadFromFile(usuarios, grupos, perfis, solicitacoes);
 }
 
 /** Persiste os dados atuais em memória no arquivo (útil para restaurar seed ou backup). */
@@ -40,7 +45,7 @@ function persistSeedIfNoFile(): void {
     if (!fs.existsSync(STORE_DIR)) {
       fs.mkdirSync(STORE_DIR, { recursive: true });
     }
-    const data = { usuarios, grupos, perfis };
+    const data = { usuarios, grupos, perfis, solicitacoes };
     fs.writeFileSync(STORE_FILE, JSON.stringify(data, null, 2), 'utf-8');
   } catch {
     // Ignora falha ao criar .data (ex.: permissão)
@@ -52,7 +57,7 @@ function saveToFile(usuariosRef: Usuario[], gruposRef: Grupo[], perfisRef: Perfi
     if (!fs.existsSync(STORE_DIR)) {
       fs.mkdirSync(STORE_DIR, { recursive: true });
     }
-    const data = { usuarios: usuariosRef, grupos: gruposRef, perfis: perfisRef };
+    const data = { usuarios: usuariosRef, grupos: gruposRef, perfis: perfisRef, solicitacoes };
     const content = JSON.stringify(data, null, 2);
     fs.writeFileSync(STORE_FILE, content, 'utf-8');
   } catch (err) {
@@ -307,8 +312,11 @@ const usuarios: Usuario[] = [
   },
 ];
 
-// Na inicialização, carrega usuários, grupos e perfis do arquivo (se existir) para persistir entre reinícios.
-loadFromFile(usuarios, grupos, perfis);
+/** Solicitações de acesso ao portal (chamados do botão "Solicite seu cadastro"). Sem seed. */
+const solicitacoes: SolicitacaoAcesso[] = [];
+
+// Na inicialização, carrega usuários, grupos, perfis e solicitações do arquivo (se existir) para persistir entre reinícios.
+loadFromFile(usuarios, grupos, perfis, solicitacoes);
 persistSeedIfNoFile();
 
 export function getClientes(): Cliente[] {
@@ -380,6 +388,7 @@ export interface UsuarioInput {
   email: string;
   ativo: boolean;
   clienteId: string;
+  cpf?: string;
   grupoId?: string;
   grupoIds?: string[];
   divisaoIds?: string[];
@@ -425,6 +434,7 @@ export function criarUsuario(input: UsuarioInput): Usuario {
   const permissoes = input.permissoes && typeof input.permissoes === 'object'
     ? { ...input.permissoes }
     : {};
+  const cpf = input.cpf?.trim() ? input.cpf.trim() : undefined;
   const novo: Usuario = {
     id,
     nome: input.nome,
@@ -435,11 +445,14 @@ export function criarUsuario(input: UsuarioInput): Usuario {
     criadoEm: now,
     atualizadoEm: now,
     ultimoAcessoEm: null,
+    ...(cpf && { cpf }),
     ...(grupoIds.length > 0 && { grupoIds, grupoId: grupoIds[0] }),
     ...(divisaoIds.length > 0 && { divisaoIds }),
     ...(input.perfilId && { perfilId: input.perfilId }),
   };
   usuarios.push(novo);
+  // Conclui automaticamente a solicitação de acesso do CPF (e/ou e-mail) recém-criado.
+  concluirSolicitacaoAoCriarAcesso(cpf, novo.email);
   saveToFile(usuarios, grupos, perfis);
   return { ...novo };
 }
@@ -663,5 +676,110 @@ export function getGruposList(): GrupoListItem[] {
       criadoEm: g.criadoEm,
       atualizadoEm: g.atualizadoEm,
     };
+  });
+}
+
+/* ───────────────────────── Solicitações de acesso ───────────────────────── */
+
+const soDigitos = (v: string | undefined | null): string => (v || '').replace(/\D/g, '');
+const emailNorm = (v: string | undefined | null): string => (v || '').trim().toLowerCase();
+
+/** Gera próximo protocolo no padrão SOL-0001, SOL-0002, ... */
+function nextSolicitacaoId(): string {
+  const numericIds = solicitacoes
+    .map((s) => {
+      const match = s.id.match(/^SOL-(\d+)$/i);
+      return match ? parseInt(match[1], 10) : 0;
+    })
+    .filter((n) => n > 0);
+  const next = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 1;
+  return 'SOL-' + String(next).padStart(4, '0');
+}
+
+export function getSolicitacoes(): SolicitacaoAcesso[] {
+  return [...solicitacoes].sort((a, b) => (b.criadoEm > a.criadoEm ? 1 : -1));
+}
+
+export function getSolicitacaoById(id: string): SolicitacaoAcesso | undefined {
+  return solicitacoes.find((s) => s.id.toLowerCase() === id.toLowerCase());
+}
+
+/** Retorna as solicitações de um CPF (para acompanhamento pelo cliente). */
+export function getSolicitacoesByCpf(cpf: string): SolicitacaoAcesso[] {
+  const dig = soDigitos(cpf);
+  if (dig.length < 11) return [];
+  return solicitacoes
+    .filter((s) => soDigitos(s.cpf) === dig)
+    .sort((a, b) => (b.criadoEm > a.criadoEm ? 1 : -1));
+}
+
+export type MotivoBloqueioSolicitacao = 'cpf' | 'email' | null;
+
+/**
+ * Verifica se o CPF ou e-mail já possui solicitação em aberto (pendente/em atendimento)
+ * ou já existe um usuário cadastrado com esse e-mail/CPF. Retorna o motivo do bloqueio.
+ */
+export function motivoBloqueioSolicitacao(cpf: string, email: string): MotivoBloqueioSolicitacao {
+  const cpfDig = soDigitos(cpf);
+  const mail = emailNorm(email);
+  // Solicitações em aberto com mesmo CPF
+  const cpfEmAberto = solicitacoes.some(
+    (s) => s.status !== 'concluido' && soDigitos(s.cpf) === cpfDig
+  );
+  const cpfJaUsuario = usuarios.some((u) => u.cpf && soDigitos(u.cpf) === cpfDig);
+  if (cpfDig.length === 11 && (cpfEmAberto || cpfJaUsuario)) return 'cpf';
+  // Solicitações em aberto com mesmo e-mail
+  const emailEmAberto = solicitacoes.some(
+    (s) => s.status !== 'concluido' && emailNorm(s.emailCorporativo) === mail
+  );
+  const emailJaUsuario = usuarios.some((u) => emailNorm(u.email) === mail);
+  if (mail && (emailEmAberto || emailJaUsuario)) return 'email';
+  return null;
+}
+
+export function criarSolicitacao(input: SolicitacaoAcessoInput): SolicitacaoAcesso {
+  const now = new Date().toISOString();
+  const nova: SolicitacaoAcesso = {
+    id: nextSolicitacaoId(),
+    nomeEmpresa: input.nomeEmpresa.trim(),
+    cnpj: input.cnpj.trim(),
+    nomeCompleto: input.nomeCompleto.trim(),
+    cpf: input.cpf.trim(),
+    dataNascimento: input.dataNascimento,
+    emailCorporativo: input.emailCorporativo.trim().toLowerCase(),
+    telefoneComercial: input.telefoneComercial.trim(),
+    ...(input.telefoneCelular?.trim() && { telefoneCelular: input.telefoneCelular.trim() }),
+    status: 'pendente',
+    criadoEm: now,
+    atualizadoEm: now,
+  };
+  solicitacoes.push(nova);
+  saveToFile(usuarios, grupos, perfis);
+  return { ...nova };
+}
+
+export function atualizarStatusSolicitacao(id: string, status: StatusSolicitacaoAcesso): SolicitacaoAcesso | null {
+  const idx = solicitacoes.findIndex((s) => s.id.toLowerCase() === id.toLowerCase());
+  if (idx === -1) return null;
+  solicitacoes[idx] = { ...solicitacoes[idx], status, atualizadoEm: new Date().toISOString() };
+  saveToFile(usuarios, grupos, perfis);
+  return { ...solicitacoes[idx] };
+}
+
+/**
+ * Conclui automaticamente as solicitações em aberto cujo CPF (ou e-mail) corresponde
+ * ao acesso recém-criado. Não persiste — quem chama (criarUsuario) já salva em seguida.
+ */
+function concluirSolicitacaoAoCriarAcesso(cpf: string | undefined, email: string | undefined): void {
+  const cpfDig = soDigitos(cpf);
+  const mail = emailNorm(email);
+  const now = new Date().toISOString();
+  solicitacoes.forEach((s, i) => {
+    if (s.status === 'concluido') return;
+    const bateCpf = cpfDig.length === 11 && soDigitos(s.cpf) === cpfDig;
+    const bateEmail = !!mail && emailNorm(s.emailCorporativo) === mail;
+    if (bateCpf || bateEmail) {
+      solicitacoes[i] = { ...s, status: 'concluido', atualizadoEm: now };
+    }
   });
 }

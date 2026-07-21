@@ -210,12 +210,56 @@ export interface GrupoListItem {
   atualizadoEm?: string;
 }
 
+/** Status de um chamado de solicitação de acesso ao portal. */
+export type StatusSolicitacaoAcesso = 'pendente' | 'em_atendimento' | 'concluido';
+
+/** Rótulos amigáveis para exibição dos status. */
+export const STATUS_SOLICITACAO_LABEL: Record<StatusSolicitacaoAcesso, string> = {
+  pendente: 'Pendente',
+  em_atendimento: 'Em atendimento',
+  concluido: 'Concluído',
+};
+
+/**
+ * Chamado de solicitação de acesso ao portal, criado pelo botão "Solicite seu cadastro".
+ * Nasce como "pendente"; é movimentado para "em_atendimento" e depois "concluido"
+ * (automaticamente quando um acesso é criado para o CPF).
+ */
+export interface SolicitacaoAcesso {
+  id: string;
+  nomeEmpresa: string;
+  cnpj: string;
+  nomeCompleto: string;
+  cpf: string;
+  dataNascimento: string;
+  emailCorporativo: string;
+  telefoneComercial: string;
+  telefoneCelular?: string;
+  status: StatusSolicitacaoAcesso;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+/** Dados enviados pelo formulário público de solicitação de acesso. */
+export interface SolicitacaoAcessoInput {
+  nomeEmpresa: string;
+  cnpj: string;
+  nomeCompleto: string;
+  cpf: string;
+  dataNascimento: string;
+  emailCorporativo: string;
+  telefoneComercial: string;
+  telefoneCelular?: string;
+}
+
 export interface Usuario {
   id: string;
   nome: string;
   email: string;
   ativo: boolean;
   clienteId: string;
+  /** CPF do usuário (somente dígitos ou formatado). Usado para concluir a solicitação de acesso correspondente. */
+  cpf?: string;
   /** ID do grupo (compatibilidade; use grupoIds quando múltiplos). */
   grupoId?: string;
   /** IDs dos grupos vinculados (seleção múltipla). */
@@ -247,6 +291,7 @@ export interface UsuarioInput {
   email: string;
   ativo: boolean;
   clienteId: string;
+  cpf?: string;
   grupoId?: string;
   /** Múltiplos grupos (prioridade sobre grupoId). */
   grupoIds?: string[];
