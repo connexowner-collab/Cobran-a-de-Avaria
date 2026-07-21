@@ -113,9 +113,9 @@ export default function PortalInicioPage() {
               <p className="text-xs text-slate-500">Comparativo mensal por tipo de serviço</p>
             </div>
             <div className="flex gap-3 text-[11px] text-slate-500">
-              <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-emerald-500" />Preventiva</span>
+              <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-sky-500" />Preventiva</span>
               <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#0e2233]" />Corretiva</span>
-              <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-primary-600" />Sinistro</span>
+              <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-indigo-400" />Sinistro</span>
             </div>
           </div>
           <div className="flex h-40 items-end gap-3">
@@ -154,7 +154,7 @@ export default function PortalInicioPage() {
           {ENTRADA_SAIDA.map((m) => (
             <div key={m.mes} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
               <div className="flex h-full items-end gap-[3px]">
-                <div className="w-2.5 rounded-t bg-primary-600" style={{ height: `${m.e}%` }} />
+                <div className="w-2.5 rounded-t bg-sky-500" style={{ height: `${m.e}%` }} />
                 <div className="w-2.5 rounded-t bg-[#0e2233]" style={{ height: `${m.s}%` }} />
               </div>
               <span className="text-[10px] text-slate-500">{m.mes}</span>
@@ -162,7 +162,7 @@ export default function PortalInicioPage() {
           ))}
         </div>
         <div className="mt-3 flex gap-4 text-[11px] text-slate-500">
-          <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-primary-600" />Entrada</span>
+          <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-sky-500" />Entrada</span>
           <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#0e2233]" />Saída</span>
         </div>
       </div>

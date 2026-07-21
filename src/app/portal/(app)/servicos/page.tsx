@@ -24,11 +24,13 @@ function diasEntre(a: Date, b: Date): number {
 
 type TipoServico = 'preventiva' | 'corretiva' | 'sinistro' | 'outros';
 
+/* Paleta categórica fria (azul/navy/índigo/cinza) — cores neutras, sem verde/vermelho,
+   já que "tipo de serviço" é categoria e não status (não representa bom/ruim). */
 const TIPO_INFO: Record<TipoServico, { label: string; dot: string; bar: string }> = {
-  preventiva: { label: 'Preventiva', dot: 'bg-emerald-500', bar: 'bg-emerald-500' },
+  preventiva: { label: 'Preventiva', dot: 'bg-sky-500', bar: 'bg-sky-500' },
   corretiva: { label: 'Corretiva', dot: 'bg-[#0e2233]', bar: 'bg-[#0e2233]' },
-  sinistro: { label: 'Sinistro', dot: 'bg-primary-600', bar: 'bg-primary-600' },
-  outros: { label: 'Outros', dot: 'bg-slate-300', bar: 'bg-slate-300' },
+  sinistro: { label: 'Sinistro', dot: 'bg-indigo-400', bar: 'bg-indigo-400' },
+  outros: { label: 'Outros', dot: 'bg-slate-400', bar: 'bg-slate-400' },
 };
 const TIPOS_ORDEM: TipoServico[] = ['preventiva', 'corretiva', 'sinistro', 'outros'];
 
@@ -322,7 +324,7 @@ export default function ServicosPage() {
           cor="border-l-primary-600"
           detalheCor="text-primary-700"
         />
-        <KpiCard label="Disponibilidade da frota" valor={`${kpis.disponibilidade}%`} detalhe="veículos operacionais" cor="border-l-emerald-500" detalheCor="text-emerald-600" />
+        <KpiCard label="Disponibilidade da frota" valor={`${kpis.disponibilidade}%`} detalhe="veículos operacionais" cor="border-l-sky-600" detalheCor="text-sky-700" />
       </KpiRow>
 
       {/* Em atendimento agora */}
@@ -396,10 +398,10 @@ export default function ServicosPage() {
         <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
           {[
             { label: 'Total', valor: '21', pct: '100%', icon: <CheckCircle2 size={14} className="text-slate-400" /> },
-            { label: 'Preventiva', valor: '5', pct: '24%', icon: <i className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> },
+            { label: 'Preventiva', valor: '5', pct: '24%', icon: <i className="h-2.5 w-2.5 rounded-full bg-sky-500" /> },
             { label: 'Corretiva', valor: '15', pct: '71%', icon: <i className="h-2.5 w-2.5 rounded-full bg-[#0e2233]" /> },
-            { label: 'Sinistro', valor: '1', pct: '5%', icon: <i className="h-2.5 w-2.5 rounded-full bg-primary-600" /> },
-            { label: 'Outros', valor: '1', pct: '5%', icon: <i className="h-2.5 w-2.5 rounded-full bg-slate-300" /> },
+            { label: 'Sinistro', valor: '1', pct: '5%', icon: <i className="h-2.5 w-2.5 rounded-full bg-indigo-400" /> },
+            { label: 'Outros', valor: '1', pct: '5%', icon: <i className="h-2.5 w-2.5 rounded-full bg-slate-400" /> },
           ].map((a) => (
             <div key={a.label}>
               <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">{a.icon}{a.label}</p>

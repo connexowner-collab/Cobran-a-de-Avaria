@@ -57,7 +57,7 @@ function AbaIdade() {
       <KpiRow cols={3}>
         <KpiCard label="Idade média" valor="2,3 anos" cor="border-l-[#0e2233]" />
         <KpiCard label="Mais antigo" valor="6 anos" cor="border-l-amber-500" />
-        <KpiCard label="Renovados (12m)" valor="9" cor="border-l-emerald-500" />
+        <KpiCard label="Renovados (12m)" valor="9" cor="border-l-sky-600" />
       </KpiRow>
       <SectionCard titulo="Distribuição por faixa de idade" subtitulo="Clique em uma faixa para filtrar a listagem abaixo" className="mb-6">
         <div className="flex h-52 items-end gap-5 px-2">
