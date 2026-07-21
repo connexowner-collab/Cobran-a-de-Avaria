@@ -259,7 +259,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       </button>
 
       {/* ===== Conteúdo ===== */}
-      <div className={`flex min-h-screen flex-1 flex-col transition-[margin] duration-200 ${colapsado ? 'ml-16' : 'ml-64'}`}>
+      <div className={`flex min-h-screen min-w-0 flex-1 flex-col transition-[margin] duration-200 ${colapsado ? 'ml-16' : 'ml-64'}`}>
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-6">
           <div className="flex w-full max-w-md items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
             <Search size={15} className="text-slate-400" />
@@ -364,7 +364,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </button>
         </header>
 
-        <main className="flex-1 px-8 py-7">{children}</main>
+        <main className="min-w-0 flex-1 px-8 py-7">{children}</main>
       </div>
 
       {/* ===== Overlay de carregamento ao trocar de grupo/distribuição =====
