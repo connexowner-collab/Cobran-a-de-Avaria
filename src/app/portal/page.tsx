@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, ShieldCheck, Truck, Headset } from 'lucide-react';
 import { LogoVamos } from '@/components/portal/ui';
+import ModalSolicitacaoAcesso from '@/components/ModalSolicitacaoAcesso';
 
 /** Login do Portal do Cliente (protótipo — qualquer credencial entra). */
 export default function PortalLoginPage() {
@@ -12,6 +13,7 @@ export default function PortalLoginPage() {
   const [senha, setSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [entrando, setEntrando] = useState(false);
+  const [modalSolicitacaoOpen, setModalSolicitacaoOpen] = useState(false);
 
   const entrar = (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,9 +133,13 @@ export default function PortalLoginPage() {
 
           <p className="mt-5 text-[13px] text-slate-500">
             Não tem acesso?{' '}
-            <a href="#" className="font-semibold text-primary-700 hover:text-primary-600">
+            <button
+              type="button"
+              onClick={() => setModalSolicitacaoOpen(true)}
+              className="font-semibold text-primary-700 hover:text-primary-600"
+            >
               Solicite seu cadastro
-            </a>
+            </button>
           </p>
 
           <div className="mt-8 flex gap-5 border-t border-slate-200 pt-6 text-xs text-slate-500">
@@ -149,6 +155,8 @@ export default function PortalLoginPage() {
           </div>
         </div>
       </div>
+
+      <ModalSolicitacaoAcesso open={modalSolicitacaoOpen} onClose={() => setModalSolicitacaoOpen(false)} />
     </div>
   );
 }

@@ -3,22 +3,28 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Pencil, Trash2, Users, Building2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Building2, Search, Inbox, UserPlus } from 'lucide-react';
 import type { Usuario, GrupoListItem, Grupo, Perfil } from '@/types';
-import type { Cliente } from '@/types';
+import type { Cliente, SolicitacaoAcesso, StatusSolicitacaoAcesso } from '@/types';
+import { STATUS_SOLICITACAO_LABEL } from '@/types';
 import ModalNovoGrupo from '@/components/ModalNovoGrupo';
 import DateRangeFilter, { isDateInRange } from '@/components/DateRangeFilter';
 import type { DateRange } from 'react-day-picker';
 
-type Aba = 'usuarios' | 'clientes';
+type Aba = 'usuarios' | 'clientes' | 'solicitacoes';
 
 function GestaoUsuariosContent() {
   const searchParams = useSearchParams();
   const abaParam = searchParams.get('aba');
-  const [aba, setAba] = useState<Aba>(abaParam === 'clientes' ? 'clientes' : 'usuarios');
+  const [aba, setAba] = useState<Aba>(
+    abaParam === 'clientes' ? 'clientes' : abaParam === 'solicitacoes' ? 'solicitacoes' : 'usuarios'
+  );
 
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [solicitacoes, setSolicitacoes] = useState<SolicitacaoAcesso[]>([]);
+  const [loadingSolicitacoes, setLoadingSolicitacoes] = useState(false);
+  const [inicialSolicitacoesCarregado, setInicialSolicitacoesCarregado] = useState(false);
   const [gruposFiltro, setGruposFiltro] = useState<GrupoListItem[]>([]);
   /** Grupos completos (com divisões) para exibir nome de grupo/divisão na listagem de usuários */
   const [gruposComDivisoes, setGruposComDivisoes] = useState<Grupo[]>([]);
@@ -120,6 +126,39 @@ function GestaoUsuariosContent() {
         setLoadingClientes(false);
       })
       .catch(() => setLoadingClientes(false));
+  };
+
+  const loadSolicitacoes = () => {
+    setLoadingSolicitacoes(true);
+    fetch('/api/solicitacoes-acesso')
+      .then((res) => res.json())
+      .then((data) => setSolicitacoes(Array.isArray(data?.items) ? data.items : []))
+      .catch(() => setSolicitacoes([]))
+      .finally(() => {
+        setLoadingSolicitacoes(false);
+        setInicialSolicitacoesCarregado(true);
+      });
+  };
+
+  const moverStatusSolicitacao = async (id: string, status: StatusSolicitacaoAcesso) => {
+    // Atualização otimista
+    setSolicitacoes((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
+    try {
+      const res = await fetch(`/api/solicitacoes-acesso/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) {
+        loadSolicitacoes();
+        setMensagemFlash({ tipo: 'erro', texto: 'Erro ao mover o status da solicitação.' });
+        setTimeout(() => setMensagemFlash(null), 4000);
+      }
+    } catch {
+      loadSolicitacoes();
+      setMensagemFlash({ tipo: 'erro', texto: 'Erro ao mover o status da solicitação.' });
+      setTimeout(() => setMensagemFlash(null), 4000);
+    }
   };
 
   const loadGrupos = (showLoading = true) => {
@@ -230,7 +269,12 @@ function GestaoUsuariosContent() {
   }, [aba, paginaGrupos, itensPorPaginaGrupos]);
 
   useEffect(() => {
+    if (aba === 'solicitacoes') loadSolicitacoes();
+  }, [aba]);
+
+  useEffect(() => {
     if (abaParam === 'clientes') setAba('clientes');
+    else if (abaParam === 'solicitacoes') setAba('solicitacoes');
   }, [abaParam]);
 
   const getGrupoOuClienteNome = (u: Usuario) => {
@@ -307,6 +351,23 @@ function GestaoUsuariosContent() {
           >
             <Building2 className="h-4 w-4" />
             Grupo de cliente
+          </button>
+          <button
+            type="button"
+            onClick={() => setAba('solicitacoes')}
+            className={`inline-flex items-center gap-2 rounded-t-lg border border-b-0 px-4 py-2.5 text-sm font-medium transition ${
+              aba === 'solicitacoes'
+                ? 'border-slate-200 bg-white text-slate-900 shadow-sm'
+                : 'border-transparent bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+          >
+            <Inbox className="h-4 w-4" />
+            Solicitação de Acessos
+            {solicitacoes.some((s) => s.status === 'pendente') && (
+              <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[11px] font-bold text-white">
+                {solicitacoes.filter((s) => s.status === 'pendente').length}
+              </span>
+            )}
           </button>
         </nav>
       </div>
@@ -674,6 +735,116 @@ function GestaoUsuariosContent() {
                 </div>
               )}
               </>
+            )}
+          </div>
+        </>
+      )}
+
+      {aba === 'solicitacoes' && (
+        <>
+          <div className="flex flex-col gap-1">
+            <h2 className="text-xl font-bold text-slate-900">Solicitação de Acessos</h2>
+            <p className="text-sm text-slate-500">
+              Chamados de acesso feitos pelo botão “Solicite seu cadastro”. Movimente o status até a conclusão
+              ou clique em “Criar acesso” para cadastrar o usuário (o chamado é concluído automaticamente).
+            </p>
+          </div>
+
+          <div className="table-container" aria-busy={loadingSolicitacoes || !inicialSolicitacoesCarregado}>
+            {loadingSolicitacoes || !inicialSolicitacoesCarregado ? (
+              <div className="flex justify-center py-12" role="status" aria-live="polite">
+                <span className="text-slate-500">Carregando...</span>
+              </div>
+            ) : (
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Protocolo</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Empresa / CNPJ</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Solicitante</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">CPF</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Contato</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Data</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">Status</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {solicitacoes.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-10 text-center">
+                        <p className="font-medium text-slate-600">Nenhuma solicitação de acesso.</p>
+                        <p className="mt-1 text-sm text-slate-500">As solicitações enviadas pelos clientes aparecem aqui.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    solicitacoes.map((s) => (
+                      <tr key={s.id} className="align-top hover:bg-slate-50/50">
+                        <td className="whitespace-nowrap px-4 py-3 text-sm font-mono font-semibold text-slate-700">{s.id}</td>
+                        <td className="px-4 py-3 text-sm text-slate-600">
+                          <span className="block font-medium text-slate-800">{s.nomeEmpresa}</span>
+                          <span className="block text-xs text-slate-500">{s.cnpj}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-600">
+                          <span className="block font-medium text-slate-800">{s.nomeCompleto}</span>
+                          <span className="block text-xs text-slate-500">{s.emailCorporativo}</span>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm font-mono text-slate-600">{s.cpf}</td>
+                        <td className="px-4 py-3 text-sm text-slate-600">
+                          <span className="block">{s.telefoneComercial}</span>
+                          {s.telefoneCelular && <span className="block text-xs text-slate-500">{s.telefoneCelular}</span>}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{formatarDataHora(s.criadoEm)}</td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                              s.status === 'pendente'
+                                ? 'bg-amber-100 text-amber-800'
+                                : s.status === 'em_atendimento'
+                                  ? 'bg-sky-100 text-sky-800'
+                                  : 'bg-emerald-100 text-emerald-800'
+                            }`}
+                          >
+                            {STATUS_SOLICITACAO_LABEL[s.status]}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right">
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            {s.status === 'pendente' && (
+                              <button
+                                type="button"
+                                onClick={() => moverStatusSolicitacao(s.id, 'em_atendimento')}
+                                className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                              >
+                                Iniciar atendimento
+                              </button>
+                            )}
+                            {s.status === 'em_atendimento' && (
+                              <button
+                                type="button"
+                                onClick={() => moverStatusSolicitacao(s.id, 'concluido')}
+                                className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+                              >
+                                Concluir
+                              </button>
+                            )}
+                            {s.status !== 'concluido' && (
+                              <Link
+                                href={`/gestao-usuarios/novo?nome=${encodeURIComponent(s.nomeCompleto)}&email=${encodeURIComponent(s.emailCorporativo)}&cpf=${encodeURIComponent(s.cpf)}&solicitacaoId=${encodeURIComponent(s.id)}`}
+                                className="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-primary-700"
+                              >
+                                <UserPlus className="h-3.5 w-3.5" />
+                                Criar acesso
+                              </Link>
+                            )}
+                            {s.status === 'concluido' && <span className="text-xs text-slate-400">—</span>}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             )}
           </div>
         </>

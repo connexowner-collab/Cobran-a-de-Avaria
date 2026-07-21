@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Plus } from 'lucide-react';
 import type { Grupo, Perfil } from '@/types';
@@ -10,13 +10,25 @@ import { MatrizPermissoes } from '@/components/MatrizPermissoes';
 import ModalCriarPerfil from '@/components/ModalCriarPerfil';
 import DropdownGruposMultiplo from '@/components/DropdownGruposMultiplo';
 
-export default function NovoUsuarioPage() {
+/** Aplica máscara de CPF (000.000.000-00) sobre os dígitos digitados. */
+function mascararCpf(v: string): string {
+  const d = v.replace(/\D/g, '').slice(0, 11);
+  return d
+    .replace(/^(\d{3})(\d)/, '$1.$2')
+    .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
+}
+
+function NovoUsuarioContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [perfis, setPerfis] = useState<Perfil[]>([]);
   const [perfilId, setPerfilId] = useState('');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [solicitacaoId, setSolicitacaoId] = useState('');
   const [ativo, setAtivo] = useState(true);
   const [grupoIds, setGrupoIds] = useState<string[]>([]);
   const [permissoes, setPermissoes] = useState<PermissaoUsuario>({});
@@ -31,6 +43,18 @@ export default function NovoUsuarioPage() {
   }, []);
 
   const [divisaoIds, setDivisaoIds] = useState<string[]>([]);
+
+  // Prefill quando vem de uma solicitação de acesso (aba Solicitação de Acessos).
+  useEffect(() => {
+    const nomeQ = searchParams.get('nome');
+    const emailQ = searchParams.get('email');
+    const cpfQ = searchParams.get('cpf');
+    const solQ = searchParams.get('solicitacaoId');
+    if (nomeQ) setNome(nomeQ);
+    if (emailQ) setEmail(emailQ);
+    if (cpfQ) setCpf(mascararCpf(cpfQ));
+    if (solQ) setSolicitacaoId(solQ);
+  }, [searchParams]);
 
   useEffect(() => {
     fetch('/api/grupos?comDivisoes=1')
@@ -92,6 +116,7 @@ export default function NovoUsuarioPage() {
         nome: nome.trim(),
         email: email.trim().toLowerCase(),
         ativo,
+        ...(cpf.trim() && { cpf: cpf.trim() }),
         grupoIds,
         divisaoIds,
         perfilId: perfilId || undefined,
@@ -155,6 +180,22 @@ export default function NovoUsuarioPage() {
                   placeholder="email@cliente.com"
                   required
                 />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  CPF {solicitacaoId && <span className="text-xs font-normal text-slate-400">(da solicitação {solicitacaoId})</span>}
+                </label>
+                <input
+                  type="text"
+                  value={cpf}
+                  onChange={(e) => setCpf(mascararCpf(e.target.value))}
+                  className="input-field"
+                  placeholder="000.000.000-00"
+                  inputMode="numeric"
+                />
+                <p className="mt-1 text-xs text-slate-400">
+                  Informe o CPF para concluir automaticamente a solicitação de acesso correspondente.
+                </p>
               </div>
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-slate-700">Grupo de cliente *</label>
@@ -246,5 +287,13 @@ export default function NovoUsuarioPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NovoUsuarioPage() {
+  return (
+    <Suspense>
+      <NovoUsuarioContent />
+    </Suspense>
   );
 }
