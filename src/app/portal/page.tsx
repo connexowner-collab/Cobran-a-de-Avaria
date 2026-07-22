@@ -14,13 +14,22 @@ export default function PortalLoginPage() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [entrando, setEntrando] = useState(false);
   const [modalSolicitacaoOpen, setModalSolicitacaoOpen] = useState(false);
-  const [primeiroAcesso, setPrimeiroAcesso] = useState(false);
 
-  const entrar = (e: React.FormEvent) => {
+  const entrar = async (e: React.FormEvent) => {
     e.preventDefault();
     setEntrando(true);
-    // Com senha provisória (primeiro acesso), o usuário define a nova senha antes de entrar.
-    router.push(primeiroAcesso ? '/portal/nova-senha' : '/portal/inicio');
+    // Detecta automaticamente se o CPF informado está com senha provisória.
+    try {
+      const res = await fetch(`/api/usuarios/verificar-acesso?documento=${encodeURIComponent(documento)}`);
+      const data = await res.json();
+      if (data?.senhaProvisoria && data?.id) {
+        router.push(`/portal/nova-senha?u=${encodeURIComponent(data.id)}`);
+        return;
+      }
+    } catch {
+      /* segue para o portal normalmente */
+    }
+    router.push('/portal/inicio');
   };
 
   return (
@@ -119,15 +128,6 @@ export default function PortalLoginPage() {
                 </button>
               </div>
             </div>
-            <label className="flex items-center gap-2 text-[13px] text-slate-600">
-              <input
-                type="checkbox"
-                checked={primeiroAcesso}
-                onChange={(e) => setPrimeiroAcesso(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-              />
-              Entrei com senha provisória (definir nova senha)
-            </label>
             <div className="text-right">
               <a href="#" className="text-[13px] font-semibold text-primary-700 hover:text-primary-600">
                 Esqueci a senha

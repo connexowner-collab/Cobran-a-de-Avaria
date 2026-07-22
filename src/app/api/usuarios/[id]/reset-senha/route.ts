@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { getUsuarioById } from '@/lib/store';
+import { getUsuarioById, setSenhaProvisoria } from '@/lib/store';
 
 /** Gera uma senha aleatória (letras + números, 12 caracteres). */
 function gerarNovaSenha(): string {
@@ -82,6 +82,8 @@ export async function POST(
     }
 
     const novaSenha = gerarNovaSenha();
+    // Marca como senha provisória: no próximo login o usuário definirá uma nova.
+    setSenhaProvisoria(id, true);
     const mailer = createMailer();
     if (mailer) {
       await enviarEmailNovaSenha(usuario.email, usuario.nome, novaSenha);

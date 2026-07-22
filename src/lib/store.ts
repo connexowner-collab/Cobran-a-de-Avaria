@@ -369,12 +369,29 @@ export function getUsuarioById(id: string): Usuario | undefined {
   return usuarios.find((u) => u.id === id);
 }
 
+/** Busca usuário pelo CPF (compara só os dígitos). */
+export function getUsuarioByCpf(cpf: string): Usuario | undefined {
+  const dig = (cpf || '').replace(/\D/g, '');
+  if (dig.length < 11) return undefined;
+  return usuarios.find((u) => u.cpf && u.cpf.replace(/\D/g, '') === dig);
+}
+
+/** Marca/desmarca a senha como provisória (força troca no próximo login). */
+export function setSenhaProvisoria(id: string, valor: boolean): Usuario | null {
+  const idx = usuarios.findIndex((u) => u.id === id);
+  if (idx === -1) return null;
+  usuarios[idx] = { ...usuarios[idx], senhaProvisoria: valor, atualizadoEm: new Date().toISOString() };
+  saveToFile(usuarios, grupos, perfis);
+  return { ...usuarios[idx] };
+}
+
 export interface UsuarioInput {
   nome: string;
   email: string;
   ativo: boolean;
   clienteId: string;
   cpf?: string;
+  senhaProvisoria?: boolean;
   grupoId?: string;
   grupoIds?: string[];
   divisaoIds?: string[];
@@ -431,6 +448,7 @@ export function criarUsuario(input: UsuarioInput): Usuario {
     criadoEm: now,
     atualizadoEm: now,
     ultimoAcessoEm: null,
+    senhaProvisoria: true,
     ...(cpf && { cpf }),
     ...(grupoIds.length > 0 && { grupoIds, grupoId: grupoIds[0] }),
     ...(divisaoIds.length > 0 && { divisaoIds }),

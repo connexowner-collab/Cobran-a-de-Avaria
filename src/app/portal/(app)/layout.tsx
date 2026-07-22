@@ -7,6 +7,7 @@ import {
   Home, BarChart3, DollarSign, Headset, MapPin, Wrench, Boxes,
   Truck, Users, HelpCircle, ChevronDown, Search, Bell, LogOut, AlertTriangle,
   AlertCircle, Info, ListFilter, ChevronLeft, ChevronRight, Check, Loader2,
+  KeyRound, X, Eye, EyeOff,
 } from 'lucide-react';
 import { NOTIFICACOES, GRUPOS_DISTRIBUICAO } from '@/lib/portalData';
 import { LogoVamos } from '@/components/portal/ui';
@@ -88,8 +89,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const [grupoId, setGrupoId] = useState(GRUPOS_DISTRIBUICAO[0].id);
   const [trocandoGrupo, setTrocandoGrupo] = useState(false);
   const [grupoAlvoId, setGrupoAlvoId] = useState<string | null>(null);
+  const [perfilOpen, setPerfilOpen] = useState(false);
+  const [senhaModalOpen, setSenhaModalOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const grupoRef = useRef<HTMLDivElement>(null);
+  const perfilRef = useRef<HTMLDivElement>(null);
 
   const grupoAtual = GRUPOS_DISTRIBUICAO.find((g) => g.id === grupoId) ?? GRUPOS_DISTRIBUICAO[0];
 
@@ -97,6 +101,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     const onClick = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
       if (grupoRef.current && !grupoRef.current.contains(e.target as Node)) setGrupoOpen(false);
+      if (perfilRef.current && !perfilRef.current.contains(e.target as Node)) setPerfilOpen(false);
     };
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
@@ -348,24 +353,47 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             )}
           </div>
 
-          <button
-            onClick={() => router.push('/portal')}
-            title="Sair do portal"
-            className="flex items-center gap-2 rounded-lg border border-slate-200 py-1.5 pl-1.5 pr-3 hover:bg-slate-50"
-          >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-600 text-xs font-bold text-white">
-              LP
-            </span>
-            <span className="hidden text-left leading-tight md:block">
-              <span className="block text-xs font-bold text-slate-800">Lucas Pessoa</span>
-              <span className="block text-[10px] text-slate-400">Vamos Locação</span>
-            </span>
-            <LogOut size={14} className="text-slate-400" />
-          </button>
+          <div className="relative" ref={perfilRef}>
+            <button
+              onClick={() => setPerfilOpen((v) => !v)}
+              className="flex items-center gap-2 rounded-lg border border-slate-200 py-1.5 pl-1.5 pr-3 hover:bg-slate-50"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-600 text-xs font-bold text-white">
+                LP
+              </span>
+              <span className="hidden text-left leading-tight md:block">
+                <span className="block text-xs font-bold text-slate-800">Lucas Pessoa</span>
+                <span className="block text-[10px] text-slate-400">Vamos Locação</span>
+              </span>
+              <ChevronDown size={13} className={`text-slate-400 transition-transform ${perfilOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {perfilOpen && (
+              <div className="absolute right-0 top-11 z-30 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                <div className="border-b border-slate-100 px-4 py-3">
+                  <p className="text-[13px] font-bold text-slate-800">Lucas Pessoa</p>
+                  <p className="text-xs text-slate-500">Vamos Locação</p>
+                </div>
+                <button
+                  onClick={() => { setPerfilOpen(false); setSenhaModalOpen(true); }}
+                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-[13px] text-slate-700 transition hover:bg-slate-50"
+                >
+                  <KeyRound size={15} className="text-slate-400" /> Trocar senha
+                </button>
+                <button
+                  onClick={() => router.push('/portal')}
+                  className="flex w-full items-center gap-2.5 border-t border-slate-100 px-4 py-2.5 text-left text-[13px] font-semibold text-rose-600 transition hover:bg-rose-50"
+                >
+                  <LogOut size={15} /> Sair
+                </button>
+              </div>
+            )}
+          </div>
         </header>
 
         <main className="min-w-0 flex-1 px-8 py-7">{children}</main>
       </div>
+
+      {senhaModalOpen && <ModalTrocarSenha onClose={() => setSenhaModalOpen(false)} />}
 
       {/* ===== Overlay de carregamento ao trocar de grupo/distribuição =====
           Placeholder — o conteúdo/visual definitivo será ajustado depois. */}
@@ -385,6 +413,67 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ModalTrocarSenha({ onClose }: { onClose: () => void }) {
+  const [atual, setAtual] = useState('');
+  const [nova, setNova] = useState('');
+  const [confirma, setConfirma] = useState('');
+  const [mostrar, setMostrar] = useState(false);
+  const [erro, setErro] = useState('');
+  const [ok, setOk] = useState(false);
+
+  const input = 'w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-mono outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500';
+  const label = 'mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500';
+
+  const salvar = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErro('');
+    if (!atual) return setErro('Informe a senha atual.');
+    if (nova.length < 8 || !/[A-Za-z]/.test(nova) || !/\d/.test(nova)) return setErro('A nova senha deve ter ao menos 8 caracteres, com letras e números.');
+    if (nova !== confirma) return setErro('A confirmação não coincide com a nova senha.');
+    setOk(true);
+    setTimeout(onClose, 1400);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <h3 className="text-lg font-bold text-slate-900">Trocar senha</h3>
+          <button onClick={onClose} aria-label="Fechar" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X size={18} /></button>
+        </div>
+        {ok ? (
+          <div className="px-5 py-8 text-center">
+            <Check className="mx-auto mb-2 h-10 w-10 text-emerald-500" />
+            <p className="text-sm font-semibold text-slate-800">Senha alterada com sucesso.</p>
+          </div>
+        ) : (
+          <form onSubmit={salvar} className="space-y-3 px-5 py-4">
+            {erro && <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</div>}
+            <div>
+              <label className={label}>Senha atual</label>
+              <input type={mostrar ? 'text' : 'password'} value={atual} onChange={(e) => setAtual(e.target.value)} className={input} autoComplete="current-password" />
+            </div>
+            <div>
+              <label className={label}>Nova senha</label>
+              <div className="relative">
+                <input type={mostrar ? 'text' : 'password'} value={nova} onChange={(e) => setNova(e.target.value)} className={`${input} pr-10`} autoComplete="new-password" />
+                <button type="button" onClick={() => setMostrar((v) => !v)} aria-label={mostrar ? 'Ocultar' : 'Mostrar'} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                  {mostrar ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className={label}>Confirmar nova senha</label>
+              <input type={mostrar ? 'text' : 'password'} value={confirma} onChange={(e) => setConfirma(e.target.value)} className={input} autoComplete="new-password" />
+            </div>
+            <button type="submit" className="btn-primary w-full py-2.5">Salvar nova senha</button>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

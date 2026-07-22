@@ -1,12 +1,13 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { LogoVamos } from '@/components/portal/ui';
 
 function NovaSenhaContent() {
   const router = useRouter();
+  const usuarioId = useSearchParams().get('u');
   const [senha, setSenha] = useState('');
   const [confirma, setConfirma] = useState('');
   const [mostrar, setMostrar] = useState(false);
@@ -31,7 +32,16 @@ function NovaSenhaContent() {
       return;
     }
     setSalvando(true);
-    router.push('/portal/inicio');
+    // Conclui: limpa o flag de senha provisória do usuário.
+    if (usuarioId) {
+      fetch('/api/usuarios/verificar-acesso', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: usuarioId }),
+      }).finally(() => router.push('/portal/inicio'));
+    } else {
+      router.push('/portal/inicio');
+    }
   };
 
   return (

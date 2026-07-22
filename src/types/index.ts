@@ -260,6 +260,8 @@ export interface Usuario {
   clienteId: string;
   /** CPF do usuário (somente dígitos ou formatado). Usado para concluir a solicitação de acesso correspondente. */
   cpf?: string;
+  /** Quando true, o usuário está com senha provisória e deve definir uma nova no próximo login. */
+  senhaProvisoria?: boolean;
   /** ID do grupo (compatibilidade; use grupoIds quando múltiplos). */
   grupoId?: string;
   /** IDs dos grupos vinculados (seleção múltipla). */
