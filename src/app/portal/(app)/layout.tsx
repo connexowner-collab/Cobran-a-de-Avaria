@@ -40,7 +40,7 @@ const NAV: { grupo: string; itens: NavItem[] }[] = [
           { label: 'Distribuição da frota', href: '/portal/relatorios?aba=regiao' },
         ],
       },
-      { label: 'Vamos Controle', href: 'https://www.vamoscontrole.com.br/iweb2/loginvamoscontrole.aspx', icon: <MapPin size={18} />, externo: true },
+      { label: 'Vamos Controle', href: '/portal/vamos-controle', icon: <MapPin size={18} /> },
     ],
   },
   {
