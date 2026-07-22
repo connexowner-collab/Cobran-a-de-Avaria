@@ -82,11 +82,20 @@ export async function POST(
     }
 
     const novaSenha = gerarNovaSenha();
-    await enviarEmailNovaSenha(usuario.email, usuario.nome, novaSenha);
-
+    const mailer = createMailer();
+    if (mailer) {
+      await enviarEmailNovaSenha(usuario.email, usuario.nome, novaSenha);
+      return NextResponse.json({
+        success: true,
+        message: `E-mail com a nova senha foi enviado para ${usuario.email}.`,
+      });
+    }
+    // Protótipo sem SMTP: retorna a senha provisória para exibição.
     return NextResponse.json({
       success: true,
-      message: `E-mail com a nova senha foi enviado para ${usuario.email}.`,
+      email: usuario.email,
+      senhaProvisoria: novaSenha,
+      message: `Senha provisória gerada para ${usuario.email}.`,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Erro ao enviar e-mail de redefinição de senha.';

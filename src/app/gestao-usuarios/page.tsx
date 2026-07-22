@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Pencil, Trash2, Users, Building2, Search, Inbox, UserPlus, LayoutDashboard, ShieldAlert, Lock, Unlock, Send } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Building2, Search, Inbox, UserPlus, LayoutDashboard, ShieldAlert, Lock, Unlock, Send, KeyRound } from 'lucide-react';
 import type { Usuario, GrupoListItem, Grupo, Perfil } from '@/types';
 import type { Cliente, SolicitacaoAcesso, StatusSolicitacaoAcesso } from '@/types';
 import { STATUS_SOLICITACAO_LABEL } from '@/types';
@@ -357,6 +357,27 @@ function GestaoUsuariosContent() {
     setTimeout(() => setMensagemFlash(null), 4000);
   };
 
+  /** Reseta a senha: gera senha provisória e envia ao usuário (protótipo mostra a senha). */
+  const handleResetarSenha = async (u: Usuario) => {
+    try {
+      const res = await fetch(`/api/usuarios/${encodeURIComponent(u.id)}/reset-senha`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setMensagemFlash({
+          tipo: 'sucesso',
+          texto: data.senhaProvisoria
+            ? `Senha provisória de ${u.email}: ${data.senhaProvisoria} — o usuário definirá uma nova no primeiro acesso.`
+            : data.message || `Nova senha enviada para ${u.email}.`,
+        });
+        setTimeout(() => setMensagemFlash(null), 8000);
+      } else {
+        setMensagemFlash({ tipo: 'erro', texto: data.error || 'Erro ao resetar a senha.' });
+      }
+    } catch {
+      setMensagemFlash({ tipo: 'erro', texto: 'Erro ao resetar a senha.' });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Abas */}
@@ -558,6 +579,15 @@ function GestaoUsuariosContent() {
                                 aria-label={`Reenviar acesso para ${u.nome}`}
                               >
                                 <Send className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleResetarSenha(u)}
+                                className="rounded p-1.5 text-slate-500 hover:bg-amber-50 hover:text-amber-600"
+                                title="Resetar senha"
+                                aria-label={`Resetar senha de ${u.nome}`}
+                              >
+                                <KeyRound className="h-4 w-4" />
                               </button>
                               <Link href={`/gestao-usuarios/${u.id}`} className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-primary-600" title="Editar" aria-label={`Editar usuário ${u.nome}`}>
                                 <Pencil className="h-4 w-4" />
