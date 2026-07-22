@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Pencil, Trash2, Users, Building2, Search, Inbox, UserPlus, LayoutDashboard, ShieldAlert } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Building2, Search, Inbox, UserPlus, LayoutDashboard, ShieldAlert, Lock, Unlock, Send } from 'lucide-react';
 import type { Usuario, GrupoListItem, Grupo, Perfil } from '@/types';
 import type { Cliente, SolicitacaoAcesso, StatusSolicitacaoAcesso } from '@/types';
 import { STATUS_SOLICITACAO_LABEL } from '@/types';
@@ -328,6 +328,35 @@ function GestaoUsuariosContent() {
       .catch(() => setMensagemFlash({ tipo: 'erro', texto: 'Erro ao excluir usuário. Verifique a conexão.' }));
   };
 
+  /** Bloqueia/desbloqueia o usuário (ativo). Reflete no Dashboard e no Portal. */
+  const handleToggleBloqueio = async (u: Usuario) => {
+    // Atualização otimista
+    setUsuarios((prev) => prev.map((x) => (x.id === u.id ? { ...x, ativo: !x.ativo } : x)));
+    try {
+      const res = await fetch(`/api/usuarios/${encodeURIComponent(u.id)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ativo: !u.ativo }),
+      });
+      if (res.ok) {
+        setMensagemFlash({ tipo: 'sucesso', texto: `${u.nome} foi ${!u.ativo ? 'desbloqueado' : 'bloqueado'}.` });
+        setTimeout(() => setMensagemFlash(null), 4000);
+      } else {
+        setUsuarios((prev) => prev.map((x) => (x.id === u.id ? { ...x, ativo: u.ativo } : x)));
+        setMensagemFlash({ tipo: 'erro', texto: 'Erro ao alterar o bloqueio do usuário.' });
+      }
+    } catch {
+      setUsuarios((prev) => prev.map((x) => (x.id === u.id ? { ...x, ativo: u.ativo } : x)));
+      setMensagemFlash({ tipo: 'erro', texto: 'Erro ao alterar o bloqueio do usuário.' });
+    }
+  };
+
+  /** Reenvia/cobra o acesso do usuário (protótipo: apenas confirmação). */
+  const handleReenviarAcesso = (u: Usuario) => {
+    setMensagemFlash({ tipo: 'sucesso', texto: `Acesso reenviado para ${u.email}.` });
+    setTimeout(() => setMensagemFlash(null), 4000);
+  };
+
   return (
     <div className="space-y-6">
       {/* Abas */}
@@ -399,7 +428,17 @@ function GestaoUsuariosContent() {
         </div>
       )}
 
-      {aba === 'dashboard' && <DashboardAcessos />}
+      {aba === 'dashboard' && (
+        <DashboardAcessos
+          onIrParaUsuarios={(filtro) => {
+            if (filtro === 'bloqueados') {
+              setAtivoFiltro('false');
+              setFiltroColStatus('Inativo');
+            }
+            setAba('usuarios');
+          }}
+        />
+      )}
 
       {aba === 'usuarios' && (
         <>
@@ -501,7 +540,25 @@ function GestaoUsuariosContent() {
                           <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{formatarDataHora(u.criadoEm)}</td>
                           <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{formatarDataHora(u.ultimoAcessoEm ?? null)}</td>
                           <td className="whitespace-nowrap px-4 py-3 text-right">
-                            <div className="flex justify-end gap-2">
+                            <div className="flex justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleBloqueio(u)}
+                                className={`rounded p-1.5 ${u.ativo ? 'text-slate-500 hover:bg-rose-50 hover:text-rose-600' : 'text-emerald-600 hover:bg-emerald-50'}`}
+                                title={u.ativo ? 'Bloquear usuário' : 'Desbloquear usuário'}
+                                aria-label={u.ativo ? `Bloquear usuário ${u.nome}` : `Desbloquear usuário ${u.nome}`}
+                              >
+                                {u.ativo ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleReenviarAcesso(u)}
+                                className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-primary-600"
+                                title="Reenviar acesso"
+                                aria-label={`Reenviar acesso para ${u.nome}`}
+                              >
+                                <Send className="h-4 w-4" />
+                              </button>
                               <Link href={`/gestao-usuarios/${u.id}`} className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-primary-600" title="Editar" aria-label={`Editar usuário ${u.nome}`}>
                                 <Pencil className="h-4 w-4" />
                               </Link>

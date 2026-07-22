@@ -1,14 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Download, Users, UserX, ShieldAlert, Activity, Send, MonitorSmartphone, Building2, TriangleAlert,
-  X, Mail, ChevronRight, Lock, Unlock,
+  Download, Users, UserX, ShieldAlert, Activity, MonitorSmartphone, Building2, TriangleAlert,
+  X, Mail, ChevronRight, ChevronDown, ArrowRight, Clock,
 } from 'lucide-react';
 import type { Usuario } from '@/types';
 import {
   ACESSOS_CLIENTES, TELAS_MAIS_ACESSADAS, REGRA_BLOQUEIO_DIAS,
-  telasDoCliente, type AcessoCliente, type TelaMaisAcessada,
+  telasDoCliente, telasDoUsuario, acessosUsuarioTela,
+  type AcessoCliente, type TelaMaisAcessada,
 } from '@/lib/acessosData';
 
 const DIA = 86_400_000;
@@ -86,14 +87,16 @@ const SITUACAO_INFO: Record<Situacao, { label: string; cls: string }> = {
   bloqueado: { label: 'Bloqueado', cls: 'bg-rose-100 text-rose-700' },
 };
 
-type Detalhe = { tipo: 'cliente'; clienteId: string } | { tipo: 'tela'; t: TelaMaisAcessada };
+type Detalhe =
+  | { tipo: 'cliente'; clienteId: string }
+  | { tipo: 'tela'; t: TelaMaisAcessada }
+  | { tipo: 'lista'; modo: 'bloqueados' | 'nunca' };
 
-export default function DashboardAcessos() {
+export default function DashboardAcessos({ onIrParaUsuarios }: { onIrParaUsuarios?: (filtro?: 'bloqueados') => void }) {
   const [users, setUsers] = useState<Usuario[]>([]);
   const [carregando, setCarregando] = useState(true);
-  const [flash, setFlash] = useState<string | null>(null);
   const [detalhe, setDetalhe] = useState<Detalhe | null>(null);
-  const [salvandoId, setSalvandoId] = useState<string | null>(null);
+  const [usuarioExpandido, setUsuarioExpandido] = useState<string | null>(null);
 
   const carregarUsuarios = useCallback(() => {
     setCarregando(true);
@@ -146,39 +149,16 @@ export default function DashboardAcessos() {
   );
 
   const totalClientes = merged.length;
-  const nuncaAcessaram = merged.filter((m) => m.count > 0 && m.nunca).length;
-  const clientesBloqueados = merged.filter((m) => m.clienteBloqueado).length;
   const usuariosBloqueados = users.filter((u) => !u.ativo).length;
   const acessos90d = merged.reduce((s, c) => s + c.acessos90d, 0);
 
-  const reenviarAcesso = (m: ClienteMerged) => {
-    setFlash(`Cobrança de acesso reenviada para ${m.nomeFantasia} (${m.count || m.usuarios} usuário(s)).`);
-    setTimeout(() => setFlash(null), 4000);
-  };
-
-  const alternarBloqueio = async (u: Usuario) => {
-    setSalvandoId(u.id);
-    try {
-      const res = await fetch(`/api/usuarios/${u.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ativo: !u.ativo }),
-      });
-      if (res.ok) {
-        await carregarUsuarios();
-        setFlash(`${u.nome} foi ${!u.ativo ? 'desbloqueado' : 'bloqueado'}. A mudança reflete também na aba Usuários.`);
-        setTimeout(() => setFlash(null), 4000);
-      } else {
-        setFlash('Não foi possível alterar o bloqueio do usuário.');
-        setTimeout(() => setFlash(null), 4000);
-      }
-    } catch {
-      setFlash('Erro de conexão ao alterar o bloqueio.');
-      setTimeout(() => setFlash(null), 4000);
-    } finally {
-      setSalvandoId(null);
-    }
-  };
+  const clienteNome = useMemo(() => {
+    const m = new Map<string, string>();
+    ACESSOS_CLIENTES.forEach((c) => m.set(c.clienteId, c.nomeFantasia));
+    return m;
+  }, []);
+  const usuariosBloqueadosLista = useMemo(() => users.filter((u) => !u.ativo), [users]);
+  const usuariosNuncaLista = useMemo(() => users.filter((u) => !u.ultimoAcessoEm), [users]);
 
   const clienteDetalhe = detalhe?.tipo === 'cliente' ? merged.find((m) => m.clienteId === detalhe.clienteId) ?? null : null;
 
@@ -196,15 +176,9 @@ export default function DashboardAcessos() {
         <p className="text-[13px] text-amber-900">
           <b>Gestão automática de acessos:</b> clientes que passarem de <b>{REGRA_BLOQUEIO_DIAS} dias</b> sem
           acessar o portal têm os usuários <b>bloqueados automaticamente</b>. Atualmente <b>{usuariosBloqueados}</b> usuário(s)
-          bloqueado(s). Bloquear/desbloquear aqui reflete na aba <b>Usuários</b>.
+          bloqueado(s). Esta tela é apenas de <b>visualização</b> — para bloquear/desbloquear ou reenviar acesso, use a aba <b>Usuários</b>.
         </p>
       </div>
-
-      {flash && (
-        <div role="status" aria-live="polite" className="rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          {flash}
-        </div>
-      )}
 
       {carregando ? (
         <div className="flex justify-center py-16 text-slate-500">Carregando dados de acesso...</div>
@@ -217,16 +191,24 @@ export default function DashboardAcessos() {
               <p className="mt-2 text-[32px] font-extrabold leading-none text-slate-900">{totalClientes}</p>
               <p className="mt-2 text-xs font-semibold text-slate-500">{users.length} usuários no total</p>
             </div>
-            <div className="card border-l-4 border-l-indigo-500 p-5">
+            <button
+              type="button"
+              onClick={() => setDetalhe({ tipo: 'lista', modo: 'nunca' })}
+              className="card border-l-4 border-l-indigo-500 p-5 text-left transition hover:shadow-md"
+            >
               <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500"><UserX className="h-3.5 w-3.5" /> Nunca acessaram</p>
-              <p className="mt-2 text-[32px] font-extrabold leading-none text-slate-900">{nuncaAcessaram}</p>
-              <p className="mt-2 text-xs font-semibold text-indigo-600">precisam de cobrança</p>
-            </div>
-            <div className="card border-l-4 border-l-rose-500 p-5">
+              <p className="mt-2 text-[32px] font-extrabold leading-none text-slate-900">{usuariosNuncaLista.length}</p>
+              <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-indigo-600">ver usuários <ChevronRight className="h-3 w-3" /></p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setDetalhe({ tipo: 'lista', modo: 'bloqueados' })}
+              className="card border-l-4 border-l-rose-500 p-5 text-left transition hover:shadow-md"
+            >
               <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500"><ShieldAlert className="h-3.5 w-3.5" /> Usuários bloqueados</p>
               <p className="mt-2 text-[32px] font-extrabold leading-none text-slate-900">{usuariosBloqueados}</p>
-              <p className="mt-2 text-xs font-semibold text-rose-600">{clientesBloqueados} cliente(s) por 90d+</p>
-            </div>
+              <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-rose-600">ver usuários <ChevronRight className="h-3 w-3" /></p>
+            </button>
             <div className="card border-l-4 border-l-sky-600 p-5">
               <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500"><Activity className="h-3.5 w-3.5" /> Acessos (90d)</p>
               <p className="mt-2 text-[32px] font-extrabold leading-none text-slate-900">{acessos90d.toLocaleString('pt-BR')}</p>
@@ -395,7 +377,6 @@ export default function DashboardAcessos() {
                     <th className="px-3 py-2.5 text-center font-bold">Usuários</th>
                     <th className="px-3 py-2.5 text-center font-bold">Dias sem acesso</th>
                     <th className="px-3 py-2.5 font-bold">Situação</th>
-                    <th className="px-3 py-2.5 text-right font-bold">Ação</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -420,16 +401,6 @@ export default function DashboardAcessos() {
                           <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${SITUACAO_INFO[sit].cls}`}>
                             {SITUACAO_INFO[sit].label}
                           </span>
-                        </td>
-                        <td className="px-3 py-2.5 text-right">
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); reenviarAcesso(c); }}
-                            className="inline-flex items-center gap-1.5 rounded-md border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 hover:bg-primary-100"
-                          >
-                            <Send className="h-3.5 w-3.5" />
-                            {c.nunca ? 'Cobrar acesso' : 'Reenviar acesso'}
-                          </button>
                         </td>
                       </tr>
                     );
@@ -490,7 +461,7 @@ export default function DashboardAcessos() {
                   </div>
 
                   <div className="px-6 pb-2">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Usuários do cliente (mesmos da aba Usuários)</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Usuários do cliente (mesmos da aba Usuários) — clique para ver as telas</p>
                     <div className="overflow-hidden rounded-lg border border-slate-200">
                       <table className="w-full text-left text-[13px]">
                         <thead className="bg-slate-50">
@@ -499,42 +470,60 @@ export default function DashboardAcessos() {
                             <th className="px-3 py-2 font-bold">E-mail</th>
                             <th className="px-3 py-2 font-bold">Último acesso</th>
                             <th className="px-3 py-2 font-bold">Status</th>
-                            <th className="px-3 py-2 text-right font-bold">Ação</th>
+                            <th className="px-3 py-2" />
                           </tr>
                         </thead>
                         <tbody>
                           {c.users.map((u) => {
                             const d = diasDesde(u.ultimoAcessoEm);
+                            const aberto = usuarioExpandido === u.id;
+                            const telasUser = aberto ? telasDoUsuario(u.email) : [];
+                            const maxUser = Math.max(...telasUser.map((t) => t.acessos), 1);
                             return (
-                              <tr key={u.id} className="border-t border-slate-100">
-                                <td className="px-3 py-2 font-semibold text-slate-800">{u.nome}</td>
-                                <td className="px-3 py-2 text-slate-500"><span className="inline-flex items-center gap-1"><Mail className="h-3 w-3 text-slate-400" />{u.email}</span></td>
-                                <td className="px-3 py-2">
-                                  <span className={`font-mono text-xs font-semibold ${d === null ? 'text-indigo-600' : d >= REGRA_BLOQUEIO_DIAS ? 'text-rose-600' : 'text-slate-500'}`}>
-                                    {d === null ? 'Nunca acessou' : `há ${d}d`}
-                                  </span>
-                                </td>
-                                <td className="px-3 py-2">
-                                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${u.ativo ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                                    {u.ativo ? 'Ativo' : 'Bloqueado'}
-                                  </span>
-                                </td>
-                                <td className="px-3 py-2 text-right">
-                                  <button
-                                    type="button"
-                                    disabled={salvandoId === u.id}
-                                    onClick={() => alternarBloqueio(u)}
-                                    className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold disabled:opacity-50 ${
-                                      u.ativo
-                                        ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
-                                        : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                                    }`}
-                                  >
-                                    {u.ativo ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
-                                    {salvandoId === u.id ? '...' : u.ativo ? 'Bloquear' : 'Desbloquear'}
-                                  </button>
-                                </td>
-                              </tr>
+                              <Fragment key={u.id}>
+                                <tr
+                                  onClick={() => setUsuarioExpandido(aberto ? null : u.id)}
+                                  className="cursor-pointer border-t border-slate-100 hover:bg-slate-50"
+                                >
+                                  <td className="px-3 py-2 font-semibold text-slate-800">{u.nome}</td>
+                                  <td className="px-3 py-2 text-slate-500"><span className="inline-flex items-center gap-1"><Mail className="h-3 w-3 text-slate-400" />{u.email}</span></td>
+                                  <td className="px-3 py-2">
+                                    <span className={`font-mono text-xs font-semibold ${d === null ? 'text-indigo-600' : d >= REGRA_BLOQUEIO_DIAS ? 'text-rose-600' : 'text-slate-500'}`}>
+                                      {d === null ? 'Nunca acessou' : `há ${d}d`}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${u.ativo ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                      {u.ativo ? 'Ativo' : 'Bloqueado'}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 text-right text-slate-400">
+                                    {aberto ? <ChevronDown className="ml-auto h-4 w-4" /> : <ChevronRight className="ml-auto h-4 w-4" />}
+                                  </td>
+                                </tr>
+                                {aberto && (
+                                  <tr className="bg-slate-50/60">
+                                    <td colSpan={5} className="px-4 py-3">
+                                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Telas acessadas por {u.nome}</p>
+                                      {u.ultimoAcessoEm ? (
+                                        <div className="space-y-1.5">
+                                          {telasUser.map((t) => (
+                                            <div key={t.tela} className="flex items-center gap-3">
+                                              <span className="w-40 shrink-0 truncate text-[12px] text-slate-600">{t.tela}</span>
+                                              <div className="flex-1"><Barra pct={Math.round((t.acessos / maxUser) * 100)} cor="bg-sky-500" /></div>
+                                              <span className="w-28 shrink-0 text-right font-mono text-[11px] text-slate-500">
+                                                {t.acessos}× · <span className="inline-flex items-center gap-0.5"><Clock className="h-3 w-3" />{t.minutos}min</span>
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-xs text-slate-400">Usuário nunca acessou o portal.</p>
+                                      )}
+                                    </td>
+                                  </tr>
+                                )}
+                              </Fragment>
                             );
                           })}
                           {c.users.length === 0 && (
@@ -562,16 +551,18 @@ export default function DashboardAcessos() {
                     </div>
                   )}
 
-                  <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
-                    <button
-                      type="button"
-                      onClick={() => { reenviarAcesso(c); }}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-primary-700"
-                    >
-                      <Send className="h-4 w-4" />
-                      {c.nunca ? 'Cobrar acesso' : 'Reenviar acesso'}
-                    </button>
-                  </div>
+                  {onIrParaUsuarios && (
+                    <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
+                      <button
+                        type="button"
+                        onClick={() => { setDetalhe(null); onIrParaUsuarios(); }}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3.5 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        Gerir usuários na aba Usuários
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                 </>
               );
             })()}
@@ -586,7 +577,7 @@ export default function DashboardAcessos() {
           aria-modal="true"
           onMouseDown={(e) => e.target === e.currentTarget && setDetalhe(null)}
         >
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">{detalhe.t.tela}</h3>
@@ -615,9 +606,110 @@ export default function DashboardAcessos() {
                   );
                 })}
               </div>
+
+              {(() => {
+                const tela = detalhe.t.tela;
+                // Usuários (reais) dos clientes que acessam esta tela, com nº de acessos por usuário.
+                const nomesTop = new Set(detalhe.t.topClientes.map((x) => x.nome));
+                const clienteIds = ACESSOS_CLIENTES.filter((c) => nomesTop.has(c.nomeFantasia)).map((c) => c.clienteId);
+                const lista = clienteIds
+                  .flatMap((cid) => (usersByCliente.get(cid) ?? []).filter((u) => u.ultimoAcessoEm))
+                  .map((u) => ({ u, ...acessosUsuarioTela(u.email, tela) }))
+                  .sort((a, b) => b.acessos - a.acessos)
+                  .slice(0, 8);
+                const maxU = Math.max(...lista.map((x) => x.acessos), 1);
+                if (lista.length === 0) return null;
+                return (
+                  <div className="mt-5 border-t border-slate-100 pt-4">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Usuários que mais acessam esta tela</p>
+                    <div className="space-y-2.5">
+                      {lista.map(({ u, acessos, minutos }) => (
+                        <div key={u.id} className="flex items-center gap-3">
+                          <span className="w-44 shrink-0 truncate text-[12px]">
+                            <span className="font-semibold text-slate-700">{u.nome}</span>
+                            <span className="ml-1 text-slate-400">· {clienteNome.get(u.clienteId)}</span>
+                          </span>
+                          <div className="flex-1"><Barra pct={Math.round((acessos / maxU) * 100)} cor="bg-sky-500" /></div>
+                          <span className="w-24 shrink-0 text-right font-mono text-[11px] text-slate-500">{acessos}× · {minutos}min</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
+      )}
+
+      {detalhe?.tipo === 'lista' && (
+        (() => {
+          const lista = detalhe.modo === 'bloqueados' ? usuariosBloqueadosLista : usuariosNuncaLista;
+          const titulo = detalhe.modo === 'bloqueados' ? 'Usuários bloqueados' : 'Usuários que nunca acessaram';
+          return (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+              role="dialog"
+              aria-modal="true"
+              onMouseDown={(e) => e.target === e.currentTarget && setDetalhe(null)}
+            >
+              <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+                <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">{titulo}</h3>
+                    <p className="text-xs text-slate-500">{lista.length} usuário(s)</p>
+                  </div>
+                  <button type="button" onClick={() => setDetalhe(null)} aria-label="Fechar" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="px-6 py-3">
+                  {lista.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-slate-400">Nenhum usuário nesta condição.</p>
+                  ) : (
+                    <div className="overflow-hidden rounded-lg border border-slate-200">
+                      <table className="w-full text-left text-[13px]">
+                        <thead className="bg-slate-50">
+                          <tr className="text-[11px] uppercase tracking-wide text-slate-500">
+                            <th className="px-3 py-2 font-bold">Nome</th>
+                            <th className="px-3 py-2 font-bold">Cliente</th>
+                            <th className="px-3 py-2 font-bold">E-mail</th>
+                            <th className="px-3 py-2 text-right font-bold">Último acesso</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lista.map((u) => {
+                            const d = diasDesde(u.ultimoAcessoEm);
+                            return (
+                              <tr key={u.id} className="border-t border-slate-100">
+                                <td className="px-3 py-2 font-semibold text-slate-800">{u.nome}</td>
+                                <td className="px-3 py-2 text-slate-600">{clienteNome.get(u.clienteId) ?? u.clienteId}</td>
+                                <td className="px-3 py-2 text-slate-500">{u.email}</td>
+                                <td className="px-3 py-2 text-right font-mono text-xs text-slate-500">{d === null ? 'Nunca' : `há ${d}d`}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+                {onIrParaUsuarios && (
+                  <div className="flex justify-end border-t border-slate-100 px-6 py-4">
+                    <button
+                      type="button"
+                      onClick={() => { setDetalhe(null); onIrParaUsuarios(detalhe.modo === 'bloqueados' ? 'bloqueados' : undefined); }}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+                    >
+                      Gerir na aba Usuários
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()
       )}
     </div>
   );

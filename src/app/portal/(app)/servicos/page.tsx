@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import {
   Download, Info, Wrench, FileText, X, AlertTriangle, Clock,
-  CheckCircle2, CalendarClock,
+  CheckCircle2, CalendarClock, ChevronRight, ChevronDown,
 } from 'lucide-react';
 import {
-  PageTitle, StatusBadge, KpiCard, FilterChip, KpiRow, SectionCard, SectionHeader,
+  PageTitle, KpiCard, FilterChip, KpiRow, SectionCard, SectionHeader,
   Toolbar, ToolbarDivider, SearchInput, DataTable, Th, TablePagination, usePaginacao,
 } from '@/components/portal/ui';
 
@@ -34,15 +34,21 @@ const TIPO_INFO: Record<TipoServico, { label: string; dot: string; bar: string }
 };
 const TIPOS_ORDEM: TipoServico[] = ['preventiva', 'corretiva', 'sinistro', 'outros'];
 
+/** Ordem de Serviço: um atendimento pode ter várias, com motivos diversos. */
+interface OrdemServico {
+  numero: string;
+  /** Mesmo vocabulário de "motivo do atendimento". */
+  motivo: string;
+  status: 'Aberta' | 'Em execução' | 'Aguardando peça' | 'Finalizada';
+}
+
 interface AtendimentoServico {
   numero: string;
   status: 'finalizado' | 'aberta';
   motivo: string;
   tipo: TipoServico;
-  /** Ordem de Serviço vinculada ao atendimento. */
-  osNumero: string;
-  osMotivo: string;
-  osStatus: string;
+  /** Ordens de Serviço vinculadas ao atendimento (uma ou várias). */
+  ordens: OrdemServico[];
   placa: string;
   /** Chassi OU nº de série identificam o ativo (sempre um dos dois). */
   chassi: string;
@@ -57,15 +63,146 @@ interface AtendimentoServico {
 }
 
 const ATENDIMENTOS_SERVICO: AtendimentoServico[] = [
-  { numero: '972972', status: 'finalizado', motivo: 'PNEU', tipo: 'corretiva', osNumero: 'OS-338271', osMotivo: 'Troca de pneu dianteiro', osStatus: 'Finalizada', placa: 'JBL5B25', chassi: '9535V6TB0PR009032', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '25/06/2026', dataEntrada: '26/06/2026', previsao: '28/06/2026', saida: '13/07/2026', dataConclusao: '13/07/2026', situacao: 'Rodando' },
-  { numero: '957964', status: 'finalizado', motivo: 'CORRETIVA', tipo: 'corretiva', osNumero: 'OS-330145', osMotivo: 'Reparo sistema elétrico', osStatus: 'Finalizada', placa: 'JBL5B27', chassi: '9535V6TB0PR009127', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '15/11/2025', dataEntrada: '15/11/2025', previsao: '20/11/2025', saida: '21/11/2025', dataConclusao: '21/11/2025', situacao: 'Rodando' },
-  { numero: '951200', status: 'finalizado', motivo: 'REVISÃO PREVENTIVA', tipo: 'preventiva', osNumero: 'OS-325509', osMotivo: 'Revisão 130.000 km', osStatus: 'Finalizada', placa: 'SHQ6B80', chassi: '9535V6TB0PR009242', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '10/05/2026', dataEntrada: '10/05/2026', previsao: '12/05/2026', saida: '12/05/2026', dataConclusao: '12/05/2026', situacao: 'Rodando' },
-  { numero: '948877', status: 'finalizado', motivo: 'SINISTRO', tipo: 'sinistro', osNumero: 'OS-321880', osMotivo: 'Reparo de lataria (sinistro)', osStatus: 'Finalizada', placa: 'JBL5E88', chassi: 'YV2RT40A8LB456789', numeroSerie: '—', marcaModelo: 'Volvo FH 460', agendamento: '02/04/2026', dataEntrada: '03/04/2026', previsao: '20/04/2026', saida: '25/04/2026', dataConclusao: '25/04/2026', situacao: 'Rodando' },
-  { numero: '2066903', status: 'aberta', motivo: 'DESMOBILIZAÇÃO', tipo: 'outros', osNumero: 'OS-344012', osMotivo: 'Vistoria de desmobilização', osStatus: 'Em execução', placa: 'SIE8F02', chassi: '9BM958074HB778812', numeroSerie: '—', marcaModelo: 'Mercedes Accelo 815', agendamento: '02/07/2026', dataEntrada: '03/07/2026', previsao: '20/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
-  { numero: '2066895', status: 'aberta', motivo: 'AFERIÇÃO TACÓGRAFO', tipo: 'preventiva', osNumero: 'OS-343988', osMotivo: 'Aferição de tacógrafo', osStatus: 'Aguardando peça', placa: 'BXW9D72', chassi: '9535V6TB0PR010455', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '08/07/2026', dataEntrada: '09/07/2026', previsao: '18/07/2026', saida: '—', dataConclusao: '—', situacao: 'Aguardando peça' },
-  { numero: '2066894', status: 'aberta', motivo: 'PNEU', tipo: 'corretiva', osNumero: 'OS-343970', osMotivo: 'Troca de pneu (eixo traseiro)', osStatus: 'Em execução', placa: 'TXI3F16', chassi: '9BM958074HB779340', numeroSerie: '—', marcaModelo: 'Mercedes Accelo 815', agendamento: '10/07/2026', dataEntrada: '11/07/2026', previsao: '17/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
-  { numero: '2066880', status: 'aberta', motivo: 'CORRETIVA', tipo: 'corretiva', osNumero: 'OS-343900', osMotivo: 'Vazamento hidráulico', osStatus: 'Aberta', placa: '—', chassi: '—', numeroSerie: 'SN-JCB-099887', marcaModelo: 'JCB 3CX', agendamento: '12/07/2026', dataEntrada: '12/07/2026', previsao: '19/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
+  { numero: '972972', status: 'finalizado', motivo: 'PNEU', tipo: 'corretiva', ordens: [{ numero: 'OS-338271', motivo: 'PNEU', status: 'Finalizada' }, { numero: 'OS-338290', motivo: 'FREIO', status: 'Finalizada' }], placa: 'JBL5B25', chassi: '9535V6TB0PR009032', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '25/06/2026', dataEntrada: '26/06/2026', previsao: '28/06/2026', saida: '13/07/2026', dataConclusao: '13/07/2026', situacao: 'Rodando' },
+  { numero: '957964', status: 'finalizado', motivo: 'CORRETIVA', tipo: 'corretiva', ordens: [{ numero: 'OS-330145', motivo: 'ELÉTRICA', status: 'Finalizada' }], placa: 'JBL5B27', chassi: '9535V6TB0PR009127', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '15/11/2025', dataEntrada: '15/11/2025', previsao: '20/11/2025', saida: '21/11/2025', dataConclusao: '21/11/2025', situacao: 'Rodando' },
+  { numero: '951200', status: 'finalizado', motivo: 'REVISÃO PREVENTIVA', tipo: 'preventiva', ordens: [{ numero: 'OS-325509', motivo: 'REVISÃO PREVENTIVA', status: 'Finalizada' }, { numero: 'OS-325520', motivo: 'PNEU', status: 'Finalizada' }, { numero: 'OS-325533', motivo: 'FREIO', status: 'Finalizada' }], placa: 'SHQ6B80', chassi: '9535V6TB0PR009242', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '10/05/2026', dataEntrada: '10/05/2026', previsao: '12/05/2026', saida: '12/05/2026', dataConclusao: '12/05/2026', situacao: 'Rodando' },
+  { numero: '948877', status: 'finalizado', motivo: 'SINISTRO', tipo: 'sinistro', ordens: [{ numero: 'OS-321880', motivo: 'SINISTRO', status: 'Finalizada' }, { numero: 'OS-321895', motivo: 'ELÉTRICA', status: 'Finalizada' }], placa: 'JBL5E88', chassi: 'YV2RT40A8LB456789', numeroSerie: '—', marcaModelo: 'Volvo FH 460', agendamento: '02/04/2026', dataEntrada: '03/04/2026', previsao: '20/04/2026', saida: '25/04/2026', dataConclusao: '25/04/2026', situacao: 'Rodando' },
+  { numero: '2066903', status: 'aberta', motivo: 'DESMOBILIZAÇÃO', tipo: 'outros', ordens: [{ numero: 'OS-344012', motivo: 'DESMOBILIZAÇÃO', status: 'Em execução' }], placa: 'SIE8F02', chassi: '9BM958074HB778812', numeroSerie: '—', marcaModelo: 'Mercedes Accelo 815', agendamento: '02/07/2026', dataEntrada: '03/07/2026', previsao: '20/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
+  { numero: '2066895', status: 'aberta', motivo: 'AFERIÇÃO TACÓGRAFO', tipo: 'preventiva', ordens: [{ numero: 'OS-343988', motivo: 'AFERIÇÃO TACÓGRAFO', status: 'Aguardando peça' }, { numero: 'OS-343999', motivo: 'ELÉTRICA', status: 'Em execução' }], placa: 'BXW9D72', chassi: '9535V6TB0PR010455', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '08/07/2026', dataEntrada: '09/07/2026', previsao: '18/07/2026', saida: '—', dataConclusao: '—', situacao: 'Aguardando peça' },
+  { numero: '2066894', status: 'aberta', motivo: 'PNEU', tipo: 'corretiva', ordens: [{ numero: 'OS-343970', motivo: 'PNEU', status: 'Em execução' }], placa: 'TXI3F16', chassi: '9BM958074HB779340', numeroSerie: '—', marcaModelo: 'Mercedes Accelo 815', agendamento: '10/07/2026', dataEntrada: '11/07/2026', previsao: '17/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
+  { numero: '2066880', status: 'aberta', motivo: 'CORRETIVA', tipo: 'corretiva', ordens: [{ numero: 'OS-343900', motivo: 'SUSPENSÃO', status: 'Aberta' }, { numero: 'OS-343911', motivo: 'FREIO', status: 'Em execução' }], placa: '—', chassi: '—', numeroSerie: 'SN-JCB-099887', marcaModelo: 'JCB 3CX', agendamento: '12/07/2026', dataEntrada: '12/07/2026', previsao: '19/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
 ];
+
+/** Cor do badge por status de OS. */
+const COR_STATUS_OS: Record<OrdemServico['status'], string> = {
+  Aberta: 'bg-indigo-100 text-indigo-700',
+  'Em execução': 'bg-sky-100 text-sky-700',
+  'Aguardando peça': 'bg-amber-100 text-amber-800',
+  Finalizada: 'bg-emerald-100 text-emerald-700',
+};
+
+/** Item autorizado para manutenção (peça ou serviço) — base do Detalhe de Serviço e do Resumo. */
+interface ItemServico {
+  os: string;
+  codigo: string;
+  descricao: string;
+  observacao: string;
+  finalidade: string;
+  qtde: number;
+  valorUnitario: string;
+  valorTotal: string;
+  tipo: 'servico' | 'peca';
+}
+
+/**
+ * Dados adicionais por atendimento:
+ *  - descricaoProblema: o que o usuário/condutor relatou no chamado (botão Informação).
+ *  - itens: peças e serviços trocados (botão Detalhe de Serviço).
+ *  - dados do veículo/cliente + totais (botão Resumo do atendimento).
+ */
+interface DetalheAtendimento {
+  descricaoProblema: string;
+  condutor: string;
+  cliente: string;
+  numeroContrato: string;
+  centroCusto: string;
+  km: string;
+  anoVeiculo: string;
+  modeloCompleto: string;
+  itens: ItemServico[];
+  totalServicos: string;
+  totalPecas: string;
+  totalAtendimento: string;
+}
+
+const DETALHES_ATENDIMENTO: Record<string, DetalheAtendimento> = {
+  '972972': {
+    descricaoProblema: 'Pneus dianteiros com desgaste acentuado e vibração acima de 80 km/h. Solicitada recapagem.',
+    condutor: 'Marcos Lima', cliente: 'Bebidas Fruki Sa', numeroContrato: '119791', centroCusto: 'NOVO CLIENTE',
+    km: '63.316', anoVeiculo: '2022/2022', modeloCompleto: 'VW - VolksWagen - 11-180 Delivery 4x2 2p (diesel)(E5)',
+    itens: [
+      { os: 'OS-338271', codigo: '101404', descricao: 'RECAPAGEM 235/75R17,5', observacao: 'DVRM', finalidade: 'MANUTENCAO/CONSERVACAO - FROTA', qtde: 2, valorUnitario: 'R$ 0,00', valorTotal: 'R$ 0,00', tipo: 'servico' },
+      { os: 'OS-338290', codigo: '204101', descricao: 'PASTILHA DE FREIO DIANTEIRA', observacao: '—', finalidade: 'MANUTENCAO/CONSERVACAO - FROTA', qtde: 1, valorUnitario: 'R$ 210,00', valorTotal: 'R$ 210,00', tipo: 'peca' },
+    ],
+    totalServicos: 'R$ 0,00', totalPecas: 'R$ 210,00', totalAtendimento: 'R$ 210,00',
+  },
+  '957964': {
+    descricaoProblema: 'Falha intermitente no sistema elétrico; luzes do painel oscilando.',
+    condutor: 'Fernanda Reis', cliente: 'Bebidas Fruki Sa', numeroContrato: '119791', centroCusto: 'MATRIZ',
+    km: '92.410', anoVeiculo: '2022/2022', modeloCompleto: 'VW - VolksWagen - 11-180 Delivery 4x2 2p (diesel)(E5)',
+    itens: [
+      { os: 'OS-330145', codigo: '305220', descricao: 'REPARO DO CHICOTE ELÉTRICO', observacao: '—', finalidade: 'MANUTENCAO/CONSERVACAO - FROTA', qtde: 1, valorUnitario: 'R$ 480,00', valorTotal: 'R$ 480,00', tipo: 'servico' },
+    ],
+    totalServicos: 'R$ 480,00', totalPecas: 'R$ 0,00', totalAtendimento: 'R$ 480,00',
+  },
+  '951200': {
+    descricaoProblema: 'Veículo atingiu 130.000 km; revisão preventiva programada.',
+    condutor: 'Patrícia Nunes', cliente: 'Matriz SP Ltda', numeroContrato: '120455', centroCusto: 'MATRIZ SP',
+    km: '128.430', anoVeiculo: '2023/2023', modeloCompleto: 'VW - VolksWagen - 11-180 Delivery 4x2 2p (diesel)(E5)',
+    itens: [
+      { os: 'OS-325509', codigo: '400010', descricao: 'REVISÃO PREVENTIVA 130.000 KM', observacao: '—', finalidade: 'MANUTENCAO/CONSERVACAO - FROTA', qtde: 1, valorUnitario: 'R$ 890,00', valorTotal: 'R$ 890,00', tipo: 'servico' },
+      { os: 'OS-325520', codigo: '101404', descricao: 'PNEU 235/75R17,5', observacao: '—', finalidade: 'MANUTENCAO/CONSERVACAO - FROTA', qtde: 2, valorUnitario: 'R$ 1.150,00', valorTotal: 'R$ 2.300,00', tipo: 'peca' },
+      { os: 'OS-325533', codigo: '204101', descricao: 'JOGO DE PASTILHAS DE FREIO', observacao: '—', finalidade: 'MANUTENCAO/CONSERVACAO - FROTA', qtde: 1, valorUnitario: 'R$ 320,00', valorTotal: 'R$ 320,00', tipo: 'peca' },
+    ],
+    totalServicos: 'R$ 890,00', totalPecas: 'R$ 2.620,00', totalAtendimento: 'R$ 3.510,00',
+  },
+  '948877': {
+    descricaoProblema: 'Colisão lateral (sinistro). Amassado na porta e lataria danificada.',
+    condutor: 'Carlos Mota', cliente: 'Matriz SP Ltda', numeroContrato: '120455', centroCusto: 'MATRIZ SP',
+    km: '340.120', anoVeiculo: '2023/2023', modeloCompleto: 'Volvo - FH 460 6x2 (diesel)',
+    itens: [
+      { os: 'OS-321880', codigo: '510300', descricao: 'FUNILARIA E PINTURA - PORTA LD', observacao: 'SINISTRO', finalidade: 'SINISTRO', qtde: 1, valorUnitario: 'R$ 3.200,00', valorTotal: 'R$ 3.200,00', tipo: 'servico' },
+      { os: 'OS-321895', codigo: '305220', descricao: 'CHICOTE ELÉTRICO DA PORTA', observacao: '—', finalidade: 'SINISTRO', qtde: 1, valorUnitario: 'R$ 640,00', valorTotal: 'R$ 640,00', tipo: 'peca' },
+    ],
+    totalServicos: 'R$ 3.200,00', totalPecas: 'R$ 640,00', totalAtendimento: 'R$ 3.840,00',
+  },
+  '2066903': {
+    descricaoProblema: 'Solicitação de vistoria de desmobilização do ativo.',
+    condutor: '—', cliente: 'Delta Logística Ltda', numeroContrato: '121088', centroCusto: 'OPERAÇÃO SP',
+    km: '—', anoVeiculo: '2021/2021', modeloCompleto: 'Mercedes - Accelo 815 (diesel)',
+    itens: [
+      { os: 'OS-344012', codigo: '600001', descricao: 'VISTORIA DE DESMOBILIZAÇÃO', observacao: '—', finalidade: 'DESMOBILIZAÇÃO', qtde: 1, valorUnitario: 'R$ 350,00', valorTotal: 'R$ 350,00', tipo: 'servico' },
+    ],
+    totalServicos: 'R$ 350,00', totalPecas: 'R$ 0,00', totalAtendimento: 'R$ 350,00',
+  },
+  '2066895': {
+    descricaoProblema: 'Tacógrafo com selo vencido; necessária aferição obrigatória.',
+    condutor: 'Marcos Lima', cliente: 'Bebidas Fruki Sa', numeroContrato: '119791', centroCusto: 'MATRIZ',
+    km: '110.220', anoVeiculo: '2022/2022', modeloCompleto: 'VW - VolksWagen - 11-180 Delivery 4x2 2p (diesel)(E5)',
+    itens: [
+      { os: 'OS-343988', codigo: '700120', descricao: 'AFERIÇÃO DE TACÓGRAFO', observacao: '—', finalidade: 'MANUTENCAO/CONSERVACAO - FROTA', qtde: 1, valorUnitario: 'R$ 180,00', valorTotal: 'R$ 180,00', tipo: 'servico' },
+      { os: 'OS-343999', codigo: '305221', descricao: 'SENSOR DO TACÓGRAFO', observacao: 'AGUARDANDO PEÇA', finalidade: 'MANUTENCAO/CONSERVACAO - FROTA', qtde: 1, valorUnitario: 'R$ 260,00', valorTotal: 'R$ 260,00', tipo: 'peca' },
+    ],
+    totalServicos: 'R$ 180,00', totalPecas: 'R$ 260,00', totalAtendimento: 'R$ 440,00',
+  },
+  '2066894': {
+    descricaoProblema: 'Pneu do eixo traseiro furado; troca necessária.',
+    condutor: 'Fernanda Reis', cliente: 'Delta Logística Ltda', numeroContrato: '121088', centroCusto: 'OPERAÇÃO SP',
+    km: '88.500', anoVeiculo: '2021/2021', modeloCompleto: 'Mercedes - Accelo 815 (diesel)',
+    itens: [
+      { os: 'OS-343970', codigo: '101404', descricao: 'PNEU 235/75R17,5', observacao: '—', finalidade: 'MANUTENCAO/CONSERVACAO - FROTA', qtde: 2, valorUnitario: 'R$ 1.150,00', valorTotal: 'R$ 2.300,00', tipo: 'peca' },
+    ],
+    totalServicos: 'R$ 0,00', totalPecas: 'R$ 2.300,00', totalAtendimento: 'R$ 2.300,00',
+  },
+  '2066880': {
+    descricaoProblema: 'Vazamento hidráulico e ruído na suspensão do equipamento.',
+    condutor: '—', cliente: 'Obra Jundiaí S.A.', numeroContrato: '121500', centroCusto: 'OBRA JUNDIAÍ',
+    km: '8.940 h', anoVeiculo: '2024/2024', modeloCompleto: 'JCB - 3CX Retroescavadeira',
+    itens: [
+      { os: 'OS-343900', codigo: '820044', descricao: 'REPARO SISTEMA HIDRÁULICO', observacao: '—', finalidade: 'MANUTENCAO/CONSERVACAO - FROTA', qtde: 1, valorUnitario: 'R$ 1.480,00', valorTotal: 'R$ 1.480,00', tipo: 'servico' },
+      { os: 'OS-343911', codigo: '204120', descricao: 'KIT DE VEDAÇÃO HIDRÁULICA', observacao: '—', finalidade: 'MANUTENCAO/CONSERVACAO - FROTA', qtde: 1, valorUnitario: 'R$ 390,00', valorTotal: 'R$ 390,00', tipo: 'peca' },
+    ],
+    totalServicos: 'R$ 1.480,00', totalPecas: 'R$ 390,00', totalAtendimento: 'R$ 1.870,00',
+  },
+};
+
+const DETALHE_PADRAO: DetalheAtendimento = {
+  descricaoProblema: 'Sem descrição registrada no chamado.',
+  condutor: '—', cliente: '—', numeroContrato: '—', centroCusto: '—', km: '—', anoVeiculo: '—', modeloCompleto: '—',
+  itens: [], totalServicos: 'R$ 0,00', totalPecas: 'R$ 0,00', totalAtendimento: 'R$ 0,00',
+};
+
+const getDetalhe = (numero: string): DetalheAtendimento => DETALHES_ATENDIMENTO[numero] ?? DETALHE_PADRAO;
 
 /** Dias de imobilização + atraso frente à previsão (para abertos). */
 function imobilizacao(a: AtendimentoServico): { dias: number | null; atrasoDias: number } {
@@ -107,10 +244,69 @@ const EVOLUCAO_MENSAL: { mes: string; valores: Record<TipoServico, number> }[] =
 
 type DetalheTipo = 'info' | 'servico' | 'resumo';
 const DETALHE_TITULO: Record<DetalheTipo, string> = {
-  info: 'Informação',
+  info: 'Informação do chamado',
   servico: 'Detalhes de Serviço',
   resumo: 'Resumo do atendimento',
 };
+
+/** Monta o HTML do Resumo de Atendimento (mesmo layout do arquivo oficial). */
+function gerarResumoHtml(a: AtendimentoServico, det: DetalheAtendimento): string {
+  const identificacao = a.chassi !== '—' ? `Chassi: ${a.chassi}` : `Nº de Série: ${a.numeroSerie}`;
+  const linhas = det.itens
+    .map(
+      (it) => `<tr>
+        <td>${it.os}</td><td>${it.codigo}</td><td>${it.descricao}</td><td>${it.observacao}</td>
+        <td>${it.finalidade}</td><td style="text-align:center">${it.qtde}</td>
+        <td style="text-align:right">${it.valorUnitario}</td><td style="text-align:right">${it.valorTotal}</td>
+      </tr>`,
+    )
+    .join('');
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+  <title>Resumo Atendimento ${a.numero}</title>
+  <style>
+    *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;padding:28px;font-size:12px}
+    h1{font-size:18px;margin:0 0 4px} h3{font-size:13px;margin:16px 0 4px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px;margin:10px 0}
+    table{width:100%;border-collapse:collapse;margin-top:6px}
+    th,td{border:1px solid #cbd5e1;padding:4px 6px;font-size:10.5px;vertical-align:top}
+    th{background:#f1f5f9;text-align:left} .tot{margin-top:6px;text-align:right;font-size:12px}
+  </style></head><body>
+    <h1>Resumo de Atendimento</h1>
+    <p><b>N°.:</b> ${a.numero}</p>
+    <div class="grid">
+      <div><b>Placa:</b> ${a.placa}</div>
+      <div><b>${identificacao.split(':')[0]}:</b> ${identificacao.split(': ')[1]}</div>
+      <div><b>Modelo:</b> ${det.modeloCompleto}</div>
+      <div><b>Ano veículo:</b> ${det.anoVeiculo}</div>
+      <div><b>KM:</b> ${det.km}</div>
+      <div><b>Cliente:</b> ${det.cliente}</div>
+      <div><b>Nº Contrato:</b> ${det.numeroContrato}</div>
+      <div><b>Centro de Custo:</b> ${det.centroCusto}</div>
+      <div><b>Data Agendamento:</b> ${a.agendamento}</div>
+      <div><b>Data Entrada em oficina:</b> ${a.dataEntrada}</div>
+      <div><b>Data de Saída:</b> ${a.saida}</div>
+    </div>
+    <p><b>Informações do condutor:</b> ${det.condutor} — ${det.descricaoProblema}</p>
+    <h3>ITENS AUTORIZADOS PARA MANUTENÇÃO</h3>
+    <table>
+      <thead><tr><th>O.S.</th><th>Nº Item</th><th>Descrição</th><th>Observação</th><th>Finalidade</th><th>Qtde</th><th>Valor unit.</th><th>Valor Total</th></tr></thead>
+      <tbody>${linhas || '<tr><td colspan="8" style="text-align:center">Sem itens</td></tr>'}</tbody>
+    </table>
+    <div class="tot"><b>Total dos Serviços:</b> ${det.totalServicos}</div>
+    <div class="tot"><b>Total das Peças:</b> ${det.totalPecas}</div>
+    <div class="tot"><b>Total do Atendimento:</b> ${det.totalAtendimento}</div>
+  </body></html>`;
+}
+
+/** Abre o Resumo numa nova janela e dispara a impressão (salvar como PDF). */
+function abrirResumoImpressao(a: AtendimentoServico, det: DetalheAtendimento) {
+  const w = window.open('', '_blank', 'width=820,height=900');
+  if (!w) return;
+  w.document.write(gerarResumoHtml(a, det));
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 350);
+}
 
 function ModalDetalheAtendimento({
   atendimento, tipo, onFechar,
@@ -119,14 +315,16 @@ function ModalDetalheAtendimento({
   tipo: DetalheTipo;
   onFechar: () => void;
 }) {
-  const imob = imobilizacao(atendimento);
-  const dias = diasEmManutencao(atendimento);
+  const det = getDetalhe(atendimento.numero);
+  const identificacaoLabel = atendimento.numeroSerie !== '—' ? 'Nº de Série' : 'Chassi';
+  const identificacaoValor = atendimento.numeroSerie !== '—' ? atendimento.numeroSerie : atendimento.chassi;
+  const largura = tipo === 'resumo' || tipo === 'servico' ? 'max-w-2xl' : 'max-w-lg';
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
-      <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className={`max-h-[90vh] w-full ${largura} overflow-y-auto rounded-xl bg-white p-6 shadow-xl`} onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="font-mono text-xs font-semibold text-slate-500">Atendimento {atendimento.numero}</p>
+            <p className="font-mono text-xs font-semibold text-slate-500">Atendimento {atendimento.numero} · {atendimento.placa !== '—' ? atendimento.placa : atendimento.numeroSerie}</p>
             <h3 className="text-lg font-extrabold text-slate-900">{DETALHE_TITULO[tipo]}</h3>
           </div>
           <button onClick={onFechar} aria-label="Fechar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
@@ -134,52 +332,126 @@ function ModalDetalheAtendimento({
           </button>
         </div>
 
+        {/* INFORMAÇÃO: o que o usuário/condutor relatou no chamado */}
         {tipo === 'info' && (
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Placa</dt><dd className="font-mono font-semibold">{atendimento.placa}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">{atendimento.numeroSerie !== '—' ? 'Nº de Série' : 'Chassi'}</dt><dd className="font-mono font-semibold">{atendimento.numeroSerie !== '—' ? atendimento.numeroSerie : atendimento.chassi}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Marca/Modelo</dt><dd className="font-semibold">{atendimento.marcaModelo}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Tipo</dt><dd className="font-semibold">{TIPO_INFO[atendimento.tipo].label}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Motivo do atendimento</dt><dd className="font-semibold">{atendimento.motivo}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Situação do veículo</dt><dd>{atendimento.situacao}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Nº da OS</dt><dd className="font-mono font-semibold">{atendimento.osNumero}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Status da OS</dt><dd className="font-semibold">{atendimento.osStatus}</dd></div>
-            <div className="col-span-2"><dt className="text-xs font-bold uppercase text-slate-400">Motivo da OS</dt><dd>{atendimento.osMotivo}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Data de agendamento</dt><dd className="font-mono">{atendimento.agendamento}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Data de entrada</dt><dd className="font-mono">{atendimento.dataEntrada}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Previsão de saída</dt><dd className="font-mono">{atendimento.previsao}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Data de saída</dt><dd className="font-mono">{atendimento.saida}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Data de conclusão</dt><dd className="font-mono">{atendimento.dataConclusao}</dd></div>
-            <div><dt className="text-xs font-bold uppercase text-slate-400">Dias em manutenção</dt><dd className="font-semibold">{dias != null ? `${dias} dias${atendimento.status === 'aberta' ? ' (em curso)' : ''}` : '—'}</dd></div>
-          </dl>
+          <div className="space-y-4 text-[13px]">
+            <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-sky-700">Problema relatado no chamado</p>
+              <p className="mt-1 text-slate-800">{det.descricaoProblema}</p>
+            </div>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Condutor</dt><dd className="font-semibold">{det.condutor}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Motivo do atendimento</dt><dd className="font-semibold">{atendimento.motivo}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Placa</dt><dd className="font-mono font-semibold">{atendimento.placa}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">{identificacaoLabel}</dt><dd className="font-mono font-semibold">{identificacaoValor}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Marca/Modelo</dt><dd className="font-semibold">{atendimento.marcaModelo}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Situação do veículo</dt><dd>{atendimento.situacao}</dd></div>
+            </dl>
+          </div>
         )}
 
+        {/* DETALHE DE SERVIÇO: serviços e peças trocadas */}
         {tipo === 'servico' && (
-          <div className="space-y-2.5 text-[13px]">
-            <div className="rounded-lg border border-slate-200 px-4 py-3">
-              <p className="font-semibold text-slate-800">{atendimento.motivo}</p>
-              <p className="mt-0.5 text-xs text-slate-500">Oficina Vamos · Ordem de serviço vinculada ao atendimento {atendimento.numero}</p>
+          <div className="space-y-3 text-[13px]">
+            <p className="text-xs text-slate-500">Serviços e peças registrados pela oficina neste atendimento.</p>
+            <div className="overflow-hidden rounded-lg border border-slate-200">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50">
+                  <tr className="text-[11px] uppercase tracking-wide text-slate-500">
+                    <th className="px-3 py-2 font-bold">Item</th>
+                    <th className="px-3 py-2 font-bold">Tipo</th>
+                    <th className="px-3 py-2 text-center font-bold">Qtde</th>
+                    <th className="px-3 py-2 text-right font-bold">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {det.itens.length === 0 ? (
+                    <tr><td colSpan={4} className="px-3 py-6 text-center text-slate-400">Nenhum item registrado.</td></tr>
+                  ) : (
+                    det.itens.map((it) => (
+                      <tr key={it.os + it.codigo} className="border-t border-slate-100">
+                        <td className="px-3 py-2">
+                          <span className="block font-semibold text-slate-800">{it.descricao}</span>
+                          <span className="block text-[11px] text-slate-400">{it.os} · cód. {it.codigo} · {it.finalidade}</span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${it.tipo === 'peca' ? 'bg-indigo-100 text-indigo-700' : 'bg-sky-100 text-sky-700'}`}>
+                            {it.tipo === 'peca' ? 'Peça' : 'Serviço'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-center font-mono">{it.qtde}</td>
+                        <td className="px-3 py-2 text-right font-mono font-semibold text-slate-700">{it.valorTotal}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
-            <div className="rounded-lg border border-slate-200 px-4 py-3">
-              <p className="font-semibold text-slate-800">Itens aplicados</p>
-              <p className="mt-0.5 text-xs text-slate-500">Peças e mão de obra registradas pela oficina aparecem aqui.</p>
+            <div className="flex flex-col items-end gap-0.5 text-[13px]">
+              <span className="text-slate-500">Total dos Serviços: <b className="font-mono text-slate-700">{det.totalServicos}</b></span>
+              <span className="text-slate-500">Total das Peças: <b className="font-mono text-slate-700">{det.totalPecas}</b></span>
+              <span className="text-slate-800">Total do Atendimento: <b className="font-mono">{det.totalAtendimento}</b></span>
             </div>
           </div>
         )}
 
+        {/* RESUMO: documento igual ao arquivo oficial + download/impressão */}
         {tipo === 'resumo' && (
-          <div className="space-y-3 text-[13px] text-slate-700">
-            <p>
-              Veículo <b className="font-mono">{atendimento.placa}</b> — atendimento{' '}
-              {atendimento.status === 'finalizado' ? 'finalizado' : 'em andamento'} com motivo{' '}
-              <b>{atendimento.motivo}</b> ({TIPO_INFO[atendimento.tipo].label}).
-            </p>
-            <p className="text-xs text-slate-500">
-              Agendado em {atendimento.agendamento}
-              {atendimento.saida !== '—'
-                ? ` · veículo liberado em ${atendimento.saida} · ${imob.dias} dias imobilizado`
-                : ` · previsão de conclusão ${atendimento.previsao}${imob.atrasoDias > 0 ? ` · atrasado ${imob.atrasoDias} dia(s)` : ''}`}.
-            </p>
+          <div className="space-y-4 text-[13px]">
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => abrirResumoImpressao(atendimento, det)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+              >
+                <Download size={15} /> Baixar / Imprimir PDF
+              </button>
+            </div>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-slate-200 p-4">
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Placa</dt><dd className="font-mono font-semibold">{atendimento.placa}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">{identificacaoLabel}</dt><dd className="font-mono font-semibold">{identificacaoValor}</dd></div>
+              <div className="col-span-2"><dt className="text-xs font-bold uppercase text-slate-400">Modelo</dt><dd className="font-semibold">{det.modeloCompleto}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Ano veículo</dt><dd>{det.anoVeiculo}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">KM</dt><dd className="font-mono">{det.km}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Cliente</dt><dd className="font-semibold">{det.cliente}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Nº Contrato</dt><dd className="font-mono">{det.numeroContrato}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Centro de Custo</dt><dd>{det.centroCusto}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Data Agendamento</dt><dd className="font-mono">{atendimento.agendamento}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Data Entrada</dt><dd className="font-mono">{atendimento.dataEntrada}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Data de Saída</dt><dd className="font-mono">{atendimento.saida}</dd></div>
+            </dl>
+            <div>
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">Itens autorizados para manutenção</p>
+              <div className="overflow-x-auto rounded-lg border border-slate-200">
+                <table className="w-full text-left text-[12px]">
+                  <thead className="bg-slate-50">
+                    <tr className="text-[10px] uppercase tracking-wide text-slate-500">
+                      <th className="px-2 py-1.5 font-bold">O.S.</th>
+                      <th className="px-2 py-1.5 font-bold">Descrição</th>
+                      <th className="px-2 py-1.5 font-bold">Finalidade</th>
+                      <th className="px-2 py-1.5 text-center font-bold">Qtde</th>
+                      <th className="px-2 py-1.5 text-right font-bold">Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {det.itens.map((it) => (
+                      <tr key={it.os + it.codigo} className="border-t border-slate-100">
+                        <td className="whitespace-nowrap px-2 py-1.5 font-mono text-slate-600">{it.os}</td>
+                        <td className="px-2 py-1.5 font-semibold text-slate-800">{it.descricao}</td>
+                        <td className="px-2 py-1.5 text-slate-500">{it.finalidade}</td>
+                        <td className="px-2 py-1.5 text-center font-mono">{it.qtde}</td>
+                        <td className="whitespace-nowrap px-2 py-1.5 text-right font-mono">{it.valorTotal}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-2 flex flex-col items-end gap-0.5">
+                <span className="text-slate-500">Total dos Serviços: <b className="font-mono text-slate-700">{det.totalServicos}</b></span>
+                <span className="text-slate-500">Total das Peças: <b className="font-mono text-slate-700">{det.totalPecas}</b></span>
+                <span className="text-slate-800">Total do Atendimento: <b className="font-mono">{det.totalAtendimento}</b></span>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -271,6 +543,7 @@ export default function ServicosPage() {
   const [filtroTipo, setFiltroTipo] = useState<TipoServico | 'todos'>('todos');
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'aberta' | 'finalizado'>('todos');
   const [detalhe, setDetalhe] = useState<{ atendimento: AtendimentoServico; tipo: DetalheTipo } | null>(null);
+  const [osExpandida, setOsExpandida] = useState<string | null>(null);
 
   const abertos = ATENDIMENTOS_SERVICO.filter((a) => a.status === 'aberta');
 
@@ -488,19 +761,41 @@ export default function ServicosPage() {
         {pag.pageItens.map((a) => {
               const dias = diasEmManutencao(a);
               const emAberto = a.status === 'aberta';
+              const os0 = a.ordens[0];
+              const extras = a.ordens.length - 1;
+              const aberto = osExpandida === a.numero;
+              const maisPill = extras > 0 && (
+                <span className="ml-1 rounded bg-slate-100 px-1 text-[10px] font-bold text-slate-500">+{extras}</span>
+              );
               return (
-                <tr key={a.numero} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                  <td className="whitespace-nowrap px-4 py-3.5 font-mono font-semibold text-slate-800">{a.numero}</td>
+                <Fragment key={a.numero}>
+                <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                   <td className="whitespace-nowrap px-4 py-3.5">
-                    <StatusBadge
-                      status={a.status === 'finalizado' ? 'resolvido' : 'aberto'}
-                      label={a.status === 'finalizado' ? 'Finalizado' : 'Em aberto'}
-                    />
+                    {a.ordens.length > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => setOsExpandida(aberto ? null : a.numero)}
+                        className="inline-flex items-center gap-1 font-mono font-semibold text-slate-800 hover:text-[#0e2233]"
+                        title="Ver ordens de serviço"
+                      >
+                        {aberto ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                        {a.numero}
+                      </button>
+                    ) : (
+                      <span className="font-mono font-semibold text-slate-800">{a.numero}</span>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3.5">
+                    <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${a.status === 'finalizado' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'}`}>
+                      {a.status === 'finalizado' ? 'Finalizado' : 'Em aberto'}
+                    </span>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold">{a.motivo}</td>
-                  <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs text-slate-600">{a.osNumero}</td>
-                  <td className="whitespace-nowrap px-4 py-3.5 text-xs">{a.osMotivo}</td>
-                  <td className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-slate-600">{a.osStatus}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs text-slate-600">{os0.numero}{maisPill}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-slate-700">{os0.motivo}{maisPill}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5 text-xs">
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${COR_STATUS_OS[os0.status]}`}>{os0.status}</span>{maisPill}
+                  </td>
                   <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.placa}</td>
                   <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs text-slate-600">{a.chassi}</td>
                   <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs text-slate-600">{a.numeroSerie}</td>
@@ -512,7 +807,7 @@ export default function ServicosPage() {
                   <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.dataConclusao}</td>
                   <td className="whitespace-nowrap px-4 py-3.5">
                     {dias != null ? (
-                      <span className={`font-mono text-xs font-semibold ${emAberto ? 'text-primary-700' : 'text-slate-600'}`}>
+                      <span className={`font-mono text-xs font-semibold ${emAberto ? 'text-sky-700' : 'text-slate-600'}`}>
                         {dias}d{emAberto ? ' · em curso' : ''}
                       </span>
                     ) : (
@@ -523,14 +818,14 @@ export default function ServicosPage() {
                   <td className="whitespace-nowrap px-4 py-3.5">
                     <div className="flex gap-1">
                       <button
-                        title="Informação"
+                        title="Informação (problema relatado)"
                         onClick={() => setDetalhe({ atendimento: a, tipo: 'info' })}
                         className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-[#0e2233]"
                       >
                         <Info size={16} />
                       </button>
                       <button
-                        title="Detalhes de Serviço"
+                        title="Detalhes de Serviço (peças e serviços)"
                         onClick={() => setDetalhe({ atendimento: a, tipo: 'servico' })}
                         className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-[#0e2233]"
                       >
@@ -546,6 +841,25 @@ export default function ServicosPage() {
                     </div>
                   </td>
                 </tr>
+                {aberto && (
+                  <tr className="bg-slate-50/60">
+                    <td colSpan={18} className="px-6 py-3">
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                        Ordens de Serviço do atendimento {a.numero} ({a.ordens.length})
+                      </p>
+                      <div className="space-y-1.5">
+                        {a.ordens.map((os) => (
+                          <div key={os.numero} className="flex items-center gap-3 text-[13px]">
+                            <span className="w-28 shrink-0 font-mono font-semibold text-slate-700">{os.numero}</span>
+                            <span className="w-56 shrink-0 font-semibold text-slate-600">{os.motivo}</span>
+                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${COR_STATUS_OS[os.status]}`}>{os.status}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               );
             })}
       </DataTable>

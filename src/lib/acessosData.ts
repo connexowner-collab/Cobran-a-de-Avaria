@@ -98,6 +98,29 @@ export function telasDoCliente(c: AcessoCliente): TelaClienteAcesso[] {
     .sort((a, b) => b.acessos - a.acessos);
 }
 
+/* ───────────────────── Acesso por usuário × tela (detalhe) ───────────────────── */
+
+function hashStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+/** Acessos e tempo (min) de um usuário numa tela — determinístico a partir da chave do usuário. */
+export function acessosUsuarioTela(userKey: string, tela: string): { acessos: number; minutos: number } {
+  const h = hashStr(`${userKey}|${tela}`);
+  return { acessos: (h % 40) + 1, minutos: ((h >> 3) % 180) + 5 };
+}
+
+export interface TelaUsuarioAcesso { tela: string; acessos: number; minutos: number }
+
+/** Telas acessadas por um usuário (ordenadas por nº de acessos). */
+export function telasDoUsuario(userKey: string): TelaUsuarioAcesso[] {
+  return TELAS_MAIS_ACESSADAS
+    .map((t) => ({ tela: t.tela, ...acessosUsuarioTela(userKey, t.tela) }))
+    .sort((a, b) => b.acessos - a.acessos);
+}
+
 /** Está bloqueado por inatividade: passou da regra de dias sem acesso
  *  (ou nunca acessou e o acesso foi criado há mais que a regra). */
 export function estaBloqueadoPorInatividade(c: AcessoCliente): boolean {
