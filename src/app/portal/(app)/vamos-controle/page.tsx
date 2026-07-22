@@ -213,30 +213,55 @@ export default function VamosControlePage() {
           <SearchInput value={busca} onChange={setBusca} placeholder="Placa, motorista ou cidade..." largura="w-52" />
         </Toolbar>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {lista.map((v) => (
-            <button
-              key={v.placa}
-              onClick={() => setSelecionada(v.placa)}
-              className={`card p-4 text-left transition ${v.placa === selecionada ? 'border-primary-500 ring-1 ring-primary-500' : 'hover:border-slate-300'}`}
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-mono text-sm font-bold text-slate-800">{v.placa}</p>
-                  <p className="text-xs text-slate-500">{v.modelo} · {v.motorista}</p>
-                </div>
-                <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${SITUACAO_INFO[v.situacao].badge}`}>
-                  <i className={`h-1.5 w-1.5 rounded-full ${SITUACAO_INFO[v.situacao].dot}`} /> {SITUACAO_INFO[v.situacao].label}
-                </span>
-              </div>
-              <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-600"><MapPin size={13} className="text-slate-400" /> {v.local} · {v.cidade}</p>
-              <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-                <span className="flex items-center gap-1"><Gauge size={13} /> {v.velocidade} km/h</span>
-                <span className={`flex items-center gap-1 ${corBateria(v.bateria)}`}><BatteryMedium size={13} /> {v.bateria}%</span>
-                <span className="flex items-center gap-1"><Clock size={13} /> {v.ultimaAtualizacao}</span>
-              </div>
-            </button>
-          ))}
+        <div className="table-container">
+          <table className="w-full text-left text-[13px]">
+            <thead>
+              <tr className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3 font-bold">Placa</th>
+                <th className="px-4 py-3 font-bold">Modelo / Motorista</th>
+                <th className="px-4 py-3 font-bold">Localização</th>
+                <th className="px-4 py-3 font-bold">Situação</th>
+                <th className="px-4 py-3 text-right font-bold">Velocidade</th>
+                <th className="px-4 py-3 text-right font-bold">Bateria</th>
+                <th className="px-4 py-3 text-right font-bold">Combustível</th>
+                <th className="px-4 py-3 text-right font-bold">Atualização</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.length === 0 ? (
+                <tr><td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-400">Nenhum veículo encontrado com os filtros atuais.</td></tr>
+              ) : (
+                lista.map((v) => (
+                  <tr
+                    key={v.placa}
+                    onClick={() => setSelecionada(v.placa)}
+                    className={`cursor-pointer border-b border-slate-100 last:border-0 ${v.placa === selecionada ? 'bg-primary-50' : 'hover:bg-slate-50'}`}
+                  >
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <span className="rounded-md border border-slate-200 px-2 py-1 font-mono text-xs font-semibold">{v.placa}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <span className="block font-semibold text-slate-800">{v.modelo}</span>
+                      <span className="block text-xs text-slate-500">{v.motorista}</span>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      <span className="flex items-center gap-1.5"><MapPin size={13} className="text-slate-400" /> {v.local}</span>
+                      <span className="block text-xs text-slate-400">{v.cidade}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${SITUACAO_INFO[v.situacao].badge}`}>
+                        <i className={`h-1.5 w-1.5 rounded-full ${SITUACAO_INFO[v.situacao].dot}`} /> {SITUACAO_INFO[v.situacao].label}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right font-mono">{v.velocidade} km/h</td>
+                    <td className={`whitespace-nowrap px-4 py-3 text-right font-mono font-semibold ${corBateria(v.bateria)}`}>{v.bateria}%</td>
+                    <td className={`whitespace-nowrap px-4 py-3 text-right font-mono ${corBateria(v.combustivel)}`}>{v.combustivel}%</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right text-xs text-slate-500">{v.ultimaAtualizacao}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
