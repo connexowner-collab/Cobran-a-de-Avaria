@@ -4,6 +4,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Check, Maximize2, Minimize2, Pencil } from 'lucide-react';
 import type { ClienteContratoOption, ResponsavelOption, Ativo } from '@/types';
 import DropdownClientesMultiplo from './DropdownClientesMultiplo';
+import { matchColuna } from '@/components/portal/ui';
+
+/** Dica exibida nas colunas que aceitam vários valores colados de uma vez. */
+const DICA_MULTI = 'Cole vários valores (do Excel, separados por espaço, vírgula ou quebra de linha) para filtrar todos de uma vez.';
 
 interface ModalNovoGrupoProps {
   open: boolean;
@@ -242,9 +246,9 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
   const ativosFiltrados = ativos.filter((a) => {
     const info = getContratoInfo(a.contratoId);
     return (
-      matchCol(filtroPlaca, (a.placa || a.numeroSerie) ?? '') &&
-      matchCol(filtroChassi, a.chassi) &&
-      matchCol(filtroNumeroSerie, a.numeroSerie) &&
+      matchColuna((a.placa || a.numeroSerie) ?? '', filtroPlaca, true) &&
+      matchColuna(a.chassi ?? '', filtroChassi, true) &&
+      matchColuna(a.numeroSerie ?? '', filtroNumeroSerie, true) &&
       matchCol(filtroModelo, a.modelo) &&
       matchCol(filtroContrato, info.contrato) &&
       matchCol(filtroCnpj, info.cnpj) &&
@@ -506,9 +510,9 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
                         </tr>
                         <tr className="border-t border-slate-200 bg-slate-100/80">
                           {mostrarDivisaoFrota && <th className="px-2 py-1" />}
-                          <th className="px-2 py-1"><input type="text" value={filtroPlaca} onChange={(e) => setFiltroPlaca(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar placa" /></th>
-                          <th className="px-2 py-1"><input type="text" value={filtroChassi} onChange={(e) => setFiltroChassi(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar chassi" /></th>
-                          <th className="px-2 py-1"><input type="text" value={filtroNumeroSerie} onChange={(e) => setFiltroNumeroSerie(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar nº série" /></th>
+                          <th className="px-2 py-1"><input type="text" value={filtroPlaca} onChange={(e) => setFiltroPlaca(e.target.value)} placeholder="Filtrar (vários)" title={DICA_MULTI} className="filter-input-line px-2 text-xs" aria-label="Filtrar placa (aceita vários valores)" /></th>
+                          <th className="px-2 py-1"><input type="text" value={filtroChassi} onChange={(e) => setFiltroChassi(e.target.value)} placeholder="Filtrar (vários)" title={DICA_MULTI} className="filter-input-line px-2 text-xs" aria-label="Filtrar chassi (aceita vários valores)" /></th>
+                          <th className="px-2 py-1"><input type="text" value={filtroNumeroSerie} onChange={(e) => setFiltroNumeroSerie(e.target.value)} placeholder="Filtrar (vários)" title={DICA_MULTI} className="filter-input-line px-2 text-xs" aria-label="Filtrar nº série (aceita vários valores)" /></th>
                           <th className="px-2 py-1"><input type="text" value={filtroModelo} onChange={(e) => setFiltroModelo(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar modelo" /></th>
                           <th className="px-2 py-1"><input type="text" value={filtroContrato} onChange={(e) => setFiltroContrato(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar contrato" /></th>
                           <th className="px-2 py-1"><input type="text" value={filtroCnpj} onChange={(e) => setFiltroCnpj(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar CNPJ" /></th>
@@ -597,9 +601,9 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
                             </tr>
                             <tr className="border-t border-slate-200 bg-slate-100/80">
                               {mostrarDivisaoFrota && <th className="px-2 py-1" />}
-                              <th className="px-2 py-1"><input type="text" value={filtroPlaca} onChange={(e) => setFiltroPlaca(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar placa" /></th>
-                              <th className="px-2 py-1"><input type="text" value={filtroChassi} onChange={(e) => setFiltroChassi(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar chassi" /></th>
-                              <th className="px-2 py-1"><input type="text" value={filtroNumeroSerie} onChange={(e) => setFiltroNumeroSerie(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar nº série" /></th>
+                              <th className="px-2 py-1"><input type="text" value={filtroPlaca} onChange={(e) => setFiltroPlaca(e.target.value)} placeholder="Filtrar (vários)" title={DICA_MULTI} className="filter-input-line px-2 text-xs" aria-label="Filtrar placa (aceita vários valores)" /></th>
+                              <th className="px-2 py-1"><input type="text" value={filtroChassi} onChange={(e) => setFiltroChassi(e.target.value)} placeholder="Filtrar (vários)" title={DICA_MULTI} className="filter-input-line px-2 text-xs" aria-label="Filtrar chassi (aceita vários valores)" /></th>
+                              <th className="px-2 py-1"><input type="text" value={filtroNumeroSerie} onChange={(e) => setFiltroNumeroSerie(e.target.value)} placeholder="Filtrar (vários)" title={DICA_MULTI} className="filter-input-line px-2 text-xs" aria-label="Filtrar nº série (aceita vários valores)" /></th>
                               <th className="px-2 py-1"><input type="text" value={filtroModelo} onChange={(e) => setFiltroModelo(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar modelo" /></th>
                               <th className="px-2 py-1"><input type="text" value={filtroContrato} onChange={(e) => setFiltroContrato(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar contrato" /></th>
                               <th className="px-2 py-1"><input type="text" value={filtroCnpj} onChange={(e) => setFiltroCnpj(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar CNPJ" /></th>
@@ -663,9 +667,9 @@ export default function ModalNovoGrupo({ open, onClose, grupoId, onSalvar }: Mod
                       </tr>
                       <tr className="border-t border-slate-200 bg-slate-100/80">
                         {mostrarDivisaoFrota && <th className="px-2 py-1" />}
-                        <th className="px-2 py-1"><input type="text" value={filtroPlaca} onChange={(e) => setFiltroPlaca(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar placa" /></th>
-                        <th className="px-2 py-1"><input type="text" value={filtroChassi} onChange={(e) => setFiltroChassi(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar chassi" /></th>
-                        <th className="px-2 py-1"><input type="text" value={filtroNumeroSerie} onChange={(e) => setFiltroNumeroSerie(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar nº série" /></th>
+                        <th className="px-2 py-1"><input type="text" value={filtroPlaca} onChange={(e) => setFiltroPlaca(e.target.value)} placeholder="Filtrar (vários)" title={DICA_MULTI} className="filter-input-line px-2 text-xs" aria-label="Filtrar placa (aceita vários valores)" /></th>
+                        <th className="px-2 py-1"><input type="text" value={filtroChassi} onChange={(e) => setFiltroChassi(e.target.value)} placeholder="Filtrar (vários)" title={DICA_MULTI} className="filter-input-line px-2 text-xs" aria-label="Filtrar chassi (aceita vários valores)" /></th>
+                        <th className="px-2 py-1"><input type="text" value={filtroNumeroSerie} onChange={(e) => setFiltroNumeroSerie(e.target.value)} placeholder="Filtrar (vários)" title={DICA_MULTI} className="filter-input-line px-2 text-xs" aria-label="Filtrar nº série (aceita vários valores)" /></th>
                         <th className="px-2 py-1"><input type="text" value={filtroModelo} onChange={(e) => setFiltroModelo(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar modelo" /></th>
                         <th className="px-2 py-1"><input type="text" value={filtroContrato} onChange={(e) => setFiltroContrato(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar contrato" /></th>
                         <th className="px-2 py-1"><input type="text" value={filtroCnpj} onChange={(e) => setFiltroCnpj(e.target.value)} placeholder="Filtrar" className="filter-input-line px-2 text-xs" aria-label="Filtrar CNPJ" /></th>
