@@ -40,6 +40,11 @@ interface OrdemServico {
   /** Mesmo vocabulário de "motivo do atendimento". */
   motivo: string;
   status: 'Aberta' | 'Em execução' | 'Aguardando peça' | 'Finalizada';
+  dataEntrada: string;
+  dataSaida: string;
+  /** Se a OS gera cobrança de avaria e o valor de reembolso estimado. */
+  temAvaria: boolean;
+  valorReembolso?: string;
 }
 
 interface AtendimentoServico {
@@ -63,14 +68,14 @@ interface AtendimentoServico {
 }
 
 const ATENDIMENTOS_SERVICO: AtendimentoServico[] = [
-  { numero: '972972', status: 'finalizado', motivo: 'PNEU', tipo: 'corretiva', ordens: [{ numero: 'OS-338271', motivo: 'PNEU', status: 'Finalizada' }, { numero: 'OS-338290', motivo: 'FREIO', status: 'Finalizada' }], placa: 'JBL5B25', chassi: '9535V6TB0PR009032', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '25/06/2026', dataEntrada: '26/06/2026', previsao: '28/06/2026', saida: '13/07/2026', dataConclusao: '13/07/2026', situacao: 'Rodando' },
-  { numero: '957964', status: 'finalizado', motivo: 'CORRETIVA', tipo: 'corretiva', ordens: [{ numero: 'OS-330145', motivo: 'ELÉTRICA', status: 'Finalizada' }], placa: 'JBL5B27', chassi: '9535V6TB0PR009127', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '15/11/2025', dataEntrada: '15/11/2025', previsao: '20/11/2025', saida: '21/11/2025', dataConclusao: '21/11/2025', situacao: 'Rodando' },
-  { numero: '951200', status: 'finalizado', motivo: 'REVISÃO PREVENTIVA', tipo: 'preventiva', ordens: [{ numero: 'OS-325509', motivo: 'REVISÃO PREVENTIVA', status: 'Finalizada' }, { numero: 'OS-325520', motivo: 'PNEU', status: 'Finalizada' }, { numero: 'OS-325533', motivo: 'FREIO', status: 'Finalizada' }], placa: 'SHQ6B80', chassi: '9535V6TB0PR009242', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '10/05/2026', dataEntrada: '10/05/2026', previsao: '12/05/2026', saida: '12/05/2026', dataConclusao: '12/05/2026', situacao: 'Rodando' },
-  { numero: '948877', status: 'finalizado', motivo: 'SINISTRO', tipo: 'sinistro', ordens: [{ numero: 'OS-321880', motivo: 'SINISTRO', status: 'Finalizada' }, { numero: 'OS-321895', motivo: 'ELÉTRICA', status: 'Finalizada' }], placa: 'JBL5E88', chassi: 'YV2RT40A8LB456789', numeroSerie: '—', marcaModelo: 'Volvo FH 460', agendamento: '02/04/2026', dataEntrada: '03/04/2026', previsao: '20/04/2026', saida: '25/04/2026', dataConclusao: '25/04/2026', situacao: 'Rodando' },
-  { numero: '2066903', status: 'aberta', motivo: 'DESMOBILIZAÇÃO', tipo: 'outros', ordens: [{ numero: 'OS-344012', motivo: 'DESMOBILIZAÇÃO', status: 'Em execução' }], placa: 'SIE8F02', chassi: '9BM958074HB778812', numeroSerie: '—', marcaModelo: 'Mercedes Accelo 815', agendamento: '02/07/2026', dataEntrada: '03/07/2026', previsao: '20/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
-  { numero: '2066895', status: 'aberta', motivo: 'AFERIÇÃO TACÓGRAFO', tipo: 'preventiva', ordens: [{ numero: 'OS-343988', motivo: 'AFERIÇÃO TACÓGRAFO', status: 'Aguardando peça' }, { numero: 'OS-343999', motivo: 'ELÉTRICA', status: 'Em execução' }], placa: 'BXW9D72', chassi: '9535V6TB0PR010455', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '08/07/2026', dataEntrada: '09/07/2026', previsao: '18/07/2026', saida: '—', dataConclusao: '—', situacao: 'Aguardando peça' },
-  { numero: '2066894', status: 'aberta', motivo: 'PNEU', tipo: 'corretiva', ordens: [{ numero: 'OS-343970', motivo: 'PNEU', status: 'Em execução' }], placa: 'TXI3F16', chassi: '9BM958074HB779340', numeroSerie: '—', marcaModelo: 'Mercedes Accelo 815', agendamento: '10/07/2026', dataEntrada: '11/07/2026', previsao: '17/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
-  { numero: '2066880', status: 'aberta', motivo: 'CORRETIVA', tipo: 'corretiva', ordens: [{ numero: 'OS-343900', motivo: 'SUSPENSÃO', status: 'Aberta' }, { numero: 'OS-343911', motivo: 'FREIO', status: 'Em execução' }], placa: '—', chassi: '—', numeroSerie: 'SN-JCB-099887', marcaModelo: 'JCB 3CX', agendamento: '12/07/2026', dataEntrada: '12/07/2026', previsao: '19/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
+  { numero: '972972', status: 'finalizado', motivo: 'PNEU', tipo: 'corretiva', ordens: [{ numero: 'OS-338271', motivo: 'PNEU', status: 'Finalizada', dataEntrada: '26/06/2026', dataSaida: '05/07/2026', temAvaria: false }, { numero: 'OS-338290', motivo: 'FREIO', status: 'Finalizada', dataEntrada: '06/07/2026', dataSaida: '13/07/2026', temAvaria: true, valorReembolso: 'R$ 210,00' }], placa: 'JBL5B25', chassi: '9535V6TB0PR009032', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '25/06/2026', dataEntrada: '26/06/2026', previsao: '28/06/2026', saida: '13/07/2026', dataConclusao: '13/07/2026', situacao: 'Rodando' },
+  { numero: '957964', status: 'finalizado', motivo: 'CORRETIVA', tipo: 'corretiva', ordens: [{ numero: 'OS-330145', motivo: 'ELÉTRICA', status: 'Finalizada', dataEntrada: '15/11/2025', dataSaida: '21/11/2025', temAvaria: false }], placa: 'JBL5B27', chassi: '9535V6TB0PR009127', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '15/11/2025', dataEntrada: '15/11/2025', previsao: '20/11/2025', saida: '21/11/2025', dataConclusao: '21/11/2025', situacao: 'Rodando' },
+  { numero: '951200', status: 'finalizado', motivo: 'REVISÃO PREVENTIVA', tipo: 'preventiva', ordens: [{ numero: 'OS-325509', motivo: 'REVISÃO PREVENTIVA', status: 'Finalizada', dataEntrada: '10/05/2026', dataSaida: '12/05/2026', temAvaria: false }, { numero: 'OS-325520', motivo: 'PNEU', status: 'Finalizada', dataEntrada: '10/05/2026', dataSaida: '11/05/2026', temAvaria: false }, { numero: 'OS-325533', motivo: 'FREIO', status: 'Finalizada', dataEntrada: '11/05/2026', dataSaida: '12/05/2026', temAvaria: true, valorReembolso: 'R$ 320,00' }], placa: 'SHQ6B80', chassi: '9535V6TB0PR009242', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '10/05/2026', dataEntrada: '10/05/2026', previsao: '12/05/2026', saida: '12/05/2026', dataConclusao: '12/05/2026', situacao: 'Rodando' },
+  { numero: '948877', status: 'finalizado', motivo: 'SINISTRO', tipo: 'sinistro', ordens: [{ numero: 'OS-321880', motivo: 'SINISTRO', status: 'Finalizada', dataEntrada: '03/04/2026', dataSaida: '25/04/2026', temAvaria: true, valorReembolso: 'R$ 3.200,00' }, { numero: 'OS-321895', motivo: 'ELÉTRICA', status: 'Finalizada', dataEntrada: '10/04/2026', dataSaida: '25/04/2026', temAvaria: false }], placa: 'JBL5E88', chassi: 'YV2RT40A8LB456789', numeroSerie: '—', marcaModelo: 'Volvo FH 460', agendamento: '02/04/2026', dataEntrada: '03/04/2026', previsao: '20/04/2026', saida: '25/04/2026', dataConclusao: '25/04/2026', situacao: 'Rodando' },
+  { numero: '2066903', status: 'aberta', motivo: 'DESMOBILIZAÇÃO', tipo: 'outros', ordens: [{ numero: 'OS-344012', motivo: 'DESMOBILIZAÇÃO', status: 'Em execução', dataEntrada: '03/07/2026', dataSaida: '—', temAvaria: false }], placa: 'SIE8F02', chassi: '9BM958074HB778812', numeroSerie: '—', marcaModelo: 'Mercedes Accelo 815', agendamento: '02/07/2026', dataEntrada: '03/07/2026', previsao: '20/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
+  { numero: '2066895', status: 'aberta', motivo: 'AFERIÇÃO TACÓGRAFO', tipo: 'preventiva', ordens: [{ numero: 'OS-343988', motivo: 'AFERIÇÃO TACÓGRAFO', status: 'Aguardando peça', dataEntrada: '09/07/2026', dataSaida: '—', temAvaria: false }, { numero: 'OS-343999', motivo: 'ELÉTRICA', status: 'Em execução', dataEntrada: '10/07/2026', dataSaida: '—', temAvaria: false }], placa: 'BXW9D72', chassi: '9535V6TB0PR010455', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '08/07/2026', dataEntrada: '09/07/2026', previsao: '18/07/2026', saida: '—', dataConclusao: '—', situacao: 'Aguardando peça' },
+  { numero: '2066894', status: 'aberta', motivo: 'PNEU', tipo: 'corretiva', ordens: [{ numero: 'OS-343970', motivo: 'PNEU', status: 'Em execução', dataEntrada: '11/07/2026', dataSaida: '—', temAvaria: true, valorReembolso: 'R$ 1.150,00' }], placa: 'TXI3F16', chassi: '9BM958074HB779340', numeroSerie: '—', marcaModelo: 'Mercedes Accelo 815', agendamento: '10/07/2026', dataEntrada: '11/07/2026', previsao: '17/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
+  { numero: '2066880', status: 'aberta', motivo: 'CORRETIVA', tipo: 'corretiva', ordens: [{ numero: 'OS-343900', motivo: 'SUSPENSÃO', status: 'Aberta', dataEntrada: '12/07/2026', dataSaida: '—', temAvaria: false }, { numero: 'OS-343911', motivo: 'FREIO', status: 'Em execução', dataEntrada: '13/07/2026', dataSaida: '—', temAvaria: true, valorReembolso: 'R$ 390,00' }], placa: '—', chassi: '—', numeroSerie: 'SN-JCB-099887', marcaModelo: 'JCB 3CX', agendamento: '12/07/2026', dataEntrada: '12/07/2026', previsao: '19/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
 ];
 
 /** Cor do badge por status de OS. */
@@ -80,6 +85,14 @@ const COR_STATUS_OS: Record<OrdemServico['status'], string> = {
   'Aguardando peça': 'bg-amber-100 text-amber-800',
   Finalizada: 'bg-emerald-100 text-emerald-700',
 };
+
+/** Dias em manutenção de uma OS (entrada -> saída, ou até hoje se em aberto). */
+function diasOS(os: OrdemServico): number | null {
+  const entrada = parseBR(os.dataEntrada);
+  if (!entrada) return null;
+  const fim = parseBR(os.dataSaida) ?? HOJE;
+  return Math.max(0, diasEntre(entrada, fim));
+}
 
 /** Item autorizado para manutenção (peça ou serviço) — base do Detalhe de Serviço e do Resumo. */
 interface ItemServico {
@@ -544,6 +557,7 @@ export default function ServicosPage() {
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'aberta' | 'finalizado'>('todos');
   const [detalhe, setDetalhe] = useState<{ atendimento: AtendimentoServico; tipo: DetalheTipo } | null>(null);
   const [osExpandida, setOsExpandida] = useState<string | null>(null);
+  const [osDetalhe, setOsDetalhe] = useState<{ atendimento: AtendimentoServico; os: OrdemServico } | null>(null);
 
   const abertos = ATENDIMENTOS_SERVICO.filter((a) => a.status === 'aberta');
 
@@ -721,7 +735,7 @@ export default function ServicosPage() {
       </Toolbar>
 
       <DataTable
-        colSpan={18}
+        colSpan={16}
         vazio={linhas.length === 0}
         vazioLabel="Nenhum atendimento encontrado com os filtros atuais."
         head={
@@ -729,9 +743,7 @@ export default function ServicosPage() {
             <Th className="whitespace-nowrap">Nº de atendimento</Th>
             <Th className="whitespace-nowrap">Status do atendimento</Th>
             <Th className="whitespace-nowrap">Motivo do atendimento</Th>
-            <Th className="whitespace-nowrap">Nº da OS</Th>
-            <Th className="whitespace-nowrap">Motivo da OS</Th>
-            <Th className="whitespace-nowrap">Status da OS</Th>
+            <Th className="whitespace-nowrap text-center">Nº de OS</Th>
             <Th className="whitespace-nowrap">Placa</Th>
             <Th className="whitespace-nowrap">Chassi</Th>
             <Th className="whitespace-nowrap">Nº de Série</Th>
@@ -761,29 +773,19 @@ export default function ServicosPage() {
         {pag.pageItens.map((a) => {
               const dias = diasEmManutencao(a);
               const emAberto = a.status === 'aberta';
-              const os0 = a.ordens[0];
-              const extras = a.ordens.length - 1;
               const aberto = osExpandida === a.numero;
-              const maisPill = extras > 0 && (
-                <span className="ml-1 rounded bg-slate-100 px-1 text-[10px] font-bold text-slate-500">+{extras}</span>
-              );
+              const stopExpand = (e: React.MouseEvent) => e.stopPropagation();
               return (
                 <Fragment key={a.numero}>
-                <tr className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                <tr
+                  onClick={() => setOsExpandida(aberto ? null : a.numero)}
+                  className={`cursor-pointer border-b border-slate-100 last:border-0 ${aberto ? 'bg-primary-50/40' : 'hover:bg-slate-50'}`}
+                >
                   <td className="whitespace-nowrap px-4 py-3.5">
-                    {a.ordens.length > 1 ? (
-                      <button
-                        type="button"
-                        onClick={() => setOsExpandida(aberto ? null : a.numero)}
-                        className="inline-flex items-center gap-1 font-mono font-semibold text-slate-800 hover:text-[#0e2233]"
-                        title="Ver ordens de serviço"
-                      >
-                        {aberto ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                        {a.numero}
-                      </button>
-                    ) : (
-                      <span className="font-mono font-semibold text-slate-800">{a.numero}</span>
-                    )}
+                    <span className="inline-flex items-center gap-1 font-mono font-semibold text-slate-800">
+                      {aberto ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                      {a.numero}
+                    </span>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3.5">
                     <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${a.status === 'finalizado' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'}`}>
@@ -791,10 +793,8 @@ export default function ServicosPage() {
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold">{a.motivo}</td>
-                  <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs text-slate-600">{os0.numero}{maisPill}</td>
-                  <td className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-slate-700">{os0.motivo}{maisPill}</td>
-                  <td className="whitespace-nowrap px-4 py-3.5 text-xs">
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${COR_STATUS_OS[os0.status]}`}>{os0.status}</span>{maisPill}
+                  <td className="whitespace-nowrap px-4 py-3.5 text-center">
+                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-100 px-1.5 text-xs font-bold text-slate-600">{a.ordens.length}</span>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.placa}</td>
                   <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs text-slate-600">{a.chassi}</td>
@@ -815,7 +815,7 @@ export default function ServicosPage() {
                     )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3.5 text-xs text-slate-500">{a.situacao}</td>
-                  <td className="whitespace-nowrap px-4 py-3.5">
+                  <td className="whitespace-nowrap px-4 py-3.5" onClick={stopExpand}>
                     <div className="flex gap-1">
                       <button
                         title="Informação (problema relatado)"
@@ -843,18 +843,58 @@ export default function ServicosPage() {
                 </tr>
                 {aberto && (
                   <tr className="bg-slate-50/60">
-                    <td colSpan={18} className="px-6 py-3">
+                    <td colSpan={16} className="px-6 py-3.5">
                       <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                         Ordens de Serviço do atendimento {a.numero} ({a.ordens.length})
                       </p>
-                      <div className="space-y-1.5">
-                        {a.ordens.map((os) => (
-                          <div key={os.numero} className="flex items-center gap-3 text-[13px]">
-                            <span className="w-28 shrink-0 font-mono font-semibold text-slate-700">{os.numero}</span>
-                            <span className="w-56 shrink-0 font-semibold text-slate-600">{os.motivo}</span>
-                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${COR_STATUS_OS[os.status]}`}>{os.status}</span>
-                          </div>
-                        ))}
+                      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                        <table className="w-full text-left text-[12px]">
+                          <thead className="bg-slate-50">
+                            <tr className="text-[10px] uppercase tracking-wide text-slate-500">
+                              <th className="px-3 py-2 font-bold">Nº da OS</th>
+                              <th className="px-3 py-2 font-bold">Motivo da OS</th>
+                              <th className="px-3 py-2 font-bold">Status da OS</th>
+                              <th className="px-3 py-2 text-center font-bold">Dias em manut.</th>
+                              <th className="px-3 py-2 font-bold">Entrada</th>
+                              <th className="px-3 py-2 font-bold">Saída</th>
+                              <th className="px-3 py-2 font-bold">Cobrança de avaria</th>
+                              <th className="px-3 py-2 text-right font-bold">Mais detalhes</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {a.ordens.map((os) => {
+                              const d = diasOS(os);
+                              return (
+                                <tr key={os.numero} className="border-t border-slate-100">
+                                  <td className="whitespace-nowrap px-3 py-2 font-mono font-semibold text-slate-700">{os.numero}</td>
+                                  <td className="whitespace-nowrap px-3 py-2 font-semibold text-slate-600">{os.motivo}</td>
+                                  <td className="whitespace-nowrap px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${COR_STATUS_OS[os.status]}`}>{os.status}</span></td>
+                                  <td className="whitespace-nowrap px-3 py-2 text-center font-mono">{d != null ? `${d}d${os.dataSaida === '—' ? ' · em curso' : ''}` : '—'}</td>
+                                  <td className="whitespace-nowrap px-3 py-2 font-mono">{os.dataEntrada}</td>
+                                  <td className="whitespace-nowrap px-3 py-2 font-mono">{os.dataSaida}</td>
+                                  <td className="whitespace-nowrap px-3 py-2">
+                                    {os.temAvaria ? (
+                                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+                                        Sim · {os.valorReembolso}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-400">Não</span>
+                                    )}
+                                  </td>
+                                  <td className="whitespace-nowrap px-3 py-2 text-right">
+                                    <button
+                                      type="button"
+                                      onClick={() => setOsDetalhe({ atendimento: a, os })}
+                                      className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+                                    >
+                                      <Info size={13} /> Detalhes
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     </td>
                   </tr>
@@ -871,6 +911,63 @@ export default function ServicosPage() {
           onFechar={() => setDetalhe(null)}
         />
       )}
+
+      {osDetalhe && (
+        <ModalDetalheOS atendimento={osDetalhe.atendimento} os={osDetalhe.os} onFechar={() => setOsDetalhe(null)} />
+      )}
+    </div>
+  );
+}
+
+function ModalDetalheOS({ atendimento, os, onFechar }: { atendimento: AtendimentoServico; os: OrdemServico; onFechar: () => void }) {
+  const d = diasOS(os);
+  const itens = getDetalhe(atendimento.numero).itens.filter((i) => i.os === os.numero);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <p className="font-mono text-xs font-semibold text-slate-500">Atendimento {atendimento.numero} · OS {os.numero}</p>
+            <h3 className="text-lg font-extrabold text-slate-900">Detalhes da Ordem de Serviço</h3>
+          </div>
+          <button onClick={onFechar} aria-label="Fechar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X size={18} /></button>
+        </div>
+
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
+          <div><dt className="text-xs font-bold uppercase text-slate-400">Motivo</dt><dd className="font-semibold">{os.motivo}</dd></div>
+          <div><dt className="text-xs font-bold uppercase text-slate-400">Status</dt><dd><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${COR_STATUS_OS[os.status]}`}>{os.status}</span></dd></div>
+          <div><dt className="text-xs font-bold uppercase text-slate-400">Entrada</dt><dd className="font-mono">{os.dataEntrada}</dd></div>
+          <div><dt className="text-xs font-bold uppercase text-slate-400">Saída</dt><dd className="font-mono">{os.dataSaida}</dd></div>
+          <div><dt className="text-xs font-bold uppercase text-slate-400">Dias em manutenção</dt><dd className="font-semibold">{d != null ? `${d} dias${os.dataSaida === '—' ? ' (em curso)' : ''}` : '—'}</dd></div>
+          <div><dt className="text-xs font-bold uppercase text-slate-400">Placa / Ativo</dt><dd className="font-mono font-semibold">{atendimento.placa !== '—' ? atendimento.placa : atendimento.numeroSerie}</dd></div>
+        </dl>
+
+        {itens.length > 0 && (
+          <div className="mt-4">
+            <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-slate-500">Itens desta OS</p>
+            <div className="space-y-1.5">
+              {itens.map((it) => (
+                <div key={it.codigo} className="flex items-center justify-between gap-2 rounded-md border border-slate-200 px-3 py-2 text-[13px]">
+                  <span className="font-semibold text-slate-700">{it.descricao}</span>
+                  <span className="font-mono text-slate-500">{it.qtde}× · {it.valorTotal}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className={`mt-4 rounded-lg border px-4 py-3 ${os.temAvaria ? 'border-rose-200 bg-rose-50/60' : 'border-slate-200 bg-slate-50'}`}>
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Cobrança de avaria</p>
+          {os.temAvaria ? (
+            <>
+              <p className="mt-1 text-[15px] font-extrabold text-rose-700">{os.valorReembolso}</p>
+              <p className="text-xs text-slate-500">Valor de reembolso estimado para esta OS. O detalhamento aparecerá em <b>Cobrança de Avarias</b>.</p>
+            </>
+          ) : (
+            <p className="mt-1 text-sm font-semibold text-slate-600">Sem cobrança de avaria para esta OS.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

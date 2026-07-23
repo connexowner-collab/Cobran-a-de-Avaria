@@ -53,7 +53,6 @@ const NAV: { grupo: string; itens: NavItem[] }[] = [
         label: 'Gestão de Veículos', href: '/portal/veiculos', icon: <Truck size={18} />,
         children: [
           { label: 'Veículos / CRLV', href: '/portal/veiculos' },
-          { label: 'Cobrança de Avarias', href: '/portal/avarias' },
           { label: 'Multas', href: '/portal/multas' },
         ],
       },
@@ -63,6 +62,7 @@ const NAV: { grupo: string; itens: NavItem[] }[] = [
     grupo: 'Financeiro',
     itens: [
       { label: 'Faturamento', href: '/portal/faturamento', icon: <DollarSign size={18} /> },
+      { label: 'Cobrança de Avarias', href: '/portal/avarias', icon: <AlertTriangle size={18} /> },
     ],
   },
   {
