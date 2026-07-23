@@ -4,70 +4,16 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Home, BarChart3, DollarSign, Headset, MapPin, Wrench, Boxes,
-  Truck, Users, HelpCircle, ChevronDown, Bell, LogOut, AlertTriangle,
+  ChevronDown, Bell, LogOut, AlertTriangle,
   AlertCircle, Info, ListFilter, ChevronLeft, ChevronRight, Check, Loader2,
-  KeyRound, X, Eye, EyeOff,
+  KeyRound, X, Eye, EyeOff, Star,
 } from 'lucide-react';
 import { NOTIFICACOES, GRUPOS_DISTRIBUICAO } from '@/lib/portalData';
+import { NAV, type NavItem } from '@/lib/portalNav';
+import { useFavoritos } from '@/lib/favoritos';
 import { LogoVamos } from '@/components/portal/ui';
 
 const GRUPO_STORAGE_KEY = 'portal_grupo_selecionado';
-
-interface NavLeaf {
-  label: string;
-  href: string;
-  novo?: boolean;
-  /** Quando true, abre o href em nova aba (link externo). */
-  externo?: boolean;
-}
-
-interface NavItem extends NavLeaf {
-  icon: React.ReactNode;
-  children?: NavLeaf[];
-}
-
-const NAV: { grupo: string; itens: NavItem[] }[] = [
-  {
-    grupo: 'Visão geral',
-    itens: [
-      { label: 'Início', href: '/portal/inicio', icon: <Home size={18} /> },
-      { label: 'Modelos', href: '/portal/modelos', icon: <Boxes size={18} /> },
-      {
-        label: 'Relatórios', href: '/portal/relatorios', icon: <BarChart3 size={18} />,
-        children: [
-          { label: 'Idade da frota', href: '/portal/relatorios?aba=idade' },
-          { label: 'Quilometragem', href: '/portal/relatorios?aba=km' },
-          { label: 'Distribuição da frota', href: '/portal/relatorios?aba=regiao' },
-        ],
-      },
-      { label: 'Vamos Controle', href: '/portal/vamos-controle', icon: <MapPin size={18} /> },
-    ],
-  },
-  {
-    grupo: 'Operação',
-    itens: [
-      { label: 'Serviços', href: '/portal/servicos', icon: <Wrench size={18} /> },
-      { label: 'Central de Chamados', href: '/portal/chamados', icon: <Headset size={18} />, novo: true },
-      { label: 'Veículos / CRLV', href: '/portal/veiculos', icon: <Truck size={18} /> },
-    ],
-  },
-  {
-    grupo: 'Financeiro',
-    itens: [
-      { label: 'Faturamento', href: '/portal/faturamento', icon: <DollarSign size={18} /> },
-      { label: 'Cobrança de Avarias', href: '/portal/avarias', icon: <AlertTriangle size={18} /> },
-      { label: 'Multas', href: '/portal/multas', icon: <AlertCircle size={18} /> },
-    ],
-  },
-  {
-    grupo: 'Suporte',
-    itens: [
-      { label: 'Central de Dúvidas', href: '/portal/central-duvidas', icon: <HelpCircle size={18} /> },
-      { label: 'Administração de Acessos', href: '/gestao-usuarios', icon: <Users size={18} />, novo: true },
-    ],
-  },
-];
 
 function NotifIcon({ tipo }: { tipo: string }) {
   if (tipo === 'critico') return <AlertCircle size={16} className="text-red-500" />;
@@ -86,6 +32,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const [grupoAlvoId, setGrupoAlvoId] = useState<string | null>(null);
   const [perfilOpen, setPerfilOpen] = useState(false);
   const [senhaModalOpen, setSenhaModalOpen] = useState(false);
+  const { isFavorito, toggle: toggleFavorito } = useFavoritos();
   const notifRef = useRef<HTMLDivElement>(null);
   const grupoRef = useRef<HTMLDivElement>(null);
   const perfilRef = useRef<HTMLDivElement>(null);
@@ -179,57 +126,92 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               )}
               {itens.map((item) => {
                 const branchActive = isBranchActive(item);
+                const favorito = isFavorito(item.href);
                 return (
                   <div key={item.label}>
-                    <Link
-                      href={item.href}
-                      title={colapsado ? item.label : undefined}
-                      {...(item.externo && { target: '_blank', rel: 'noopener noreferrer' })}
-                      className={`group relative mb-0.5 flex items-center gap-3 rounded-lg py-2.5 text-[13.5px] font-semibold transition ${
-                        colapsado ? 'justify-center px-0' : 'px-3'
-                      } ${
-                        branchActive
-                          ? 'bg-white/10 text-white'
-                          : 'text-white/70 hover:bg-white/5 hover:text-white'
-                      }`}
-                    >
-                      {branchActive && (
-                        <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-primary-500" />
-                      )}
-                      <span className="relative opacity-90">
-                        {item.icon}
-                        {colapsado && item.novo && (
-                          <span className="absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full bg-primary-500" />
+                    <div className="group relative flex items-center">
+                      <Link
+                        href={item.href}
+                        title={colapsado ? item.label : undefined}
+                        {...(item.externo && { target: '_blank', rel: 'noopener noreferrer' })}
+                        className={`mb-0.5 flex flex-1 items-center gap-3 rounded-lg py-2.5 text-[13.5px] font-semibold transition ${
+                          colapsado ? 'justify-center px-0' : 'px-3 pr-8'
+                        } ${
+                          branchActive
+                            ? 'bg-white/10 text-white'
+                            : 'text-white/70 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        {branchActive && (
+                          <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-primary-500" />
                         )}
-                      </span>
-                      {!colapsado && <span className="flex-1">{item.label}</span>}
-                      {!colapsado && item.novo && (
-                        <span className="rounded-full bg-primary-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide">
-                          NOVO
+                        <span className="relative opacity-90">
+                          {item.icon}
+                          {colapsado && item.novo && (
+                            <span className="absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full bg-primary-500" />
+                          )}
                         </span>
+                        {!colapsado && <span className="flex-1">{item.label}</span>}
+                        {!colapsado && item.novo && (
+                          <span className="rounded-full bg-primary-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wide">
+                            NOVO
+                          </span>
+                        )}
+                        {!colapsado && item.children && (
+                          <ChevronDown
+                            size={14}
+                            className={`transition-transform ${branchActive ? 'rotate-180' : ''}`}
+                          />
+                        )}
+                      </Link>
+                      {!colapsado && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); toggleFavorito(item.href); }}
+                          aria-label={favorito ? `Remover ${item.label} dos favoritos` : `Favoritar ${item.label}`}
+                          title={favorito ? 'Remover dos favoritos' : 'Favoritar tela'}
+                          className={`absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 transition ${
+                            favorito
+                              ? 'text-amber-400'
+                              : 'text-white/30 opacity-0 hover:text-amber-300 group-hover:opacity-100'
+                          }`}
+                        >
+                          <Star size={14} fill={favorito ? 'currentColor' : 'none'} />
+                        </button>
                       )}
-                      {!colapsado && item.children && (
-                        <ChevronDown
-                          size={14}
-                          className={`transition-transform ${branchActive ? 'rotate-180' : ''}`}
-                        />
-                      )}
-                    </Link>
+                    </div>
                     {!colapsado && item.children && branchActive && (
                       <div className="mb-1 ml-[26px] border-l border-white/10 pl-3">
-                        {item.children.map((sub) => (
-                          <Link
-                            key={sub.href}
-                            href={sub.href}
-                            className={`block rounded-md px-2 py-1.5 text-[12.5px] transition ${
-                              isActive(sub.href)
-                                ? 'font-semibold text-white'
-                                : 'text-white/60 hover:text-white'
-                            }`}
-                          >
-                            {sub.label}
-                          </Link>
-                        ))}
+                        {item.children.map((sub) => {
+                          const subFav = isFavorito(sub.href);
+                          return (
+                            <div key={sub.href} className="group/sub relative flex items-center">
+                              <Link
+                                href={sub.href}
+                                className={`block flex-1 rounded-md px-2 py-1.5 pr-7 text-[12.5px] transition ${
+                                  isActive(sub.href)
+                                    ? 'font-semibold text-white'
+                                    : 'text-white/60 hover:text-white'
+                                }`}
+                              >
+                                {sub.label}
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); toggleFavorito(sub.href); }}
+                                aria-label={subFav ? `Remover ${sub.label} dos favoritos` : `Favoritar ${sub.label}`}
+                                title={subFav ? 'Remover dos favoritos' : 'Favoritar tela'}
+                                className={`absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 transition ${
+                                  subFav
+                                    ? 'text-amber-400'
+                                    : 'text-white/25 opacity-0 hover:text-amber-300 group-hover/sub:opacity-100'
+                                }`}
+                              >
+                                <Star size={12} fill={subFav ? 'currentColor' : 'none'} />
+                              </button>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>

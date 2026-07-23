@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Plus, X, Check, ArrowUp, ArrowDown, RotateCcw, ArrowRight,
-  LayoutGrid, SlidersHorizontal, Search,
+  LayoutGrid, SlidersHorizontal, Search, Star,
 } from 'lucide-react';
 import { CATALOGO_WIDGETS, VISAO_PADRAO, type WidgetInicio } from '@/lib/inicioWidgets';
+import { getTela } from '@/lib/portalNav';
+import { useFavoritos } from '@/lib/favoritos';
 
 const VISAO_STORAGE_KEY = 'portal_inicio_visao';
 
@@ -19,6 +21,8 @@ export default function PortalInicioPage() {
   const [carregado, setCarregado] = useState(false);
   const [editando, setEditando] = useState(false);
   const [catalogoOpen, setCatalogoOpen] = useState(false);
+  const { favoritos, toggle: toggleFavorito } = useFavoritos();
+  const telasFavoritas = favoritos.map(getTela).filter((t): t is NonNullable<typeof t> => Boolean(t));
 
   // Restaura a visão personalizada salva.
   useEffect(() => {
@@ -94,6 +98,43 @@ export default function PortalInicioPage() {
             {editando ? <><Check size={15} /> Concluir</> : <><SlidersHorizontal size={15} /> Personalizar</>}
           </button>
         </div>
+      </div>
+
+      {/* Telas favoritas — acesso rápido montado pelo usuário via estrela no menu lateral */}
+      <div className="mb-6">
+        <div className="mb-2 flex items-center gap-2">
+          <Star size={15} className="text-amber-400" fill="currentColor" />
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Telas favoritas</p>
+        </div>
+        {telasFavoritas.length === 0 ? (
+          <div className="card flex items-center gap-3 px-5 py-4 text-[13px] text-slate-500">
+            <Star size={16} className="shrink-0 text-slate-300" />
+            <span>Favorite telas pela <b className="text-slate-600">estrela</b> no menu lateral para acessá-las rápido por aqui.</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+            {telasFavoritas.map((t) => (
+              <Link
+                key={t.href}
+                href={t.href}
+                {...(t.externo && { target: '_blank', rel: 'noopener noreferrer' })}
+                className="card group relative flex items-center gap-3 p-4 transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600">{t.icon}</span>
+                <span className="min-w-0 flex-1 text-[13px] font-bold text-slate-800 group-hover:text-primary-700">{t.label}</span>
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorito(t.href); }}
+                  aria-label={`Remover ${t.label} dos favoritos`}
+                  title="Remover dos favoritos"
+                  className="shrink-0 rounded p-1 text-amber-400 hover:text-amber-500"
+                >
+                  <Star size={15} fill="currentColor" />
+                </button>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {visao.length === 0 ? (
