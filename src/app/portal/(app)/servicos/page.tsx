@@ -4,6 +4,7 @@ import { Fragment, useMemo, useState } from 'react';
 import {
   Download, Info, Wrench, FileText, X, AlertTriangle, Clock,
   CheckCircle2, CalendarClock, ChevronRight, ChevronDown,
+  Eye, LogIn, LogOut, Flag,
 } from 'lucide-react';
 import {
   PageTitle, KpiCard, FilterChip, KpiRow, SectionCard, SectionHeader,
@@ -322,6 +323,99 @@ function abrirResumoImpressao(a: AtendimentoServico, det: DetalheAtendimento, ti
   setTimeout(() => w.print(), 350);
 }
 
+type EstadoEtapa = 'concluido' | 'atual' | 'pendente';
+interface EtapaManutencao {
+  label: string;
+  data: string;
+  icon: React.ComponentType<{ size?: number | string; className?: string }>;
+  estado: EstadoEtapa;
+  detalhe?: string;
+}
+
+/** Monta as etapas da esteira de manutenção de um atendimento em aberto. */
+function etapasManutencao(a: AtendimentoServico): EtapaManutencao[] {
+  const entrou = a.dataEntrada !== '—';
+  const saiu = a.saida !== '—';
+  const finalizado = a.status === 'finalizado' || a.dataConclusao !== '—';
+  const aguardandoPeca = a.ordens.some((o) => o.status === 'Aguardando peça');
+  const emExecucao = a.ordens.some((o) => o.status === 'Em execução');
+
+  const detManut = aguardandoPeca
+    ? 'Aguardando peça'
+    : emExecucao
+      ? 'Serviços em execução'
+      : 'Em avaliação pela oficina';
+
+  const manutEstado: EstadoEtapa = finalizado ? 'concluido' : entrou && !saiu ? 'atual' : 'pendente';
+
+  return [
+    { label: 'Agendado', data: a.agendamento, icon: CalendarClock, estado: 'concluido' },
+    { label: 'Entrada na oficina', data: a.dataEntrada, icon: LogIn, estado: entrou ? 'concluido' : 'atual' },
+    { label: 'Em manutenção', data: manutEstado === 'atual' ? 'Em andamento' : a.saida !== '—' ? '—' : '—', icon: Wrench, estado: manutEstado, detalhe: manutEstado === 'pendente' ? undefined : detManut },
+    { label: 'Saída da oficina', data: a.saida, icon: LogOut, estado: saiu ? 'concluido' : 'pendente' },
+    { label: 'Finalizado', data: a.dataConclusao, icon: Flag, estado: finalizado ? 'concluido' : 'pendente' },
+  ];
+}
+
+function ModalAcompanhamento({ atendimento: a, onFechar }: { atendimento: AtendimentoServico; onFechar: () => void }) {
+  const etapas = etapasManutencao(a);
+  const identificador = a.placa !== '—' ? a.placa : a.numeroSerie;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-xs font-semibold text-slate-500">Atendimento {a.numero} · {identificador}</p>
+            <h3 className="text-lg font-extrabold text-slate-900">Acompanhar manutenção</h3>
+            <p className="mt-0.5 text-[13px] text-slate-500">{a.motivo} · {a.marcaModelo}</p>
+          </div>
+          <button onClick={onFechar} aria-label="Fechar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="mb-5 flex items-center justify-between rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-2.5 text-[13px]">
+          <span className="font-semibold text-sky-800">Previsão de entrega</span>
+          <span className="font-mono font-bold text-sky-900">{a.previsao}</span>
+        </div>
+
+        <ol className="relative">
+          {etapas.map((et, i) => {
+            const ultimo = i === etapas.length - 1;
+            const Icone = et.icon;
+            const cor = et.estado === 'concluido'
+              ? { dot: 'bg-emerald-500 text-white border-emerald-500', linha: 'bg-emerald-500', txt: 'text-slate-800', sub: 'text-slate-500' }
+              : et.estado === 'atual'
+                ? { dot: 'bg-sky-500 text-white border-sky-500 ring-4 ring-sky-100', linha: 'bg-slate-200', txt: 'text-sky-800 font-bold', sub: 'text-sky-600' }
+                : { dot: 'bg-white text-slate-300 border-slate-200', linha: 'bg-slate-200', txt: 'text-slate-400', sub: 'text-slate-300' };
+            return (
+              <li key={et.label} className="flex gap-3.5 pb-1">
+                <div className="flex flex-col items-center">
+                  <span className={`flex h-8 w-8 items-center justify-center rounded-full border ${cor.dot}`}>
+                    {et.estado === 'concluido' ? <CheckCircle2 size={16} /> : <Icone size={15} />}
+                  </span>
+                  {!ultimo && <span className={`w-0.5 flex-1 ${cor.linha}`} style={{ minHeight: 22 }} />}
+                </div>
+                <div className={`pb-4 ${ultimo ? '' : ''}`}>
+                  <p className={`text-[14px] leading-tight ${cor.txt}`}>{et.label}</p>
+                  {et.detalhe && (
+                    <p className={`mt-0.5 text-[12px] font-semibold ${cor.sub}`}>{et.detalhe}</p>
+                  )}
+                  <p className={`mt-0.5 font-mono text-[12px] ${cor.sub}`}>{et.data && et.data !== '—' ? et.data : (et.estado === 'pendente' ? 'Pendente' : '')}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+
+        <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
+          Acompanhe aqui o andamento da manutenção. As datas de saída e conclusão são preenchidas conforme a oficina avança.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function ModalDetalheAtendimento({
   atendimento, tipo, os, onFechar,
 }: {
@@ -582,6 +676,7 @@ export default function ServicosPage() {
   const [detalhe, setDetalhe] = useState<{ atendimento: AtendimentoServico; tipo: DetalheTipo; os?: OrdemServico } | null>(null);
   const [osExpandida, setOsExpandida] = useState<string | null>(null);
   const [osDetalhe, setOsDetalhe] = useState<{ atendimento: AtendimentoServico; os: OrdemServico } | null>(null);
+  const [acompanhar, setAcompanhar] = useState<AtendimentoServico | null>(null);
 
   const abertos = ATENDIMENTOS_SERVICO.filter((a) => a.status === 'aberta');
 
@@ -873,6 +968,16 @@ export default function ServicosPage() {
                   <td className="whitespace-nowrap px-4 py-3.5 text-xs text-slate-500">{a.situacao}</td>
                   <td className="whitespace-nowrap px-4 py-3.5" onClick={stopExpand}>
                     <div className="flex gap-1">
+                      {emAberto && (
+                        <button
+                          title="Acompanhar manutenção"
+                          aria-label="Acompanhar manutenção"
+                          onClick={() => setAcompanhar(a)}
+                          className="rounded-lg p-1.5 text-sky-600 hover:bg-sky-50 hover:text-sky-700"
+                        >
+                          <Eye size={16} />
+                        </button>
+                      )}
                       <button
                         title="Informação (problema relatado)"
                         onClick={() => setDetalhe({ atendimento: a, tipo: 'info' })}
@@ -988,6 +1093,10 @@ export default function ServicosPage() {
 
       {osDetalhe && (
         <ModalDetalheOS atendimento={osDetalhe.atendimento} os={osDetalhe.os} onFechar={() => setOsDetalhe(null)} />
+      )}
+
+      {acompanhar && (
+        <ModalAcompanhamento atendimento={acompanhar} onFechar={() => setAcompanhar(null)} />
       )}
     </div>
   );

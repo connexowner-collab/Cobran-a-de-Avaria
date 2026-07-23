@@ -2,38 +2,106 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Check, Camera, CalendarClock, ArrowLeft } from 'lucide-react';
+import { Check, CalendarClock, ArrowLeft, Upload, Plus, X, Gauge, ImagePlus } from 'lucide-react';
 import { AGENDAMENTOS } from '@/lib/portalData';
 import { PageTitle, StatusBadge } from '@/components/portal/ui';
 
 const PASSOS = ['Veículo', 'Serviços', 'Fotos', 'Agenda'];
-const SINTOMAS = ['Freios', 'Motor', 'Ar-condicionado', 'Pneus', 'Elétrica', 'Suspensão', 'Vidros', 'Outro'];
+const SERVICOS_OPCOES = [
+  'Revisão preventiva', 'Corretiva', 'Freios', 'Motor', 'Ar-condicionado',
+  'Pneus', 'Elétrica', 'Suspensão', 'Funilaria e pintura', 'Vidros',
+  'Aferição de tacógrafo', 'Sinistro', 'Outro',
+];
 const STATUS_LABEL = { confirmado: 'Confirmado', aguardando: 'Aguardando', concluido: 'Concluído' } as const;
+
+interface ServicoItem { servico: string; detalhes: string; }
+
+/* ------------------------------------------------------------------ *
+ * Blocos reutilizáveis do formulário.
+ * ------------------------------------------------------------------ */
+function Campo({ label, obrigatorio, children }: { label: string; obrigatorio?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="mb-4">
+      <label className="mb-1 block text-[13px] font-semibold text-slate-600">
+        {obrigatorio && <span className="text-primary-600">*</span>}{label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function UploadField({ files, onFiles, multiple, placeholder }: {
+  files: File[]; onFiles: (f: File[]) => void; multiple?: boolean; placeholder: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-2.5">
+      <span className="min-w-0 flex-1 truncate text-[13px] text-slate-500">
+        {files.length ? files.map((f) => f.name).join(', ') : placeholder}
+      </span>
+      <label className="shrink-0 cursor-pointer rounded-md bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700">
+        Upload
+        <input
+          type="file"
+          accept="image/*"
+          multiple={multiple}
+          className="hidden"
+          onChange={(e) => onFiles(Array.from(e.target.files ?? []))}
+        />
+      </label>
+    </div>
+  );
+}
 
 export default function AgendamentosPage() {
   const [passo, setPasso] = useState(0);
+  // Passo 1 — veículo
   const [placa, setPlaca] = useState('');
   const [km, setKm] = useState('');
-  const [sintomas, setSintomas] = useState<string[]>([]);
+  // Passo 2 — serviços
+  const [servicos, setServicos] = useState<ServicoItem[]>([{ servico: '', detalhes: '' }]);
+  const [observacoes, setObservacoes] = useState('');
+  const [anexos, setAnexos] = useState<File[]>([]);
+  // Passo 3 — fotos
+  const [fotoHodometro, setFotoHodometro] = useState<File[]>([]);
+  const [fotoPlaca, setFotoPlaca] = useState<File[]>([]);
+  const [maisFotos, setMaisFotos] = useState<File[]>([]);
+  // Passo 4 — agenda
+  const [endereco, setEndereco] = useState('');
   const [data, setData] = useState('');
+  const [horario, setHorario] = useState('');
+  const [condutor, setCondutor] = useState('');
+  const [email, setEmail] = useState('');
+  const [celular, setCelular] = useState('');
   const [concluido, setConcluido] = useState(false);
 
-  const toggleSintoma = (s: string) =>
-    setSintomas((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+  const setServico = (i: number, campo: keyof ServicoItem, valor: string) =>
+    setServicos((prev) => prev.map((s, idx) => (idx === i ? { ...s, [campo]: valor } : s)));
+  const addServico = () => setServicos((prev) => [...prev, { servico: '', detalhes: '' }]);
+  const removeServico = (i: number) => setServicos((prev) => (prev.length === 1 ? prev : prev.filter((_, idx) => idx !== i)));
+
+  const servicosSelecionados = servicos.filter((s) => s.servico).map((s) => s.servico);
 
   const podeAvancar =
-    (passo === 0 && placa.trim().length >= 5) ||
-    (passo === 1 && sintomas.length > 0) ||
-    passo === 2 ||
-    (passo === 3 && data !== '');
+    (passo === 0 && placa.trim().length >= 5 && km.trim() !== '') ||
+    (passo === 1 && servicosSelecionados.length > 0 && observacoes.trim() !== '') ||
+    (passo === 2 && fotoHodometro.length > 0 && fotoPlaca.length > 0) ||
+    (passo === 3 && !!endereco && !!data && !!horario && !!condutor && !!email && !!celular);
 
   const avancar = () => {
-    if (passo === 3) {
-      setConcluido(true);
-      return;
-    }
+    if (passo === 3) { setConcluido(true); return; }
     setPasso((p) => p + 1);
   };
+
+  const resetar = () => {
+    setConcluido(false); setPasso(0);
+    setPlaca(''); setKm('');
+    setServicos([{ servico: '', detalhes: '' }]); setObservacoes(''); setAnexos([]);
+    setFotoHodometro([]); setFotoPlaca([]); setMaisFotos([]);
+    setEndereco(''); setData(''); setHorario(''); setCondutor(''); setEmail(''); setCelular('');
+  };
+
+  const inputCls = 'input-field w-full py-2.5 text-[13px]';
+  const textareaCls = 'input-field w-full py-2.5 text-[13px] min-h-[84px] resize-y';
 
   return (
     <div>
@@ -55,13 +123,10 @@ export default function AgendamentosPage() {
               </span>
               <h2 className="mt-4 text-lg font-extrabold text-slate-900">Agendamento solicitado!</h2>
               <p className="mt-1 max-w-sm text-sm text-slate-500">
-                Veículo <b className="font-mono">{placa.toUpperCase()}</b> · {sintomas.join(', ')} ·{' '}
-                {data.split('-').reverse().join('/')}. Você receberá a confirmação da oficina em até 2h úteis.
+                Veículo <b className="font-mono">{placa.toUpperCase()}</b> · {servicosSelecionados.join(', ')}
+                {data && <> · {data.split('-').reverse().join('/')}{horario && ` às ${horario}`}</>}. Você receberá a confirmação da oficina em até 2h úteis.
               </p>
-              <button
-                className="btn-secondary mt-6 text-[13px]"
-                onClick={() => { setConcluido(false); setPasso(0); setPlaca(''); setKm(''); setSintomas([]); setData(''); }}
-              >
+              <button className="btn-secondary mt-6 text-[13px]" onClick={resetar}>
                 Fazer novo agendamento
               </button>
             </div>
@@ -90,73 +155,124 @@ export default function AgendamentosPage() {
                 ))}
               </div>
 
+              {/* Passo 1 — Veículo */}
               {passo === 0 && (
                 <div>
-                  <p className="text-[15px] font-bold text-slate-800">Dados do veículo</p>
-                  <p className="mb-4 text-xs text-slate-500">Placa, chassi ou nº de série</p>
-                  <input
-                    value={placa}
-                    onChange={(e) => setPlaca(e.target.value)}
-                    placeholder="SHQ6B80"
-                    className="input-field mb-3 py-3 font-mono uppercase"
-                  />
-                  <input
-                    value={km}
-                    onChange={(e) => setKm(e.target.value)}
-                    placeholder="Km atual do veículo"
-                    className="input-field py-3 font-mono"
-                  />
+                  <p className="text-[15px] font-bold text-slate-800">Dados sobre o veículo para agendamento</p>
+                  <p className="mb-4 text-xs text-slate-500">Insira as informações abaixo</p>
+                  <Campo label="Placa, Chassi ou Nº Série do Veículo" obrigatorio>
+                    <input value={placa} onChange={(e) => setPlaca(e.target.value)} placeholder="SHQ6B80" className={`${inputCls} font-mono uppercase`} />
+                  </Campo>
+                  <Campo label="Km do Veículo" obrigatorio>
+                    <input value={km} onChange={(e) => setKm(e.target.value)} placeholder="Km atual do veículo" inputMode="numeric" className={`${inputCls} font-mono`} />
+                  </Campo>
                 </div>
               )}
 
+              {/* Passo 2 — Serviços */}
               {passo === 1 && (
                 <div>
-                  <p className="text-[15px] font-bold text-slate-800">Sintomas / serviço desejado</p>
-                  <p className="mb-4 text-xs text-slate-500">Selecione um ou mais itens</p>
-                  <div className="flex flex-wrap gap-2">
-                    {SINTOMAS.map((sTag) => {
-                      const ativo = sintomas.includes(sTag);
-                      return (
-                        <button
-                          key={sTag}
-                          onClick={() => toggleSintoma(sTag)}
-                          className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
-                            ativo
-                              ? 'border border-primary-600 bg-primary-50 text-primary-700'
-                              : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300'
-                          }`}
-                        >
-                          {sTag}
-                        </button>
-                      );
-                    })}
+                  <p className="text-[15px] font-bold text-slate-800">Serviços Necessários</p>
+                  <p className="mb-4 text-xs text-slate-500">Selecione os serviços necessários</p>
+
+                  <div className="space-y-3">
+                    {servicos.map((s, i) => (
+                      <div key={i} className="rounded-xl border border-slate-200 p-4">
+                        <div className="mb-2 flex items-center justify-between">
+                          <p className="text-[13px] font-bold text-slate-700">Selecione o serviço</p>
+                          {servicos.length > 1 && (
+                            <button type="button" onClick={() => removeServico(i)} aria-label="Remover serviço" className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-rose-600">
+                              <X size={15} />
+                            </button>
+                          )}
+                        </div>
+                        <select value={s.servico} onChange={(e) => setServico(i, 'servico', e.target.value)} className={`${inputCls} mb-3`}>
+                          <option value="">Selecionar serviço</option>
+                          {SERVICOS_OPCOES.map((op) => <option key={op} value={op}>{op}</option>)}
+                        </select>
+                        <label className="mb-1 block text-[13px] font-semibold text-slate-600">Adicione detalhes da solicitação</label>
+                        <textarea value={s.detalhes} onChange={(e) => setServico(i, 'detalhes', e.target.value)} className={textareaCls} placeholder="Descreva o serviço desejado" />
+                      </div>
+                    ))}
+                    <button type="button" onClick={addServico} className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-sky-200 py-2.5 text-[13px] font-semibold text-sky-600 hover:bg-sky-50">
+                      <Plus size={15} /> Adicionar mais serviços
+                    </button>
+                  </div>
+
+                  <div className="mt-5 border-t border-slate-100 pt-4">
+                    <Campo label="Observações Gerais" obrigatorio>
+                      <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} className={textareaCls} placeholder="Digite sua observação" />
+                    </Campo>
+                    <label className="mb-1 block text-[13px] font-semibold text-slate-600">Deseja anexar imagens a sua solicitação?</label>
+                    <UploadField files={anexos} onFiles={setAnexos} multiple placeholder="Insira um arquivo se necessário" />
                   </div>
                 </div>
               )}
 
+              {/* Passo 3 — Fotos */}
               {passo === 2 && (
                 <div>
-                  <p className="text-[15px] font-bold text-slate-800">Fotos (opcional)</p>
-                  <p className="mb-4 text-xs text-slate-500">
-                    Fotos do problema ajudam a oficina a preparar peças antes da sua chegada
-                  </p>
-                  <div className="flex h-36 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 text-slate-400">
-                    <Camera size={26} />
-                    <span className="text-xs font-semibold">Arraste imagens ou clique para enviar</span>
+                  <p className="text-[15px] font-bold text-slate-800">Fotos do hodômetro e placa</p>
+                  <p className="mb-4 text-xs text-slate-500">Anexe as fotos solicitadas</p>
+
+                  <div className="mb-4 rounded-xl border border-slate-200 p-4">
+                    <div className="mb-2 flex items-center gap-2 text-slate-700">
+                      <Gauge size={16} /><p className="text-[13px] font-bold">Hodômetro</p>
+                    </div>
+                    <p className="mb-2 text-xs text-slate-500">Por favor, anexe uma foto do <b>Hodômetro</b> do veículo</p>
+                    <Campo label="Foto do hodômetro" obrigatorio>
+                      <UploadField files={fotoHodometro} onFiles={setFotoHodometro} placeholder="Selecionar foto do hodômetro" />
+                    </Campo>
+                  </div>
+
+                  <div className="mb-4 rounded-xl border border-slate-200 p-4">
+                    <div className="mb-2 flex items-center gap-2 text-slate-700">
+                      <ImagePlus size={16} /><p className="text-[13px] font-bold">Placa</p>
+                    </div>
+                    <p className="mb-2 text-xs text-slate-500">Por favor, anexe uma foto da <b>Placa</b> do veículo</p>
+                    <Campo label="Foto da placa" obrigatorio>
+                      <UploadField files={fotoPlaca} onFiles={setFotoPlaca} placeholder="Selecionar foto da placa" />
+                    </Campo>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 p-4">
+                    <div className="mb-2 flex items-center gap-2 text-slate-700">
+                      <ImagePlus size={16} /><p className="text-[13px] font-bold">Mais fotos</p>
+                    </div>
+                    <p className="mb-2 text-xs text-slate-500">Anexe outras fotos do veículo ou do problema, caso seja necessário (opcional)</p>
+                    <UploadField files={maisFotos} onFiles={setMaisFotos} multiple placeholder="Selecionar mais fotos se necessário" />
+                    {maisFotos.length > 0 && (
+                      <p className="mt-2 text-[11px] font-semibold text-slate-500">{maisFotos.length} foto(s) anexada(s)</p>
+                    )}
                   </div>
                 </div>
               )}
 
+              {/* Passo 4 — Agenda */}
               {passo === 3 && (
                 <div>
-                  <p className="text-[15px] font-bold text-slate-800">Data preferida</p>
-                  <p className="mb-4 text-xs text-slate-500">A oficina confirmará o melhor horário disponível</p>
-                  <input
-                    type="date"
-                    value={data}
-                    onChange={(e) => setData(e.target.value)}
-                    className="input-field py-3 font-mono"
-                  />
+                  <p className="text-[15px] font-bold text-slate-800">Informe os dados para agendamento</p>
+                  <p className="mb-4 text-xs text-slate-500">Insira os dados abaixo</p>
+                  <Campo label="Endereço de referência sugerido" obrigatorio>
+                    <input value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Digite o endereço de referência sugerido" className={inputCls} />
+                  </Campo>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Campo label="Data" obrigatorio>
+                      <input type="date" value={data} onChange={(e) => setData(e.target.value)} className={`${inputCls} font-mono`} />
+                    </Campo>
+                    <Campo label="Horário sugerido" obrigatorio>
+                      <input type="time" value={horario} onChange={(e) => setHorario(e.target.value)} className={`${inputCls} font-mono`} />
+                    </Campo>
+                  </div>
+                  <Campo label="Nome / Condutor" obrigatorio>
+                    <input value={condutor} onChange={(e) => setCondutor(e.target.value)} placeholder="Digite nome do condutor" className={inputCls} />
+                  </Campo>
+                  <Campo label="E-mail" obrigatorio>
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Digite o e-mail" className={inputCls} />
+                  </Campo>
+                  <Campo label="Celular" obrigatorio>
+                    <input value={celular} onChange={(e) => setCelular(e.target.value)} placeholder="Digite o telefone do condutor" inputMode="tel" className={inputCls} />
+                  </Campo>
                 </div>
               )}
 
@@ -167,7 +283,7 @@ export default function AgendamentosPage() {
                   </button>
                 )}
                 <button className="btn-primary text-[13px]" disabled={!podeAvancar} onClick={avancar}>
-                  {passo === 3 ? 'Confirmar agendamento' : 'Continuar'}
+                  {passo === 3 ? 'Finalizar' : 'Continuar'}
                 </button>
               </div>
             </>
