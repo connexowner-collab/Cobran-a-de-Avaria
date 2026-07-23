@@ -49,13 +49,7 @@ const NAV: { grupo: string; itens: NavItem[] }[] = [
     itens: [
       { label: 'Serviços', href: '/portal/servicos', icon: <Wrench size={18} /> },
       { label: 'Central de Chamados', href: '/portal/chamados', icon: <Headset size={18} />, novo: true },
-      {
-        label: 'Gestão de Veículos', href: '/portal/veiculos', icon: <Truck size={18} />,
-        children: [
-          { label: 'Veículos / CRLV', href: '/portal/veiculos' },
-          { label: 'Multas', href: '/portal/multas' },
-        ],
-      },
+      { label: 'Gestão de Veículos', href: '/portal/veiculos', icon: <Truck size={18} /> },
     ],
   },
   {
@@ -63,6 +57,7 @@ const NAV: { grupo: string; itens: NavItem[] }[] = [
     itens: [
       { label: 'Faturamento', href: '/portal/faturamento', icon: <DollarSign size={18} /> },
       { label: 'Cobrança de Avarias', href: '/portal/avarias', icon: <AlertTriangle size={18} /> },
+      { label: 'Multas', href: '/portal/multas', icon: <AlertCircle size={18} /> },
     ],
   },
   {

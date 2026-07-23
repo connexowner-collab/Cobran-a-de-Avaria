@@ -263,8 +263,8 @@ const DETALHE_TITULO: Record<DetalheTipo, string> = {
   resumo: 'Resumo do atendimento',
 };
 
-/** Monta o HTML do Resumo de Atendimento (mesmo layout do arquivo oficial). */
-function gerarResumoHtml(a: AtendimentoServico, det: DetalheAtendimento): string {
+/** Monta o HTML do Resumo (mesmo layout do arquivo oficial). */
+function gerarResumoHtml(a: AtendimentoServico, det: DetalheAtendimento, titulo = 'Resumo de Atendimento'): string {
   const identificacao = a.chassi !== '—' ? `Chassi: ${a.chassi}` : `Nº de Série: ${a.numeroSerie}`;
   const linhas = det.itens
     .map(
@@ -276,7 +276,7 @@ function gerarResumoHtml(a: AtendimentoServico, det: DetalheAtendimento): string
     )
     .join('');
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-  <title>Resumo Atendimento ${a.numero}</title>
+  <title>${titulo} ${a.numero}</title>
   <style>
     *{box-sizing:border-box} body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;padding:28px;font-size:12px}
     h1{font-size:18px;margin:0 0 4px} h3{font-size:13px;margin:16px 0 4px}
@@ -285,7 +285,7 @@ function gerarResumoHtml(a: AtendimentoServico, det: DetalheAtendimento): string
     th,td{border:1px solid #cbd5e1;padding:4px 6px;font-size:10.5px;vertical-align:top}
     th{background:#f1f5f9;text-align:left} .tot{margin-top:6px;text-align:right;font-size:12px}
   </style></head><body>
-    <h1>Resumo de Atendimento</h1>
+    <h1>${titulo}</h1>
     <p><b>N°.:</b> ${a.numero}</p>
     <div class="grid">
       <div><b>Placa:</b> ${a.placa}</div>
@@ -313,10 +313,10 @@ function gerarResumoHtml(a: AtendimentoServico, det: DetalheAtendimento): string
 }
 
 /** Abre o Resumo numa nova janela e dispara a impressão (salvar como PDF). */
-function abrirResumoImpressao(a: AtendimentoServico, det: DetalheAtendimento) {
+function abrirResumoImpressao(a: AtendimentoServico, det: DetalheAtendimento, titulo?: string) {
   const w = window.open('', '_blank', 'width=820,height=900');
   if (!w) return;
-  w.document.write(gerarResumoHtml(a, det));
+  w.document.write(gerarResumoHtml(a, det, titulo));
   w.document.close();
   w.focus();
   setTimeout(() => w.print(), 350);
@@ -942,7 +942,7 @@ export default function ServicosPage() {
                                       </button>
                                       <button
                                         type="button"
-                                        onClick={() => { const det = getDetalhe(a.numero); abrirResumoImpressao(a, { ...det, itens: det.itens.filter((i) => i.os === os.numero) }); }}
+                                        onClick={() => { const det = getDetalhe(a.numero); abrirResumoImpressao(a, { ...det, itens: det.itens.filter((i) => i.os === os.numero) }, 'Resumo da OS'); }}
                                         className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-[#0e2233]"
                                         title="Resumo da OS"
                                         aria-label="Resumo da OS"
