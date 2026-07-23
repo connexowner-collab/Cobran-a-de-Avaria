@@ -3,10 +3,11 @@
 import { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Download } from 'lucide-react';
-import { VEICULOS } from '@/lib/portalData';
+import { VEICULOS, type VeiculoFrota } from '@/lib/portalData';
 import {
   PageTitle, KpiCard, BarraProgresso, KpiRow, SectionCard, DataTable, Th, TablePagination,
-  Toolbar, ToolbarSpacer, FilterChip, SearchInput, usePaginacao,
+  Toolbar, ToolbarSpacer, FilterChip, usePaginacao,
+  ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
 
 const ABAS = [
@@ -44,13 +45,15 @@ const REGIOES = [
 
 function AbaIdade() {
   const [faixaAtiva, setFaixaAtiva] = useState<string | null>(null);
-  const [busca, setBusca] = useState('');
 
-  const veiculos = useMemo(() => {
-    return VEICULOS
-      .filter((v) => !faixaAtiva || faixaIdade(v.anoModelo) === faixaAtiva)
-      .filter((v) => !busca || v.placa.toLowerCase().includes(busca.toLowerCase()) || v.modelo.toLowerCase().includes(busca.toLowerCase()));
-  }, [faixaAtiva, busca]);
+  const veiculosBase = useMemo(() => VEICULOS.filter((v) => !faixaAtiva || faixaIdade(v.anoModelo) === faixaAtiva), [faixaAtiva]);
+  const cols = useMemo<ColDef<VeiculoFrota>[]>(() => [
+    { key: 'placa', get: (v) => v.placa, multi: true },
+    { key: 'modelo', get: (v) => v.modelo },
+    { key: 'ano', get: (v) => v.anoModelo },
+    { key: 'idade', get: (v) => faixaIdade(v.anoModelo) },
+  ], []);
+  const { val, set, filtradas: veiculos } = useFiltrosColuna(veiculosBase, cols);
 
   const pag = usePaginacao(veiculos, 10);
 
@@ -85,8 +88,6 @@ function AbaIdade() {
 
       <Toolbar>
         <span className="text-sm font-bold text-slate-800">Veículos {faixaAtiva ? `· ${faixaAtiva}` : ''}</span>
-        <ToolbarSpacer />
-        <SearchInput value={busca} onChange={setBusca} placeholder="Placa ou modelo..." />
       </Toolbar>
 
       <DataTable
@@ -99,6 +100,14 @@ function AbaIdade() {
             <Th>Modelo</Th>
             <Th>Ano modelo</Th>
             <Th>Idade</Th>
+          </>
+        }
+        filterRow={
+          <>
+            <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa" multi ariaLabel="Filtrar placa" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('modelo')} onChange={set('modelo')} placeholder="Modelo" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('ano')} onChange={set('ano')} placeholder="Ano" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('idade')} onChange={set('idade')} placeholder="Idade" /></ThFiltro>
           </>
         }
         footer={
@@ -135,19 +144,21 @@ const META_KM_MES = 5000;
 
 function AbaKm() {
   const [filtro, setFiltro] = useState<'todos' | 'acima' | 'dentro'>('todos');
-  const [busca, setBusca] = useState('');
 
-  const medidos = VEICULOS.filter((v) => v.kmMes !== '—');
-
-  const veiculos = useMemo(() => {
-    return medidos
-      .filter((v) => {
-        if (filtro === 'todos') return true;
-        const kmMes = Number(v.kmMes.replace(/\D/g, ''));
-        return filtro === 'acima' ? kmMes > META_KM_MES : kmMes <= META_KM_MES;
-      })
-      .filter((v) => !busca || v.placa.toLowerCase().includes(busca.toLowerCase()) || v.modelo.toLowerCase().includes(busca.toLowerCase()));
-  }, [medidos, filtro, busca]);
+  const veiculosBase = useMemo(() =>
+    VEICULOS.filter((v) => v.kmMes !== '—').filter((v) => {
+      if (filtro === 'todos') return true;
+      const kmMes = Number(v.kmMes.replace(/\D/g, ''));
+      return filtro === 'acima' ? kmMes > META_KM_MES : kmMes <= META_KM_MES;
+    }),
+  [filtro]);
+  const cols = useMemo<ColDef<VeiculoFrota>[]>(() => [
+    { key: 'placa', get: (v) => v.placa, multi: true },
+    { key: 'modelo', get: (v) => v.modelo },
+    { key: 'km', get: (v) => v.km },
+    { key: 'kmMes', get: (v) => v.kmMes },
+  ], []);
+  const { val, set, filtradas: veiculos } = useFiltrosColuna(veiculosBase, cols);
 
   const pag = usePaginacao(veiculos, 10);
 
@@ -163,8 +174,6 @@ function AbaKm() {
         {FILTROS_KM.map((f) => (
           <FilterChip key={f.key} label={f.label} active={filtro === f.key} onClick={() => setFiltro(f.key)} />
         ))}
-        <ToolbarSpacer />
-        <SearchInput value={busca} onChange={setBusca} placeholder="Placa ou modelo..." />
       </Toolbar>
 
       <DataTable
@@ -177,6 +186,14 @@ function AbaKm() {
             <Th>Modelo</Th>
             <Th>Km total</Th>
             <Th>Km médio/mês</Th>
+          </>
+        }
+        filterRow={
+          <>
+            <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa" multi ariaLabel="Filtrar placa" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('modelo')} onChange={set('modelo')} placeholder="Modelo" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('km')} onChange={set('km')} placeholder="Km" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('kmMes')} onChange={set('kmMes')} placeholder="Km/mês" /></ThFiltro>
           </>
         }
         footer={
@@ -206,13 +223,15 @@ function AbaKm() {
 
 function AbaRegiao() {
   const [regiaoAtiva, setRegiaoAtiva] = useState<string | null>(null);
-  const [busca, setBusca] = useState('');
 
-  const veiculos = useMemo(() => {
-    return VEICULOS
-      .filter((v) => !regiaoAtiva || v.regiao === regiaoAtiva)
-      .filter((v) => !busca || v.placa.toLowerCase().includes(busca.toLowerCase()) || v.modelo.toLowerCase().includes(busca.toLowerCase()));
-  }, [regiaoAtiva, busca]);
+  const veiculosBase = useMemo(() => VEICULOS.filter((v) => !regiaoAtiva || v.regiao === regiaoAtiva), [regiaoAtiva]);
+  const cols = useMemo<ColDef<VeiculoFrota>[]>(() => [
+    { key: 'placa', get: (v) => v.placa, multi: true },
+    { key: 'modelo', get: (v) => v.modelo },
+    { key: 'regiao', get: (v) => v.regiao },
+    { key: 'frota', get: (v) => v.frota },
+  ], []);
+  const { val, set, filtradas: veiculos } = useFiltrosColuna(veiculosBase, cols);
 
   const pag = usePaginacao(veiculos, 10);
 
@@ -248,8 +267,6 @@ function AbaRegiao() {
             onClick={() => setRegiaoAtiva(r === 'Todas' ? null : r)}
           />
         ))}
-        <ToolbarSpacer />
-        <SearchInput value={busca} onChange={setBusca} placeholder="Placa ou modelo..." />
       </Toolbar>
 
       <DataTable
@@ -262,6 +279,14 @@ function AbaRegiao() {
             <Th>Modelo</Th>
             <Th>Região</Th>
             <Th>Centro de custo</Th>
+          </>
+        }
+        filterRow={
+          <>
+            <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa" multi ariaLabel="Filtrar placa" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('modelo')} onChange={set('modelo')} placeholder="Modelo" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('regiao')} onChange={set('regiao')} placeholder="Região" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('frota')} onChange={set('frota')} placeholder="Centro de custo" /></ThFiltro>
           </>
         }
         footer={

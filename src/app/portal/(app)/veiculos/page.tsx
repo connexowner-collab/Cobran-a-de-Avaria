@@ -6,6 +6,7 @@ import { VEICULOS, type VeiculoSituacao, type CrlvStatus, type VeiculoFrota } fr
 import {
   PageTitle, StatusBadge, FilterChip, KpiCard, KpiRow, Toolbar, ToolbarSpacer,
   DataTable, Th, TablePagination, usePaginacao,
+  ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
 
 const SITUACAO_LABEL: Record<VeiculoSituacao, string> = {
@@ -130,7 +131,17 @@ export default function VeiculosPage() {
     return base.filter((v) => filtro === 'todos' || v.crlvStatus === filtro);
   }, [buscou, verTudo, termos, filtro]);
 
-  const pag = usePaginacao(veiculos, 10);
+  const cols = useMemo<ColDef<VeiculoFrota>[]>(() => [
+    { key: 'frota', get: (v) => v.frota },
+    { key: 'placa', get: (v) => v.placa, multi: true },
+    { key: 'modelo', get: (v) => `${v.modelo} ${v.categoria}` },
+    { key: 'chassiRenavam', get: (v) => `${v.chassi} ${v.renavam}`, multi: true },
+    { key: 'ano', get: (v) => v.anoModelo },
+    { key: 'crlv', get: (v) => CRLV_LABEL[v.crlvStatus] },
+  ], []);
+  const { val, set, filtradas: veiculosFiltrados } = useFiltrosColuna(veiculos, cols);
+
+  const pag = usePaginacao(veiculosFiltrados, 10);
 
   const kpis = useMemo(() => {
     const count = (s: CrlvStatus) => VEICULOS.filter((v) => v.crlvStatus === s).length;
@@ -242,7 +253,7 @@ export default function VeiculosPage() {
 
           <DataTable
             colSpan={7}
-            vazio={veiculos.length === 0}
+            vazio={veiculosFiltrados.length === 0}
             vazioLabel="Nenhum veículo encontrado para a busca. Confira a placa/chassi/Renavam ou veja a listagem completa."
             head={
               <>
@@ -253,6 +264,17 @@ export default function VeiculosPage() {
                 <Th>Ano</Th>
                 <Th>Status do CRLV</Th>
                 <Th />
+              </>
+            }
+            filterRow={
+              <>
+                <ThFiltro><ColunaFiltro value={val('frota')} onChange={set('frota')} placeholder="Centro de custo" /></ThFiltro>
+                <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa" multi ariaLabel="Filtrar placa" /></ThFiltro>
+                <ThFiltro><ColunaFiltro value={val('modelo')} onChange={set('modelo')} placeholder="Modelo" /></ThFiltro>
+                <ThFiltro><ColunaFiltro value={val('chassiRenavam')} onChange={set('chassiRenavam')} placeholder="Chassi/Renavam" multi ariaLabel="Filtrar chassi ou renavam" /></ThFiltro>
+                <ThFiltro><ColunaFiltro value={val('ano')} onChange={set('ano')} placeholder="Ano" /></ThFiltro>
+                <ThFiltro><ColunaFiltro value={val('crlv')} onChange={set('crlv')} placeholder="Status" /></ThFiltro>
+                <ThFiltro />
               </>
             }
             footer={

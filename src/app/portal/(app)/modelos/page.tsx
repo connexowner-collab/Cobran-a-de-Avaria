@@ -4,9 +4,11 @@ import { useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { VEICULOS } from '@/lib/portalData';
 import {
-  PageTitle, KpiCard, KpiRow, BarraProgresso, FilterChip, Toolbar, ToolbarSpacer,
-  SearchInput, DataTable, Th, TablePagination, SectionCard, usePaginacao,
+  PageTitle, KpiCard, KpiRow, BarraProgresso, FilterChip, Toolbar,
+  DataTable, Th, TablePagination, SectionCard, usePaginacao,
+  ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
+import type { VeiculoFrota } from '@/lib/portalData';
 
 const FROTA_TOTAL = 42;
 
@@ -25,19 +27,21 @@ const CATEGORIAS = ['Todas', ...Array.from(new Set(VEICULOS.map((v) => v.categor
 export default function ModelosPage() {
   const [categoria, setCategoria] = useState('Todas');
   const [modeloAtivo, setModeloAtivo] = useState<string | null>(null);
-  const [busca, setBusca] = useState('');
 
-  const veiculos = useMemo(() => {
-    return VEICULOS
+  const veiculosBase = useMemo(() =>
+    VEICULOS
       .filter((v) => categoria === 'Todas' || v.categoria === categoria)
-      .filter((v) => !modeloAtivo || v.modelo === modeloAtivo)
-      .filter(
-        (v) =>
-          !busca ||
-          v.placa.toLowerCase().includes(busca.toLowerCase()) ||
-          v.modelo.toLowerCase().includes(busca.toLowerCase()),
-      );
-  }, [categoria, modeloAtivo, busca]);
+      .filter((v) => !modeloAtivo || v.modelo === modeloAtivo),
+  [categoria, modeloAtivo]);
+  const cols = useMemo<ColDef<VeiculoFrota>[]>(() => [
+    { key: 'placa', get: (v) => v.placa, multi: true },
+    { key: 'modelo', get: (v) => v.modelo },
+    { key: 'categoria', get: (v) => v.categoria },
+    { key: 'ano', get: (v) => v.anoModelo },
+    { key: 'km', get: (v) => v.km },
+    { key: 'contrato', get: (v) => v.contrato },
+  ], []);
+  const { val, set, filtradas: veiculos } = useFiltrosColuna(veiculosBase, cols);
 
   const modelosVisiveis = MODELOS.filter((m) => categoria === 'Todas' || m.categoria === categoria);
 
@@ -118,8 +122,6 @@ export default function ModelosPage() {
         <span className="text-sm font-bold text-slate-800">
           Veículos {modeloAtivo ? `· ${modeloAtivo}` : ''}
         </span>
-        <ToolbarSpacer />
-        <SearchInput value={busca} onChange={setBusca} placeholder="Placa ou modelo..." />
       </Toolbar>
 
       <DataTable
@@ -134,6 +136,16 @@ export default function ModelosPage() {
             <Th>Ano</Th>
             <Th>Km</Th>
             <Th>Contrato</Th>
+          </>
+        }
+        filterRow={
+          <>
+            <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa" multi ariaLabel="Filtrar placa" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('modelo')} onChange={set('modelo')} placeholder="Modelo" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('categoria')} onChange={set('categoria')} placeholder="Categoria" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('ano')} onChange={set('ano')} placeholder="Ano" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('km')} onChange={set('km')} placeholder="Km" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('contrato')} onChange={set('contrato')} placeholder="Contrato" multi ariaLabel="Filtrar contrato" /></ThFiltro>
           </>
         }
         footer={

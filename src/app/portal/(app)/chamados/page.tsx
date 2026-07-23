@@ -6,7 +6,8 @@ import { Plus, Send, X, Eye } from 'lucide-react';
 import { CHAMADOS, type Chamado, type ChamadoStatus } from '@/lib/portalData';
 import {
   PageTitle, StatusBadge, FilterChip, KpiCard, KpiRow, Toolbar, ToolbarSpacer,
-  SearchInput, DataTable, Th, TablePagination, usePaginacao,
+  DataTable, Th, TablePagination, usePaginacao,
+  ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
 
 const STATUS_LABEL: Record<ChamadoStatus, string> = {
@@ -104,7 +105,6 @@ function ModalChamado({ chamado, onFechar }: { chamado: Chamado; onFechar: () =>
 
 export default function ChamadosPage() {
   const [filtro, setFiltro] = useState<ChamadoStatus | 'todos'>('todos');
-  const [busca, setBusca] = useState('');
   const [aberto, setAberto] = useState<Chamado | null>(null);
 
   /** Base da Central de Chamados: somente chamados em aberto. */
@@ -113,17 +113,19 @@ export default function ChamadosPage() {
     [],
   );
 
-  const lista = useMemo(() => {
-    return chamadosEmAberto
-      .filter((c) => filtro === 'todos' || c.status === filtro)
-      .filter(
-        (c) =>
-          !busca ||
-          c.id.toLowerCase().includes(busca.toLowerCase()) ||
-          c.categoria.toLowerCase().includes(busca.toLowerCase()) ||
-          c.placa.toLowerCase().includes(busca.toLowerCase()),
-      );
-  }, [chamadosEmAberto, filtro, busca]);
+  const listaBase = useMemo(
+    () => chamadosEmAberto.filter((c) => filtro === 'todos' || c.status === filtro),
+    [chamadosEmAberto, filtro],
+  );
+  const cols = useMemo<ColDef<Chamado>[]>(() => [
+    { key: 'id', get: (c) => c.id, multi: true },
+    { key: 'categoria', get: (c) => c.categoria },
+    { key: 'placa', get: (c) => c.placa, multi: true },
+    { key: 'solicitante', get: (c) => c.solicitante },
+    { key: 'responsavel', get: (c) => c.responsavel },
+    { key: 'status', get: (c) => STATUS_LABEL[c.status] },
+  ], []);
+  const { val, set, filtradas: lista } = useFiltrosColuna(listaBase, cols);
 
   const pag = usePaginacao(lista, 10);
 
@@ -165,14 +167,24 @@ export default function ChamadosPage() {
         {FILTROS.map((f) => (
           <FilterChip key={f.key} label={f.label} active={filtro === f.key} onClick={() => setFiltro(f.key)} />
         ))}
-        <ToolbarSpacer />
-        <SearchInput value={busca} onChange={setBusca} placeholder="Nº, categoria ou placa..." largura="w-52" />
       </Toolbar>
 
       <DataTable
         colSpan={8}
         vazio={lista.length === 0}
         vazioLabel="Nenhum chamado encontrado com os filtros atuais."
+        filterRow={
+          <>
+            <ThFiltro><ColunaFiltro value={val('id')} onChange={set('id')} placeholder="Chamado" multi ariaLabel="Filtrar chamado" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('categoria')} onChange={set('categoria')} placeholder="Categoria" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa" multi ariaLabel="Filtrar placa" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('solicitante')} onChange={set('solicitante')} placeholder="Solicitante" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('responsavel')} onChange={set('responsavel')} placeholder="Responsável" /></ThFiltro>
+            <ThFiltro />
+            <ThFiltro />
+            <ThFiltro><ColunaFiltro value={val('status')} onChange={set('status')} placeholder="Status" /></ThFiltro>
+          </>
+        }
         head={
           <>
             <Th>Chamado</Th>

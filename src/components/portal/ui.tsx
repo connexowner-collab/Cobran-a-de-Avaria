@@ -238,12 +238,77 @@ export function SearchInput({
   );
 }
 
+/**
+ * Compara o valor de uma célula com o texto do filtro.
+ * multi=true aceita vários termos colados (separados por espaço, vírgula, ; ou quebra de linha):
+ * a linha passa se o valor contiver QUALQUER um dos termos.
+ */
+export function matchColuna(valor: string, filtro: string, multi?: boolean): boolean {
+  const f = (filtro ?? '').trim();
+  if (!f) return true;
+  const v = (valor ?? '').toLowerCase();
+  if (multi) {
+    const termos = f.split(/[\s,;]+/).map((t) => t.trim().toLowerCase()).filter(Boolean);
+    return termos.length === 0 || termos.some((t) => v.includes(t));
+  }
+  return v.includes(f.toLowerCase());
+}
+
+const DICA_MULTI = 'Você pode colar vários valores de uma vez (do Excel, separados por espaço, vírgula ou quebra de linha) para filtrar todos ao mesmo tempo.';
+
+export interface ColDef<T> { key: string; get: (r: T) => string; multi?: boolean }
+
+/** Gerencia os filtros por coluna e devolve as linhas filtradas. */
+export function useFiltrosColuna<T>(rows: T[], cols: ColDef<T>[]) {
+  const [filtros, setFiltros] = useState<Record<string, string>>({});
+  const val = (k: string) => filtros[k] ?? '';
+  const set = (k: string) => (v: string) => setFiltros((p) => ({ ...p, [k]: v }));
+  const filtradas = useMemo(
+    () => rows.filter((r) => cols.every((c) => matchColuna(c.get(r), filtros[c.key] ?? '', c.multi))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rows, filtros],
+  );
+  return { val, set, filtradas };
+}
+
+/** Campo de filtro por coluna (linha de filtros do cabeçalho). */
+export function ColunaFiltro({
+  value, onChange, placeholder = 'Filtrar...', multi = false, ariaLabel,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  multi?: boolean;
+  ariaLabel?: string;
+}) {
+  return (
+    <div className="relative min-w-[7rem]" title={multi ? DICA_MULTI : undefined}>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={multi ? `${placeholder} (vários)` : placeholder}
+        aria-label={ariaLabel ?? placeholder}
+        autoComplete="off"
+        className="w-full rounded-md border border-slate-200 bg-white py-1.5 pl-2 pr-6 text-[11px] font-normal normal-case tracking-normal text-slate-700 outline-none placeholder:text-slate-400 focus:border-primary-400 focus:ring-1 focus:ring-primary-300"
+      />
+      <Search className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" aria-hidden />
+    </div>
+  );
+}
+
+/** Célula de cabeçalho para a linha de filtros. */
+export function ThFiltro({ children, className = '' }: { children?: React.ReactNode; className?: string }) {
+  return <th className={`px-2 pb-2 align-top ${className}`}>{children}</th>;
+}
+
 /** Tabela padronizada: cabeçalho, estado vazio e rodapé (paginação) consistentes.
- *  Só a tabela rola horizontalmente; o rodapé fica fixo (fora da área de scroll). */
+ *  Só a tabela rola horizontalmente; o rodapé fica fixo (fora da área de scroll).
+ *  `filterRow` renderiza uma segunda linha de cabeçalho com os filtros por coluna. */
 export function DataTable({
-  head, children, vazio, vazioLabel = 'Nenhum registro encontrado.', colSpan = 1, footer,
+  head, filterRow, children, vazio, vazioLabel = 'Nenhum registro encontrado.', colSpan = 1, footer,
 }: {
   head: React.ReactNode;
+  filterRow?: React.ReactNode;
   children: React.ReactNode;
   vazio?: boolean;
   vazioLabel?: string;
@@ -258,6 +323,11 @@ export function DataTable({
             <tr className="border-b border-slate-200 text-[11px] uppercase tracking-wide text-slate-500">
               {head}
             </tr>
+            {filterRow && (
+              <tr className="border-b border-slate-200 bg-slate-50/60">
+                {filterRow}
+              </tr>
+            )}
           </thead>
           <tbody>
             {vazio ? (

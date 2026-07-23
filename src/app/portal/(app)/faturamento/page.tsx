@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Download, FileText } from 'lucide-react';
-import { FATURAS, type FaturaStatus } from '@/lib/portalData';
+import { FATURAS, type FaturaStatus, type Fatura } from '@/lib/portalData';
 import {
   PageTitle, StatusBadge, FilterChip, KpiCard, KpiRow, Toolbar, ToolbarSpacer,
   DataTable, Th, TablePagination, usePaginacao,
+  ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
 
 const STATUS_LABEL: Record<FaturaStatus, string> = {
@@ -23,7 +24,15 @@ const FILTROS: Array<{ key: FaturaStatus | 'todos'; label: string }> = [
 
 export default function FaturamentoPage() {
   const [filtro, setFiltro] = useState<FaturaStatus | 'todos'>('todos');
-  const faturas = FATURAS.filter((f) => filtro === 'todos' || f.status === filtro);
+  const faturasBase = FATURAS.filter((f) => filtro === 'todos' || f.status === filtro);
+  const cols = useMemo<ColDef<Fatura>[]>(() => [
+    { key: 'nf', get: (f) => f.nf, multi: true },
+    { key: 'competencia', get: (f) => f.competencia },
+    { key: 'valor', get: (f) => f.valor },
+    { key: 'vencimento', get: (f) => f.vencimento },
+    { key: 'status', get: (f) => STATUS_LABEL[f.status] },
+  ], []);
+  const { val, set, filtradas: faturas } = useFiltrosColuna(faturasBase, cols);
   const pag = usePaginacao(faturas, 10);
 
   return (
@@ -62,6 +71,16 @@ export default function FaturamentoPage() {
             <Th>Vencimento</Th>
             <Th>Status</Th>
             <Th />
+          </>
+        }
+        filterRow={
+          <>
+            <ThFiltro><ColunaFiltro value={val('nf')} onChange={set('nf')} placeholder="NF" multi ariaLabel="Filtrar nota fiscal" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('competencia')} onChange={set('competencia')} placeholder="Competência" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('valor')} onChange={set('valor')} placeholder="Valor" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('vencimento')} onChange={set('vencimento')} placeholder="Vencimento" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('status')} onChange={set('status')} placeholder="Status" /></ThFiltro>
+            <ThFiltro />
           </>
         }
         footer={

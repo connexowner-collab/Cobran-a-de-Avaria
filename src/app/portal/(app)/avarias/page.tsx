@@ -10,6 +10,7 @@ import { AVARIAS, type Avaria, type AvariaStatus, type AvariaMotivo } from '@/li
 import {
   PageTitle, StatusBadge, FilterChip, Toolbar, ToolbarSpacer,
   DataTable, Th, TablePagination, usePaginacao,
+  ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
 import DateRangeFilter from '@/components/DateRangeFilter';
 
@@ -207,7 +208,6 @@ function ModalAnalise({
 }
 
 export default function AvariasPage() {
-  const [busca, setBusca] = useState('');
   const [filtro, setFiltro] = useState<AvariaStatus | 'todos'>('todos');
   const [periodo, setPeriodo] = useState<DateRange | undefined>(undefined);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
@@ -220,16 +220,16 @@ export default function AvariasPage() {
     [statusOverride],
   );
 
-  const linhas = useMemo(() => {
-    return avarias
-      .filter((a) => filtro === 'todos' || a.status === filtro)
-      .filter(
-        (a) =>
-          !busca ||
-          a.placa.toLowerCase().includes(busca.toLowerCase()) ||
-          a.id.toLowerCase().includes(busca.toLowerCase()),
-      );
-  }, [avarias, filtro, busca]);
+  const linhasBase = useMemo(() => avarias.filter((a) => filtro === 'todos' || a.status === filtro), [avarias, filtro]);
+  const cols = useMemo<ColDef<Avaria>[]>(() => [
+    { key: 'id', get: (a) => `${a.id} ${a.descricao}`, multi: true },
+    { key: 'placa', get: (a) => `${a.placa} ${a.centroCusto}`, multi: true },
+    { key: 'motivo', get: (a) => a.motivo },
+    { key: 'data', get: (a) => a.data },
+    { key: 'valor', get: (a) => a.valor },
+    { key: 'status', get: (a) => STATUS_LABEL[a.status] },
+  ], []);
+  const { val, set, filtradas: linhas } = useFiltrosColuna(linhasBase, cols);
 
   const pag = usePaginacao(linhas, 10);
 
@@ -276,7 +276,6 @@ export default function AvariasPage() {
   };
 
   const limparFiltros = () => {
-    setBusca('');
     setFiltro('todos');
     setPeriodo(undefined);
   };
@@ -301,17 +300,6 @@ export default function AvariasPage() {
           </p>
         </div>
       )}
-
-      {/* Busca principal */}
-      <div className="mb-4 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3">
-        <Search size={16} className="text-slate-400" />
-        <input
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Digite a placa ou nº de CA desejado"
-          className="w-full border-none bg-transparent text-sm outline-none placeholder:text-slate-400"
-        />
-      </div>
 
       <Toolbar>
         {FILTROS.map((f) => (
@@ -413,6 +401,19 @@ export default function AvariasPage() {
             <Th>Status</Th>
             <Th>Fotos</Th>
             <Th />
+          </>
+        }
+        filterRow={
+          <>
+            <ThFiltro />
+            <ThFiltro><ColunaFiltro value={val('id')} onChange={set('id')} placeholder="Nº CA" multi ariaLabel="Filtrar nº de CA" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa" multi ariaLabel="Filtrar placa" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('motivo')} onChange={set('motivo')} placeholder="Motivo" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('data')} onChange={set('data')} placeholder="Data" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('valor')} onChange={set('valor')} placeholder="Valor" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('status')} onChange={set('status')} placeholder="Status" /></ThFiltro>
+            <ThFiltro />
+            <ThFiltro />
           </>
         }
         footer={

@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import {
   PageTitle, KpiCard, FilterChip, KpiRow, SectionCard, SectionHeader,
-  Toolbar, ToolbarDivider, SearchInput, DataTable, Th, TablePagination, usePaginacao,
+  Toolbar, ToolbarDivider, DataTable, Th, TablePagination, usePaginacao,
+  ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
 
 /* Data de referência do protótipo (para calcular imobilização/atrasos). */
@@ -552,7 +553,6 @@ const FILTROS_TIPO: Array<{ key: TipoServico | 'todos'; label: string }> = [
 ];
 
 export default function ServicosPage() {
-  const [busca, setBusca] = useState('');
   const [filtroTipo, setFiltroTipo] = useState<TipoServico | 'todos'>('todos');
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'aberta' | 'finalizado'>('todos');
   const [detalhe, setDetalhe] = useState<{ atendimento: AtendimentoServico; tipo: DetalheTipo } | null>(null);
@@ -588,14 +588,29 @@ export default function ServicosPage() {
       .map(([motivo, qtd]) => ({ motivo, qtd, pct: Math.round((qtd / total) * 100) }));
   }, []);
 
-  const linhas = useMemo(
+  const linhasBase = useMemo(
     () =>
       ATENDIMENTOS_SERVICO
         .filter((a) => filtroStatus === 'todos' || a.status === filtroStatus)
-        .filter((a) => filtroTipo === 'todos' || a.tipo === filtroTipo)
-        .filter((a) => !busca || a.placa.toLowerCase().includes(busca.toLowerCase()) || a.numero.includes(busca)),
-    [filtroStatus, filtroTipo, busca],
+        .filter((a) => filtroTipo === 'todos' || a.tipo === filtroTipo),
+    [filtroStatus, filtroTipo],
   );
+  const cols = useMemo<ColDef<AtendimentoServico>[]>(() => [
+    { key: 'numero', get: (a) => a.numero, multi: true },
+    { key: 'statusAt', get: (a) => (a.status === 'finalizado' ? 'Finalizado' : 'Em aberto') },
+    { key: 'motivo', get: (a) => a.motivo },
+    { key: 'placa', get: (a) => a.placa, multi: true },
+    { key: 'chassi', get: (a) => a.chassi, multi: true },
+    { key: 'serie', get: (a) => a.numeroSerie, multi: true },
+    { key: 'modelo', get: (a) => a.marcaModelo },
+    { key: 'agendamento', get: (a) => a.agendamento },
+    { key: 'entrada', get: (a) => a.dataEntrada },
+    { key: 'previsao', get: (a) => a.previsao },
+    { key: 'saida', get: (a) => a.saida },
+    { key: 'conclusao', get: (a) => a.dataConclusao },
+    { key: 'situacao', get: (a) => a.situacao },
+  ], []);
+  const { val, set, filtradas: linhas } = useFiltrosColuna(linhasBase, cols);
   const pag = usePaginacao(linhas, 10);
 
   return (
@@ -710,12 +725,9 @@ export default function ServicosPage() {
         subtitulo="Atendimentos e ordens de serviço da frota"
         className="mb-3"
         acao={
-          <div className="flex items-center gap-2.5">
-            <SearchInput value={busca} onChange={setBusca} placeholder="Buscar placa ou nº..." largura="w-40" />
-            <button className="btn-secondary gap-1.5 px-3 py-2 text-xs">
-              <Download size={13} /> Baixar planilha
-            </button>
-          </div>
+          <button className="btn-secondary gap-1.5 px-3 py-2 text-xs">
+            <Download size={13} /> Baixar planilha
+          </button>
         }
       />
 
@@ -756,6 +768,26 @@ export default function ServicosPage() {
             <Th className="whitespace-nowrap">Dias em Manutenção</Th>
             <Th className="whitespace-nowrap">Situação do Veículo</Th>
             <Th className="whitespace-nowrap">Mais detalhes</Th>
+          </>
+        }
+        filterRow={
+          <>
+            <ThFiltro><ColunaFiltro value={val('numero')} onChange={set('numero')} placeholder="Nº atend." multi ariaLabel="Filtrar nº de atendimento" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('statusAt')} onChange={set('statusAt')} placeholder="Status" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('motivo')} onChange={set('motivo')} placeholder="Motivo" /></ThFiltro>
+            <ThFiltro />
+            <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa" multi ariaLabel="Filtrar placa" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('chassi')} onChange={set('chassi')} placeholder="Chassi" multi ariaLabel="Filtrar chassi" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('serie')} onChange={set('serie')} placeholder="Nº série" multi ariaLabel="Filtrar nº de série" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('modelo')} onChange={set('modelo')} placeholder="Modelo" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('agendamento')} onChange={set('agendamento')} placeholder="Data" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('entrada')} onChange={set('entrada')} placeholder="Data" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('previsao')} onChange={set('previsao')} placeholder="Data" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('saida')} onChange={set('saida')} placeholder="Data" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('conclusao')} onChange={set('conclusao')} placeholder="Data" /></ThFiltro>
+            <ThFiltro />
+            <ThFiltro><ColunaFiltro value={val('situacao')} onChange={set('situacao')} placeholder="Situação" /></ThFiltro>
+            <ThFiltro />
           </>
         }
         footer={
@@ -858,6 +890,7 @@ export default function ServicosPage() {
                               <th className="px-3 py-2 font-bold">Entrada</th>
                               <th className="px-3 py-2 font-bold">Saída</th>
                               <th className="px-3 py-2 font-bold">Cobrança de avaria</th>
+                              <th className="px-3 py-2 font-bold">Valor de reembolso</th>
                               <th className="px-3 py-2 text-right font-bold">Mais detalhes</th>
                             </tr>
                           </thead>
@@ -874,21 +907,34 @@ export default function ServicosPage() {
                                   <td className="whitespace-nowrap px-3 py-2 font-mono">{os.dataSaida}</td>
                                   <td className="whitespace-nowrap px-3 py-2">
                                     {os.temAvaria ? (
-                                      <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
-                                        Sim · {os.valorReembolso}
+                                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                                        Sim
                                       </span>
                                     ) : (
                                       <span className="text-slate-400">Não</span>
                                     )}
                                   </td>
+                                  <td className="whitespace-nowrap px-3 py-2 font-mono font-semibold text-slate-700">
+                                    {os.temAvaria ? os.valorReembolso : <span className="font-sans font-normal text-slate-400">—</span>}
+                                  </td>
                                   <td className="whitespace-nowrap px-3 py-2 text-right">
-                                    <button
-                                      type="button"
-                                      onClick={() => setOsDetalhe({ atendimento: a, os })}
-                                      className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
-                                    >
-                                      <Info size={13} /> Detalhes
-                                    </button>
+                                    <div className="flex justify-end gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => setOsDetalhe({ atendimento: a, os })}
+                                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+                                      >
+                                        <Info size={13} /> Detalhes
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => { const det = getDetalhe(a.numero); abrirResumoImpressao(a, { ...det, itens: det.itens.filter((i) => i.os === os.numero) }); }}
+                                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50"
+                                        title="Resumo da OS"
+                                      >
+                                        <FileText size={13} /> Resumo
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               );
@@ -956,12 +1002,12 @@ function ModalDetalheOS({ atendimento, os, onFechar }: { atendimento: Atendiment
           </div>
         )}
 
-        <div className={`mt-4 rounded-lg border px-4 py-3 ${os.temAvaria ? 'border-rose-200 bg-rose-50/60' : 'border-slate-200 bg-slate-50'}`}>
+        <div className={`mt-4 rounded-lg border px-4 py-3 ${os.temAvaria ? 'border-amber-200 bg-amber-50/60' : 'border-slate-200 bg-slate-50'}`}>
           <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Cobrança de avaria</p>
           {os.temAvaria ? (
             <>
-              <p className="mt-1 text-[15px] font-extrabold text-rose-700">{os.valorReembolso}</p>
-              <p className="text-xs text-slate-500">Valor de reembolso estimado para esta OS. O detalhamento aparecerá em <b>Cobrança de Avarias</b>.</p>
+              <p className="mt-1 text-[15px] font-extrabold text-amber-800">{os.valorReembolso}</p>
+              <p className="text-xs text-slate-500">Valor de reembolso estimado para esta OS. O detalhamento aparecerá na <b>Cobrança desta Avarias</b>.</p>
             </>
           ) : (
             <p className="mt-1 text-sm font-semibold text-slate-600">Sem cobrança de avaria para esta OS.</p>

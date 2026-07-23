@@ -4,8 +4,9 @@ import { Fragment, useMemo, useState } from 'react';
 import { ChevronRight, Download } from 'lucide-react';
 import { MULTAS, VEICULOS, type Multa } from '@/lib/portalData';
 import {
-  PageTitle, StatusBadge, KpiCard, KpiRow, FilterChip, Toolbar, ToolbarSpacer,
-  SearchInput, DataTable, Th, TablePagination, SectionCard, usePaginacao,
+  PageTitle, StatusBadge, KpiCard, KpiRow, FilterChip, Toolbar,
+  DataTable, Th, TablePagination, SectionCard, usePaginacao,
+  ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
 
 /** Quantos veículos aparecem no ranking — fixo, independente do tamanho da frota. */
@@ -41,7 +42,6 @@ function fmtBRL(n: number): string {
 
 export default function MultasPage() {
   const [filtro, setFiltro] = useState<Multa['status'] | 'todos'>('todos');
-  const [busca, setBusca] = useState('');
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
 
@@ -67,17 +67,18 @@ export default function MultasPage() {
   }, []);
   const topPlacas = porPlacaBase.slice(0, TOP_N);
 
-  // Multas que batem com os filtros de status/busca.
-  const linhasFiltradas = useMemo(() => {
-    return MULTAS
-      .filter((m) => filtro === 'todos' || m.status === filtro)
-      .filter(
-        (m) =>
-          !busca ||
-          m.placa.toLowerCase().includes(busca.toLowerCase()) ||
-          m.auto.toLowerCase().includes(busca.toLowerCase()),
-      );
-  }, [filtro, busca]);
+  // Multas que batem com o filtro de status + filtros por coluna.
+  const multasBase = useMemo(() => MULTAS.filter((m) => filtro === 'todos' || m.status === filtro), [filtro]);
+  const cols = useMemo<ColDef<Multa>[]>(() => [
+    { key: 'placa', get: (m) => m.placa, multi: true },
+    { key: 'auto', get: (m) => m.auto, multi: true },
+    { key: 'infracao', get: (m) => m.infracao },
+    { key: 'data', get: (m) => m.data },
+    { key: 'valor', get: (m) => m.valor },
+    { key: 'prazo', get: (m) => m.prazo },
+    { key: 'status', get: (m) => STATUS_LABEL[m.status] },
+  ], []);
+  const { val, set, filtradas: linhasFiltradas } = useFiltrosColuna(multasBase, cols);
 
   // Agrupa o resultado filtrado por placa, mantendo só quem tem alguma multa correspondente.
   const grupos = useMemo(() => {
@@ -101,7 +102,7 @@ export default function MultasPage() {
   const pag = usePaginacao(grupos, 10);
 
   // Com filtro de status ou busca ativos, expande automaticamente os grupos com resultado.
-  const filtroAtivo = filtro !== 'todos' || busca.trim() !== '';
+  const filtroAtivo = filtro !== 'todos';
   const estaExpandido = (placa: string) => filtroAtivo || expandidos.has(placa);
   const toggleExpandido = (placa: string) => {
     setExpandidos((prev) => {
@@ -159,7 +160,7 @@ export default function MultasPage() {
             <button
               key={p.placa}
               onClick={() => {
-                setBusca((prev) => (prev === p.placa ? '' : p.placa));
+                set('placa')(val('placa') === p.placa ? '' : p.placa);
                 setExpandidos((prev) => new Set(prev).add(p.placa));
               }}
               className="flex w-full items-center gap-4 py-3 text-left transition first:pt-0 last:pb-0 hover:bg-slate-50"
@@ -191,8 +192,6 @@ export default function MultasPage() {
         {FILTROS.map((f) => (
           <FilterChip key={f.key} label={f.label} active={filtro === f.key} onClick={() => setFiltro(f.key)} />
         ))}
-        <ToolbarSpacer />
-        <SearchInput value={busca} onChange={setBusca} placeholder="Placa ou nº do auto..." />
       </Toolbar>
 
       {/* Ações em massa */}
@@ -218,6 +217,19 @@ export default function MultasPage() {
         colSpan={9}
         vazio={grupos.length === 0}
         vazioLabel="Nenhuma multa encontrada com os filtros atuais."
+        filterRow={
+          <>
+            <ThFiltro />
+            <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa" multi ariaLabel="Filtrar placa" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('infracao')} onChange={set('infracao')} placeholder="Infração" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('data')} onChange={set('data')} placeholder="Data" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('valor')} onChange={set('valor')} placeholder="Valor" /></ThFiltro>
+            <ThFiltro />
+            <ThFiltro><ColunaFiltro value={val('prazo')} onChange={set('prazo')} placeholder="Prazo" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('status')} onChange={set('status')} placeholder="Status" /></ThFiltro>
+            <ThFiltro />
+          </>
+        }
         head={
           <>
             <Th className="w-10" />
