@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, BarChart3, DollarSign, Headset, MapPin, Wrench, Boxes,
-  Truck, Users, HelpCircle, ChevronDown, Search, Bell, LogOut, AlertTriangle,
+  Truck, Users, HelpCircle, ChevronDown, Bell, LogOut, AlertTriangle,
   AlertCircle, Info, ListFilter, ChevronLeft, ChevronRight, Check, Loader2,
   KeyRound, X, Eye, EyeOff,
 } from 'lucide-react';
@@ -261,14 +261,6 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       {/* ===== Conteúdo ===== */}
       <div className={`flex min-h-screen min-w-0 flex-1 flex-col transition-[margin] duration-200 ${colapsado ? 'ml-16' : 'ml-64'}`}>
         <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-6">
-          <div className="flex w-full max-w-md items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-            <Search size={15} className="text-slate-400" />
-            <input
-              placeholder="Buscar placa, chassi, chamado, documento..."
-              className="w-full border-none bg-transparent text-[13px] text-slate-700 outline-none placeholder:text-slate-400"
-            />
-          </div>
-
           <div className="flex-1" />
 
           {/* Seletor de grupo/distribuição da frota vinculada ao perfil */}
