@@ -49,7 +49,7 @@ const NAV: { grupo: string; itens: NavItem[] }[] = [
     itens: [
       { label: 'Serviços', href: '/portal/servicos', icon: <Wrench size={18} /> },
       { label: 'Central de Chamados', href: '/portal/chamados', icon: <Headset size={18} />, novo: true },
-      { label: 'Gestão de Veículos', href: '/portal/veiculos', icon: <Truck size={18} /> },
+      { label: 'Veículos / CRLV', href: '/portal/veiculos', icon: <Truck size={18} /> },
     ],
   },
   {
