@@ -323,13 +323,18 @@ function abrirResumoImpressao(a: AtendimentoServico, det: DetalheAtendimento, ti
 }
 
 function ModalDetalheAtendimento({
-  atendimento, tipo, onFechar,
+  atendimento, tipo, os, onFechar,
 }: {
   atendimento: AtendimentoServico;
   tipo: DetalheTipo;
+  os?: OrdemServico;
   onFechar: () => void;
 }) {
-  const det = getDetalhe(atendimento.numero);
+  const detCompleto = getDetalhe(atendimento.numero);
+  // Quando é o resumo de uma OS específica, escopa itens/ordens àquela OS.
+  const det = os ? { ...detCompleto, itens: detCompleto.itens.filter((i) => i.os === os.numero) } : detCompleto;
+  const ordensExibidas = os ? [os] : atendimento.ordens;
+  const tituloResumo = os ? 'Resumo da OS' : 'Resumo do atendimento';
   const identificacaoLabel = atendimento.numeroSerie !== '—' ? 'Nº de Série' : 'Chassi';
   const identificacaoValor = atendimento.numeroSerie !== '—' ? atendimento.numeroSerie : atendimento.chassi;
   const largura = tipo === 'resumo' || tipo === 'servico' ? 'max-w-2xl' : 'max-w-lg';
@@ -338,8 +343,10 @@ function ModalDetalheAtendimento({
       <div className={`max-h-[90vh] w-full ${largura} overflow-y-auto rounded-xl bg-white p-6 shadow-xl`} onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="font-mono text-xs font-semibold text-slate-500">Atendimento {atendimento.numero} · {atendimento.placa !== '—' ? atendimento.placa : atendimento.numeroSerie}</p>
-            <h3 className="text-lg font-extrabold text-slate-900">{DETALHE_TITULO[tipo]}</h3>
+            <p className="font-mono text-xs font-semibold text-slate-500">
+              Atendimento {atendimento.numero}{os ? ` · OS ${os.numero}` : ''} · {atendimento.placa !== '—' ? atendimento.placa : atendimento.numeroSerie}
+            </p>
+            <h3 className="text-lg font-extrabold text-slate-900">{tipo === 'resumo' ? tituloResumo : DETALHE_TITULO[tipo]}</h3>
           </div>
           <button onClick={onFechar} aria-label="Fechar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <X size={18} />
@@ -419,7 +426,7 @@ function ModalDetalheAtendimento({
             <div className="flex justify-end">
               <button
                 type="button"
-                onClick={() => abrirResumoImpressao(atendimento, det)}
+                onClick={() => abrirResumoImpressao(atendimento, det, tituloResumo)}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-primary-700"
               >
                 <Download size={15} /> Baixar / Imprimir PDF
@@ -438,10 +445,15 @@ function ModalDetalheAtendimento({
               <div><dt className="text-xs font-bold uppercase text-slate-400">Data Entrada</dt><dd className="font-mono">{atendimento.dataEntrada}</dd></div>
               <div><dt className="text-xs font-bold uppercase text-slate-400">Data de Saída</dt><dd className="font-mono">{atendimento.saida}</dd></div>
             </dl>
+            <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-sky-700">Problema relatado no chamado</p>
+              <p className="mt-1 text-slate-800">{det.descricaoProblema}</p>
+              <p className="mt-1 text-xs text-slate-500">Condutor: <b className="text-slate-700">{det.condutor}</b></p>
+            </div>
             <div>
               <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">Itens autorizados para manutenção (por OS)</p>
               <div className="space-y-2">
-                {atendimento.ordens.map((os) => {
+                {ordensExibidas.map((os) => {
                   const itensOS = det.itens.filter((i) => i.os === os.numero);
                   return (
                     <div key={os.numero} className="overflow-hidden rounded-lg border border-slate-200">
@@ -567,7 +579,7 @@ const FILTROS_TIPO: Array<{ key: TipoServico | 'todos'; label: string }> = [
 export default function ServicosPage() {
   const [filtroTipo, setFiltroTipo] = useState<TipoServico | 'todos'>('todos');
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'aberta' | 'finalizado'>('todos');
-  const [detalhe, setDetalhe] = useState<{ atendimento: AtendimentoServico; tipo: DetalheTipo } | null>(null);
+  const [detalhe, setDetalhe] = useState<{ atendimento: AtendimentoServico; tipo: DetalheTipo; os?: OrdemServico } | null>(null);
   const [osExpandida, setOsExpandida] = useState<string | null>(null);
   const [osDetalhe, setOsDetalhe] = useState<{ atendimento: AtendimentoServico; os: OrdemServico } | null>(null);
 
@@ -942,7 +954,7 @@ export default function ServicosPage() {
                                       </button>
                                       <button
                                         type="button"
-                                        onClick={() => { const det = getDetalhe(a.numero); abrirResumoImpressao(a, { ...det, itens: det.itens.filter((i) => i.os === os.numero) }, 'Resumo da OS'); }}
+                                        onClick={() => setDetalhe({ atendimento: a, tipo: 'resumo', os })}
                                         className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-[#0e2233]"
                                         title="Resumo da OS"
                                         aria-label="Resumo da OS"
@@ -969,6 +981,7 @@ export default function ServicosPage() {
         <ModalDetalheAtendimento
           atendimento={detalhe.atendimento}
           tipo={detalhe.tipo}
+          os={detalhe.os}
           onFechar={() => setDetalhe(null)}
         />
       )}
