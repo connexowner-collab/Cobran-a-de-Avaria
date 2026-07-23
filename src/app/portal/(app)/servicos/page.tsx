@@ -4,13 +4,17 @@ import { Fragment, useMemo, useState } from 'react';
 import {
   Download, Info, Wrench, FileText, X, AlertTriangle, Clock,
   CheckCircle2, CalendarClock, ChevronRight, ChevronDown,
-  Eye, LogIn, LogOut, Flag,
+  Eye, LogIn, LogOut, Flag, Send,
 } from 'lucide-react';
 import {
   PageTitle, KpiCard, FilterChip, KpiRow, SectionCard, SectionHeader,
   Toolbar, ToolbarDivider, DataTable, Th, TablePagination, usePaginacao,
   ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
+import {
+  EsteiraManutencao, BlocoSla, BlocoConversa,
+  type EtapaManutencao, type Interacao, type SlaVisual,
+} from '@/lib/acompanhamento';
 
 /* Data de referência do protótipo (para calcular imobilização/atrasos). */
 const HOJE = new Date(2026, 6, 20); // 20/07/2026
@@ -323,16 +327,7 @@ function abrirResumoImpressao(a: AtendimentoServico, det: DetalheAtendimento, ti
   setTimeout(() => w.print(), 350);
 }
 
-type EstadoEtapa = 'concluido' | 'atual' | 'pendente';
-interface EtapaManutencao {
-  label: string;
-  data: string;
-  icon: React.ComponentType<{ size?: number | string; className?: string }>;
-  estado: EstadoEtapa;
-  detalhe?: string;
-}
-
-/** Monta as etapas da esteira de manutenção de um atendimento em aberto. */
+/** Monta as etapas da esteira de manutenção de um atendimento. */
 function etapasManutencao(a: AtendimentoServico): EtapaManutencao[] {
   const entrou = a.dataEntrada !== '—';
   const saiu = a.saida !== '—';
@@ -346,23 +341,50 @@ function etapasManutencao(a: AtendimentoServico): EtapaManutencao[] {
       ? 'Serviços em execução'
       : 'Em avaliação pela oficina';
 
-  const manutEstado: EstadoEtapa = finalizado ? 'concluido' : entrou && !saiu ? 'atual' : 'pendente';
+  const manutEstado = finalizado ? 'concluido' : entrou && !saiu ? 'atual' : 'pendente';
 
   return [
     { label: 'Agendado', data: a.agendamento, icon: CalendarClock, estado: 'concluido' },
     { label: 'Entrada na oficina', data: a.dataEntrada, icon: LogIn, estado: entrou ? 'concluido' : 'atual' },
-    { label: 'Em manutenção', data: manutEstado === 'atual' ? 'Em andamento' : a.saida !== '—' ? '—' : '—', icon: Wrench, estado: manutEstado, detalhe: manutEstado === 'pendente' ? undefined : detManut },
+    { label: 'Em manutenção', data: manutEstado === 'atual' ? 'Em andamento' : '—', icon: Wrench, estado: manutEstado, detalhe: manutEstado === 'pendente' ? undefined : detManut },
     { label: 'Saída da oficina', data: a.saida, icon: LogOut, estado: saiu ? 'concluido' : 'pendente' },
     { label: 'Finalizado', data: a.dataConclusao, icon: Flag, estado: finalizado ? 'concluido' : 'pendente' },
   ];
 }
 
+/** Prazo de entrega derivado da previsão do atendimento (equivalente ao SLA dos chamados). */
+function slaEntrega(a: AtendimentoServico): SlaVisual {
+  const prev = parseBR(a.previsao);
+  if (!prev) return { label: 'Sem previsão', cls: 'text-slate-500', bar: 'bg-slate-400', pct: 20 };
+  const dias = diasEntre(HOJE, prev);
+  if (dias < 0) return { label: `Atrasado ${Math.abs(dias)}d`, cls: 'text-rose-600', bar: 'bg-rose-500', pct: 100 };
+  if (dias === 0) return { label: 'Previsto para hoje', cls: 'text-amber-600', bar: 'bg-amber-500', pct: 85 };
+  return { label: `${dias}d para a previsão`, cls: 'text-emerald-600', bar: 'bg-emerald-500', pct: Math.max(15, 70 - dias * 5) };
+}
+
+/** Gera a linha do tempo de interações do atendimento (mesmo formato dos chamados). */
+function interacoesDoAtendimento(a: AtendimentoServico): Interacao[] {
+  const msgs: Interacao[] = [
+    { autor: 'Portal', origem: 'suporte', horario: a.agendamento, texto: `Agendamento do atendimento ${a.numero} recebido para ${a.motivo}.` },
+  ];
+  if (a.dataEntrada !== '—') {
+    msgs.push({ autor: 'Oficina', origem: 'oficina', horario: a.dataEntrada, texto: 'Veículo deu entrada na oficina. Início da avaliação.' });
+  }
+  a.ordens.forEach((os) => {
+    if (os.status === 'Aguardando peça') msgs.push({ autor: 'Oficina', origem: 'oficina', horario: os.dataEntrada, texto: `OS ${os.numero} (${os.motivo}) aguardando peça.` });
+    else if (os.status === 'Em execução') msgs.push({ autor: 'Oficina', origem: 'oficina', horario: os.dataEntrada, texto: `OS ${os.numero} (${os.motivo}) em execução.` });
+    else if (os.status === 'Finalizada') msgs.push({ autor: 'Oficina', origem: 'oficina', horario: os.dataSaida, texto: `OS ${os.numero} (${os.motivo}) finalizada.` });
+  });
+  if (a.saida !== '—') msgs.push({ autor: 'Oficina', origem: 'oficina', horario: a.saida, texto: 'Veículo liberado — saída da oficina.' });
+  else msgs.push({ autor: 'Portal', origem: 'suporte', horario: '—', texto: `Previsão de entrega: ${a.previsao}.` });
+  return msgs;
+}
+
 function ModalAcompanhamento({ atendimento: a, onFechar }: { atendimento: AtendimentoServico; onFechar: () => void }) {
-  const etapas = etapasManutencao(a);
   const identificador = a.placa !== '—' ? a.placa : a.numeroSerie;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <p className="font-mono text-xs font-semibold text-slate-500">Atendimento {a.numero} · {identificador}</p>
@@ -374,43 +396,21 @@ function ModalAcompanhamento({ atendimento: a, onFechar }: { atendimento: Atendi
           </button>
         </div>
 
-        <div className="mb-5 flex items-center justify-between rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-2.5 text-[13px]">
-          <span className="font-semibold text-sky-800">Previsão de entrega</span>
-          <span className="font-mono font-bold text-sky-900">{a.previsao}</span>
+        <div className="mb-5">
+          <BlocoSla titulo="Prazo de entrega (previsão)" sla={slaEntrega(a)} />
         </div>
 
-        <ol className="relative">
-          {etapas.map((et, i) => {
-            const ultimo = i === etapas.length - 1;
-            const Icone = et.icon;
-            const cor = et.estado === 'concluido'
-              ? { dot: 'bg-emerald-500 text-white border-emerald-500', linha: 'bg-emerald-500', txt: 'text-slate-800', sub: 'text-slate-500' }
-              : et.estado === 'atual'
-                ? { dot: 'bg-sky-500 text-white border-sky-500 ring-4 ring-sky-100', linha: 'bg-slate-200', txt: 'text-sky-800 font-bold', sub: 'text-sky-600' }
-                : { dot: 'bg-white text-slate-300 border-slate-200', linha: 'bg-slate-200', txt: 'text-slate-400', sub: 'text-slate-300' };
-            return (
-              <li key={et.label} className="flex gap-3.5 pb-1">
-                <div className="flex flex-col items-center">
-                  <span className={`flex h-8 w-8 items-center justify-center rounded-full border ${cor.dot}`}>
-                    {et.estado === 'concluido' ? <CheckCircle2 size={16} /> : <Icone size={15} />}
-                  </span>
-                  {!ultimo && <span className={`w-0.5 flex-1 ${cor.linha}`} style={{ minHeight: 22 }} />}
-                </div>
-                <div className={`pb-4 ${ultimo ? '' : ''}`}>
-                  <p className={`text-[14px] leading-tight ${cor.txt}`}>{et.label}</p>
-                  {et.detalhe && (
-                    <p className={`mt-0.5 text-[12px] font-semibold ${cor.sub}`}>{et.detalhe}</p>
-                  )}
-                  <p className={`mt-0.5 font-mono text-[12px] ${cor.sub}`}>{et.data && et.data !== '—' ? et.data : (et.estado === 'pendente' ? 'Pendente' : '')}</p>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+        <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Andamento da manutenção</p>
+        <div className="mb-5">
+          <EsteiraManutencao etapas={etapasManutencao(a)} />
+        </div>
 
-        <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
-          Acompanhe aqui o andamento da manutenção. As datas de saída e conclusão são preenchidas conforme a oficina avança.
-        </p>
+        <BlocoConversa interacoes={interacoesDoAtendimento(a)} />
+
+        <div className="mt-5 flex gap-2.5 border-t border-slate-100 pt-4">
+          <input placeholder="Responder ao atendimento..." className="input-field flex-1 bg-slate-50 py-2.5 text-[13px]" />
+          <button className="btn-primary gap-1.5 text-[13px]"><Send size={14} /> Enviar</button>
+        </div>
       </div>
     </div>
   );

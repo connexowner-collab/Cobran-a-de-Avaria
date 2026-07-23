@@ -2,13 +2,18 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Send, X, Eye } from 'lucide-react';
+import {
+  Plus, Send, X, Eye, CalendarClock, LogIn, LogOut, Wrench, Flag,
+} from 'lucide-react';
 import { CHAMADOS, type Chamado, type ChamadoStatus } from '@/lib/portalData';
 import {
   PageTitle, StatusBadge, FilterChip, KpiCard, KpiRow, Toolbar, ToolbarSpacer,
   DataTable, Th, TablePagination, usePaginacao,
   ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
+import {
+  slaInfo, EsteiraManutencao, BlocoSla, BlocoConversa, type EtapaManutencao,
+} from '@/lib/acompanhamento';
 
 const STATUS_LABEL: Record<ChamadoStatus, string> = {
   aberto: 'Aberto',
@@ -18,10 +23,31 @@ const STATUS_LABEL: Record<ChamadoStatus, string> = {
   resolvido: 'Resolvido',
 };
 
-function slaInfo(min: number) {
-  if (min < 0) return { label: `Vencido há ${Math.abs(min)}min`, cls: 'text-rose-600', bar: 'bg-rose-500', pct: 100 };
-  if (min < 60) return { label: `${min}min restantes`, cls: 'text-amber-600', bar: 'bg-amber-500', pct: Math.max(10, 100 - min) };
-  return { label: `${Math.round(min / 60)}h restantes`, cls: 'text-emerald-600', bar: 'bg-emerald-500', pct: Math.max(10, 100 - min / 10) };
+/** Deriva a esteira de manutenção a partir do status do chamado. */
+function etapasDoChamado(c: Chamado): EtapaManutencao[] {
+  const resolvido = c.status === 'resolvido';
+  let idx = 0;
+  let detalhe: string | undefined;
+  switch (c.status) {
+    case 'aberto': idx = 0; detalhe = 'Aguardando agendamento'; break;
+    case 'atendimento': idx = 2; detalhe = 'Serviços em execução'; break;
+    case 'aguardando': idx = 2; detalhe = 'Aguardando retorno'; break;
+    case 'escalonado': idx = 2; detalhe = 'Chamado escalonado'; break;
+    case 'resolvido': idx = 4; break;
+  }
+  const base = [
+    { label: 'Agendado', icon: CalendarClock },
+    { label: 'Entrada na oficina', icon: LogIn },
+    { label: 'Em manutenção', icon: Wrench },
+    { label: 'Saída da oficina', icon: LogOut },
+    { label: 'Finalizado', icon: Flag },
+  ];
+  return base.map((b, i) => ({
+    ...b,
+    data: i === 0 ? c.abertoHa : '—',
+    estado: resolvido ? 'concluido' : i < idx ? 'concluido' : i === idx ? 'atual' : 'pendente',
+    detalhe: i === idx && !resolvido ? detalhe : undefined,
+  }));
 }
 
 /** Status considerados "em aberto" — os únicos exibidos na Central de Chamados.
@@ -59,35 +85,16 @@ function ModalChamado({ chamado, onFechar }: { chamado: Chamado; onFechar: () =>
           </div>
         </div>
 
-        <div className="mb-5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3.5">
-          <div className="mb-2 flex justify-between text-xs font-bold">
-            <span className="text-slate-700">SLA de resposta</span>
-            <span className={sla.cls}>{sla.label}</span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-            <div className={`h-full rounded-full ${sla.bar}`} style={{ width: `${sla.pct}%` }} />
-          </div>
+        <div className="mb-5">
+          <BlocoSla titulo="SLA de resposta" sla={sla} />
         </div>
 
-        <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Linha do tempo</p>
-        <div className="max-h-72 space-y-3.5 overflow-y-auto pr-1.5">
-          {chamado.respostas.map((r, i) => (
-            <div key={i} className="flex gap-2.5">
-              <span
-                className={`mt-1.5 h-2 w-2 flex-none rounded-full ${
-                  r.origem === 'suporte' ? 'bg-[#0e2233]' : 'bg-primary-500'
-                }`}
-              />
-              <div className="flex-1 rounded-lg bg-slate-50 px-3.5 py-2.5">
-                <div className="flex justify-between text-[11px] font-bold text-slate-500">
-                  <span>{r.origem === 'suporte' ? 'Suporte' : 'Cliente'} · {r.autor}</span>
-                  <span>{r.horario}</span>
-                </div>
-                <p className="mt-1 text-[13px] text-slate-700">{r.texto}</p>
-              </div>
-            </div>
-          ))}
+        <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Andamento da manutenção</p>
+        <div className="mb-5">
+          <EsteiraManutencao etapas={etapasDoChamado(chamado)} />
         </div>
+
+        <BlocoConversa interacoes={chamado.respostas} />
 
         <div className="mt-5 flex gap-2.5 border-t border-slate-100 pt-4">
           <input
