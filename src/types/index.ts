@@ -177,6 +177,9 @@ export interface Divisao {
   id: string;
   nome: string;
   ativoIds: string[];
+  /** Código estável e único da divisão, no formato `{idDoGrupo}-{n}` (ex.: grp-1-1).
+   *  Gerado pelo sistema ao salvar; enviado ao portal e usado no login do cliente. */
+  codigo?: string;
 }
 
 /** Grupo criado (possui ID único). */
@@ -188,6 +191,8 @@ export interface Grupo {
   ativo: boolean;
   /** Divisões de frota do grupo. */
   divisoes?: Divisao[];
+  /** Próximo sequencial a usar ao gerar código de divisão (mantém IDs estáveis). */
+  seqDivisao?: number;
   /** Data e hora de criação (ISO). Preenchida pelo sistema ao criar. */
   criadoEm?: string;
   /** Data e hora da última atualização (ISO). Atualizada pelo sistema ao editar. */

@@ -80,11 +80,11 @@ function situacaoDe(m: ClienteMerged): Situacao {
   return 'ativo';
 }
 
-const SITUACAO_INFO: Record<Situacao, { label: string; cls: string }> = {
-  ativo: { label: 'Ativo', cls: 'bg-slate-100 text-slate-600' },
-  atencao: { label: 'Em risco', cls: 'bg-amber-100 text-amber-800' },
-  nunca: { label: 'Nunca acessou', cls: 'bg-indigo-100 text-indigo-700' },
-  bloqueado: { label: 'Bloqueado', cls: 'bg-rose-100 text-rose-700' },
+const SITUACAO_INFO: Record<Situacao, { label: string; cls: string; dica: string }> = {
+  ativo: { label: 'Ativo', cls: 'bg-slate-100 text-slate-600', dica: 'Acessou o portal nos últimos 60 dias.' },
+  atencao: { label: 'Último acesso +60 dias', cls: 'bg-amber-100 text-amber-800', dica: 'O acesso mais recente foi há mais de 60 dias. Aos 90 dias sem acessar, os usuários são bloqueados automaticamente.' },
+  nunca: { label: 'Nunca acessou', cls: 'bg-indigo-100 text-indigo-700', dica: 'Nenhum usuário deste cliente entrou no portal até agora.' },
+  bloqueado: { label: 'Bloqueado', cls: 'bg-rose-100 text-rose-700', dica: 'Todos os usuários deste cliente estão bloqueados.' },
 };
 
 type Detalhe =
@@ -398,7 +398,7 @@ export default function DashboardAcessos({ onIrParaUsuarios }: { onIrParaUsuario
                           </span>
                         </td>
                         <td className="px-3 py-2.5">
-                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${SITUACAO_INFO[sit].cls}`}>
+                          <span title={SITUACAO_INFO[sit].dica} className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${SITUACAO_INFO[sit].cls}`}>
                             {SITUACAO_INFO[sit].label}
                           </span>
                         </td>
@@ -432,7 +432,7 @@ export default function DashboardAcessos({ onIrParaUsuarios }: { onIrParaUsuario
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="text-lg font-bold text-slate-900">{c.nomeFantasia}</h3>
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${SITUACAO_INFO[sit].cls}`}>
+                        <span title={SITUACAO_INFO[sit].dica} className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${SITUACAO_INFO[sit].cls}`}>
                           {SITUACAO_INFO[sit].label}
                         </span>
                       </div>

@@ -320,11 +320,30 @@ export interface FiltrosUsuarios {
   ativo?: boolean;
 }
 
+/** Garante que toda divisão tenha um código estável (`{grupoId}-N`); backfill de dados antigos. */
+function garantirCodigosDivisoes(): void {
+  let mudou = false;
+  for (const g of grupos) {
+    if (!g.divisoes || g.divisoes.length === 0) continue;
+    const faltando = g.divisoes.some((d) => !d.codigo || !d.codigo.startsWith(`${g.id}-`));
+    if (!faltando) continue;
+    const maxExistente = g.divisoes.reduce((m, d) => Math.max(m, seqDoCodigoDivisao(g.id, d.codigo)), 0);
+    const seqInicial = Math.max(g.seqDivisao ?? 1, maxExistente + 1);
+    const { divisoes, proximoSeq } = aplicarCodigosDivisoes(g.id, g.divisoes, seqInicial);
+    g.divisoes = divisoes;
+    g.seqDivisao = proximoSeq;
+    mudou = true;
+  }
+  if (mudou) saveToFile(usuarios, grupos, perfis);
+}
+
 export function getGrupos(): Grupo[] {
+  garantirCodigosDivisoes();
   return [...grupos];
 }
 
 export function getGrupoById(id: string): Grupo | undefined {
+  garantirCodigosDivisoes();
   return grupos.find((g) => g.id === id);
 }
 
@@ -593,6 +612,30 @@ export interface GrupoInput {
   divisoes?: Divisao[];
 }
 
+/** Extrai o sequencial de um código de divisão (`{grupoId}-N`). Retorna 0 se não casar. */
+function seqDoCodigoDivisao(grupoId: string, codigo?: string): number {
+  const prefixo = `${grupoId}-`;
+  if (!codigo || !codigo.startsWith(prefixo)) return 0;
+  const n = parseInt(codigo.slice(prefixo.length), 10);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+/** Atribui códigos estáveis (`{grupoId}-N`) às divisões que ainda não têm; preserva as já codificadas. */
+function aplicarCodigosDivisoes(
+  grupoId: string,
+  divisoes: Divisao[] | undefined,
+  seqInicial: number
+): { divisoes: Divisao[]; proximoSeq: number } {
+  let seq = seqInicial;
+  const out = (divisoes ?? []).map((d) => {
+    if (d.codigo && d.codigo.startsWith(`${grupoId}-`)) return { ...d };
+    const codigo = `${grupoId}-${seq}`;
+    seq += 1;
+    return { ...d, codigo };
+  });
+  return { divisoes: out, proximoSeq: seq };
+}
+
 /** Verifica se já existe grupo com o mesmo nome (ignora maiúsculas/minúsculas). Exclui um id da checagem (para edição). */
 export function grupoNomeEmUso(nome: string, excluirGrupoId?: string): boolean {
   const n = (nome || '').trim().toLowerCase();
@@ -605,13 +648,19 @@ export function grupoNomeEmUso(nome: string, excluirGrupoId?: string): boolean {
 export function criarGrupo(input: GrupoInput): Grupo {
   const id = nextGrupoId();
   const iso = nowIso();
+  const { divisoes: divisoesComCodigo, proximoSeq } = aplicarCodigosDivisoes(
+    id,
+    Array.isArray(input.divisoes) ? input.divisoes : [],
+    1
+  );
   const novo: Grupo = {
     id,
     nome: input.nome,
     responsavelId: input.responsavelId,
     contratoIds: input.contratoIds || [],
     ativo: input.ativo ?? true,
-    divisoes: Array.isArray(input.divisoes) ? input.divisoes : [],
+    divisoes: divisoesComCodigo,
+    seqDivisao: proximoSeq,
     criadoEm: iso,
     atualizadoEm: iso,
   };
@@ -628,7 +677,14 @@ export function atualizarGrupo(id: string, input: Partial<GrupoInput>): Grupo | 
   if (input.responsavelId !== undefined) now.responsavelId = input.responsavelId;
   if (input.contratoIds !== undefined) now.contratoIds = input.contratoIds;
   if (input.ativo !== undefined) now.ativo = input.ativo;
-  if (input.divisoes !== undefined) now.divisoes = Array.isArray(input.divisoes) ? input.divisoes : [];
+  if (input.divisoes !== undefined) {
+    const incoming = Array.isArray(input.divisoes) ? input.divisoes : [];
+    const maxExistente = incoming.reduce((m, d) => Math.max(m, seqDoCodigoDivisao(id, d.codigo)), 0);
+    const seqInicial = Math.max(now.seqDivisao ?? 1, maxExistente + 1);
+    const { divisoes, proximoSeq } = aplicarCodigosDivisoes(id, incoming, seqInicial);
+    now.divisoes = divisoes;
+    now.seqDivisao = proximoSeq;
+  }
   now.atualizadoEm = nowIso();
   grupos[idx] = now;
   saveToFile(usuarios, grupos, perfis);

@@ -5,8 +5,17 @@ import { ChevronDown, X } from 'lucide-react';
 import type { Grupo } from '@/types';
 
 type OpcaoGrupo = { tipo: 'grupo'; id: string; nome: string; grupo: Grupo };
-type OpcaoDivisao = { tipo: 'divisao'; id: string; nome: string; nomeCompleto: string; grupo: Grupo };
+type OpcaoDivisao = { tipo: 'divisao'; id: string; nome: string; nomeCompleto: string; codigo: string; grupo: Grupo };
 type Opcao = OpcaoGrupo | OpcaoDivisao;
+
+/** Badge com o ID do grupo/divisão (enviado ao portal e usado no login do cliente). */
+function IdBadge({ texto }: { texto: string }) {
+  return (
+    <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-slate-500" title="ID usado no portal / login do cliente">
+      {texto}
+    </span>
+  );
+}
 
 interface DropdownGruposMultiploProps {
   /** Grupos completos (com divisoes) — usar GET /api/grupos?comDivisoes=1 */
@@ -48,6 +57,7 @@ export default function DropdownGruposMultiplo({
           id: d.id,
           nome: d.nome,
           nomeCompleto: `${g.nome} › ${d.nome}`,
+          codigo: (d.codigo ?? d.id).toUpperCase(),
           grupo: g,
         });
       }
@@ -101,6 +111,14 @@ export default function DropdownGruposMultiplo({
       if (d) return `${g.nome} › ${d.nome}`;
     }
     return divisaoId;
+  };
+
+  const codigoChipDivisao = (divisaoId: string) => {
+    for (const g of grupos) {
+      const d = g.divisoes?.find((x) => x.id === divisaoId);
+      if (d) return (d.codigo ?? d.id).toUpperCase();
+    }
+    return divisaoId.toUpperCase();
   };
 
   return (
@@ -167,6 +185,7 @@ export default function DropdownGruposMultiplo({
                       {o.grupo.divisoes?.length ? (
                         <span className="text-xs text-slate-500">(grupo inteiro)</span>
                       ) : null}
+                      <IdBadge texto={o.grupo.id.toUpperCase()} />
                     </li>
                   );
                 }
@@ -192,6 +211,7 @@ export default function DropdownGruposMultiplo({
                       )}
                     </span>
                     <span className="flex-1 truncate text-slate-700">{o.nomeCompleto}</span>
+                    <IdBadge texto={o.codigo} />
                   </li>
                 );
               })
@@ -213,6 +233,7 @@ export default function DropdownGruposMultiplo({
                 className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-3 py-1 text-sm font-medium text-primary-800"
               >
                 {grupo?.nome ?? id}
+                <span className="font-mono text-[10px] font-semibold text-primary-600/80">{(grupo?.id ?? id).toUpperCase()}</span>
                 <button
                   type="button"
                   onClick={() => onRemoveGrupo(id)}
@@ -230,6 +251,7 @@ export default function DropdownGruposMultiplo({
               className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-800"
             >
               {labelChipDivisao(divId)}
+              <span className="font-mono text-[10px] font-semibold text-slate-500">{codigoChipDivisao(divId)}</span>
               <button
                 type="button"
                 onClick={() => onRemoveDivisao(divId)}
