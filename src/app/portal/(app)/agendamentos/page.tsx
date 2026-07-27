@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, Fragment } from 'react';
 import Link from 'next/link';
 import {
   Check, CalendarClock, CalendarCheck, Clock, ArrowLeft, ArrowRight, Upload, X, Gauge,
-  ImagePlus, Truck, Wrench, Camera, MapPin, User, Mail, Phone, Info,
+  ImagePlus, Truck, Wrench, Camera, MapPin, User, Mail, Phone, Info, Barcode, Hash, Lock,
   AlertTriangle, Disc3, Cog, Snowflake, CircleDot, Zap, Waves, Paintbrush2, Square,
   ShieldAlert, Ellipsis, type LucideIcon,
 } from 'lucide-react';
@@ -37,6 +37,14 @@ const SERVICOS_OPCOES: { nome: string; icon: LucideIcon }[] = [
 ];
 const ICONE_SERVICO = (nome: string): LucideIcon =>
   SERVICOS_OPCOES.find((s) => s.nome === nome)?.icon ?? Wrench;
+
+/* Tipos de identificação do veículo — o usuário escolhe antes de liberar o campo. */
+type TipoIdent = 'placa' | 'chassi' | 'serie';
+const TIPOS_IDENT: { key: TipoIdent; label: string; icon: LucideIcon; placeholder: string }[] = [
+  { key: 'placa', label: 'Placa', icon: Truck, placeholder: 'SHQ6B80' },
+  { key: 'chassi', label: 'Chassi', icon: Barcode, placeholder: '9BM958074HB778812' },
+  { key: 'serie', label: 'Nº de Série', icon: Hash, placeholder: 'SN-JCB-099887' },
+];
 
 const STATUS_LABEL = { confirmado: 'Confirmado', aguardando: 'Aguardando', concluido: 'Concluído' } as const;
 
@@ -75,7 +83,7 @@ function InputIcone({ icon: Icon, className = '', ...props }: { icon: LucideIcon
   return (
     <div className="relative">
       <Icon size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-      <input {...props} className={`input-field w-full py-2.5 pl-9 text-[13px] ${className}`} />
+      <input {...props} className={`input-field w-full py-2.5 pl-9 text-[13px] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 ${className}`} />
     </div>
   );
 }
@@ -134,6 +142,7 @@ function UploadZona({
 export default function AgendamentosPage() {
   const [passo, setPasso] = useState(0);
   // Passo 1 — veículo
+  const [tipoIdent, setTipoIdent] = useState<TipoIdent | ''>('');
   const [placa, setPlaca] = useState('');
   const [km, setKm] = useState('');
   // Passo 2 — serviços
@@ -164,10 +173,12 @@ export default function AgendamentosPage() {
 
   const servicosSelecionados = servicos.map((s) => s.servico);
 
+  const identAtual = TIPOS_IDENT.find((t) => t.key === tipoIdent);
+
   const podeAvancar =
-    (passo === 0 && placa.trim().length >= 5 && km.trim() !== '') ||
+    (passo === 0 && !!tipoIdent && placa.trim().length >= 5 && km.trim() !== '') ||
     (passo === 1 && servicosSelecionados.length > 0 && observacoes.trim() !== '') ||
-    (passo === 2 && fotoHodometro.length > 0 && fotoPlaca.length > 0) ||
+    (passo === 2) ||
     (passo === 3 && !!endereco && !!data && !!horario && !!condutor && !!email && !!celular);
 
   const avancar = () => {
@@ -177,7 +188,7 @@ export default function AgendamentosPage() {
 
   const resetar = () => {
     setConcluido(false); setPasso(0);
-    setPlaca(''); setKm('');
+    setTipoIdent(''); setPlaca(''); setKm('');
     setServicos([]); setObservacoes(''); setAnexos([]);
     setFotoHodometro([]); setFotoPlaca([]); setMaisFotos([]);
     setEndereco(''); setData(''); setHorario(''); setCondutor(''); setEmail(''); setCelular('');
@@ -255,15 +266,52 @@ export default function AgendamentosPage() {
               {passo === 0 && (
                 <div>
                   <CabecalhoPasso icon={Truck} titulo="Dados do veículo" subtitulo="Identifique o veículo que precisa de manutenção" />
-                  <Campo label="Placa, Chassi ou Nº Série do Veículo" obrigatorio>
-                    <InputIcone icon={Truck} value={placa} onChange={(e) => setPlaca(e.target.value)} placeholder="SHQ6B80" className="font-mono uppercase" />
+
+                  <Campo label="Como deseja identificar o veículo?" obrigatorio>
+                    <div className="grid grid-cols-3 gap-2">
+                      {TIPOS_IDENT.map(({ key, label, icon: Icon }) => {
+                        const sel = tipoIdent === key;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => { setTipoIdent(key); setPlaca(''); }}
+                            aria-pressed={sel}
+                            className={`flex flex-col items-center gap-1.5 rounded-xl border-2 px-2 py-3 text-center transition ${
+                              sel
+                                ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-sm'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            <Icon size={19} className={sel ? 'text-primary-600' : 'text-slate-400'} />
+                            <span className="text-[12px] font-semibold leading-tight">{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </Campo>
+
+                  <Campo label={identAtual ? identAtual.label + ' do veículo' : 'Placa, Chassi ou Nº Série do Veículo'} obrigatorio>
+                    <InputIcone
+                      icon={identAtual?.icon ?? Lock}
+                      value={placa}
+                      onChange={(e) => setPlaca(e.target.value)}
+                      disabled={!tipoIdent}
+                      placeholder={identAtual ? identAtual.placeholder : 'Selecione o tipo acima para liberar'}
+                      className="font-mono uppercase"
+                    />
+                    {!tipoIdent && (
+                      <p className="mt-1 text-[11px] text-slate-400">Escolha primeiro Placa, Chassi ou Nº de Série para habilitar o campo.</p>
+                    )}
+                  </Campo>
+
                   <Campo label="Km do Veículo" obrigatorio>
                     <InputIcone icon={Gauge} value={km} onChange={(e) => setKm(e.target.value)} placeholder="Km atual do veículo" inputMode="numeric" className="font-mono" />
                   </Campo>
+
                   <div className="flex items-start gap-2 rounded-lg bg-sky-50 px-3.5 py-2.5 text-[12px] text-sky-800">
                     <Info size={15} className="mt-0.5 shrink-0 text-sky-500" />
-                    <p>Informe a placa como no documento. O Km ajuda a oficina a preparar a revisão correta.</p>
+                    <p>Informe a identificação como no documento. O Km ajuda a oficina a preparar a revisão correta.</p>
                   </div>
                 </div>
               )}
@@ -340,17 +388,17 @@ export default function AgendamentosPage() {
 
                   <div className="mb-4 rounded-xl border border-slate-200 p-4">
                     <div className="mb-1 flex items-center gap-2 text-slate-700">
-                      <Gauge size={16} className="text-primary-600" /><p className="text-[13px] font-bold">Hodômetro <span className="text-primary-600">*</span></p>
+                      <Gauge size={16} className="text-primary-600" /><p className="text-[13px] font-bold">Hodômetro <span className="font-semibold text-slate-400">(opcional)</span></p>
                     </div>
-                    <p className="mb-2.5 text-xs text-slate-500">Anexe uma foto nítida do <b>hodômetro</b> do veículo.</p>
+                    <p className="mb-2.5 text-xs text-slate-500">Anexe uma foto nítida do <b>hodômetro</b> do veículo, se possível.</p>
                     <UploadZona files={fotoHodometro} onFiles={setFotoHodometro} placeholder="Foto do hodômetro" />
                   </div>
 
                   <div className="mb-4 rounded-xl border border-slate-200 p-4">
                     <div className="mb-1 flex items-center gap-2 text-slate-700">
-                      <ImagePlus size={16} className="text-primary-600" /><p className="text-[13px] font-bold">Placa <span className="text-primary-600">*</span></p>
+                      <ImagePlus size={16} className="text-primary-600" /><p className="text-[13px] font-bold">Placa <span className="font-semibold text-slate-400">(opcional)</span></p>
                     </div>
-                    <p className="mb-2.5 text-xs text-slate-500">Anexe uma foto da <b>placa</b> do veículo.</p>
+                    <p className="mb-2.5 text-xs text-slate-500">Anexe uma foto da <b>placa</b> do veículo, se possível.</p>
                     <UploadZona files={fotoPlaca} onFiles={setFotoPlaca} placeholder="Foto da placa" />
                   </div>
 
