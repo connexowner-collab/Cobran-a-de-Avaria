@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Plus, Send, X, Eye, CalendarClock, LogIn, LogOut, Wrench, Flag,
 } from 'lucide-react';
@@ -121,7 +122,7 @@ function ModalChamado({ chamado, onFechar }: { chamado: Chamado; onFechar: () =>
 }
 
 export default function ChamadosPage() {
-  const [etapaFiltro, setEtapaFiltro] = useState<EtapaManutencaoKey | null>(null);
+  const router = useRouter();
   const [aberto, setAberto] = useState<Chamado | null>(null);
 
   /** Base da Central de Chamados: somente chamados em aberto. */
@@ -130,10 +131,7 @@ export default function ChamadosPage() {
     [],
   );
 
-  const listaBase = useMemo(
-    () => chamadosEmAberto.filter((c) => !etapaFiltro || etapaChamado(c) === etapaFiltro),
-    [chamadosEmAberto, etapaFiltro],
-  );
+  const listaBase = chamadosEmAberto;
   const cols = useMemo<ColDef<Chamado>[]>(() => [
     { key: 'id', get: (c) => c.id, multi: true },
     { key: 'categoria', get: (c) => c.categoria },
@@ -154,11 +152,11 @@ export default function ChamadosPage() {
     return { abertos: abertos.length, foraDoSla, escalonados, mediaSla: slaInfo(mediaMin) };
   }, [chamadosEmAberto]);
 
-  /* Funil: conta os chamados em aberto por etapa (bate com a lista abaixo). */
-  const funil = useMemo(
-    () => ETAPAS_MANUTENCAO.map((e) => ({ ...e, count: chamadosEmAberto.filter((c) => etapaChamado(c) === e.key).length })),
-    [chamadosEmAberto],
-  );
+  /* Timeline (espelho de Serviços): só etapas em aberto, sem contagem.
+     Ao clicar, leva o usuário para a tela de Serviços. */
+  const etapasAbertas = ETAPAS_MANUTENCAO
+    .filter((e) => e.key !== 'finalizado')
+    .map((e) => ({ ...e, count: 0 }));
 
   return (
     <div>
@@ -187,11 +185,12 @@ export default function ChamadosPage() {
       </KpiRow>
 
       <FunilEtapas
-        titulo="Chamados por etapa"
-        subtitulo="Clique numa etapa para filtrar a lista abaixo"
-        etapas={funil}
-        ativo={etapaFiltro}
-        onSelecionar={(k) => setEtapaFiltro(k as EtapaManutencaoKey | null)}
+        titulo="Manutenções por etapa"
+        subtitulo="Acompanhe a esteira em Serviços · clique numa etapa para abrir"
+        etapas={etapasAbertas}
+        ativo={null}
+        onSelecionar={() => router.push('/portal/servicos')}
+        mostrarContagem={false}
         className="mb-6"
       />
 

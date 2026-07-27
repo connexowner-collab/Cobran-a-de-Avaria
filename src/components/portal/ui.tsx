@@ -331,7 +331,7 @@ export interface EtapaFunil { key: string; label: string; icon: LucideIcon; coun
  *  funciona como pré-filtro da(s) tabela(s) da tela. Clicar de novo (ou em
  *  "Limpar filtro") volta ao estado inicial. */
 export function FunilEtapas({
-  titulo, subtitulo, etapas, ativo, onSelecionar, className = '',
+  titulo, subtitulo, etapas, ativo, onSelecionar, className = '', mostrarContagem = true,
 }: {
   titulo: string;
   subtitulo?: string;
@@ -339,6 +339,8 @@ export function FunilEtapas({
   ativo: string | null;
   onSelecionar: (key: string | null) => void;
   className?: string;
+  /** Exibe o número de itens em cada etapa (padrão true). */
+  mostrarContagem?: boolean;
 }) {
   return (
     <div className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
@@ -389,8 +391,10 @@ export function FunilEtapas({
                     <Icon size={20} />
                   </span>
                 </div>
-                <span className={`mt-1.5 text-2xl font-extrabold leading-none ${sel ? 'text-primary-700' : 'text-slate-900'}`}>{e.count}</span>
-                <span className="mt-1 max-w-[7.5rem] text-center text-[11px] font-semibold leading-tight text-slate-500">{e.label}</span>
+                {mostrarContagem && (
+                  <span className={`mt-1.5 text-2xl font-extrabold leading-none ${sel ? 'text-primary-700' : 'text-slate-900'}`}>{e.count}</span>
+                )}
+                <span className={`${mostrarContagem ? 'mt-1' : 'mt-2'} max-w-[7.5rem] text-center text-[11px] font-semibold leading-tight ${sel ? 'text-primary-700' : 'text-slate-500'}`}>{e.label}</span>
               </button>
             );
           })}
