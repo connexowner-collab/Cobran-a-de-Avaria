@@ -13,8 +13,7 @@ import {
   ColunaFiltro, ColunaDropdown, ThFiltro, useFiltrosColuna, FunilEtapas, type ColDef,
 } from '@/components/portal/ui';
 import {
-  EsteiraManutencao, BlocoSla, BlocoConversa,
-  ETAPAS_MANUTENCAO, CONTAGEM_ETAPAS,
+  EsteiraManutencao, BlocoSla, BlocoConversa, ETAPAS_MANUTENCAO,
   type EtapaManutencao, type EtapaManutencaoKey, type Interacao, type SlaVisual,
 } from '@/lib/acompanhamento';
 
@@ -80,10 +79,10 @@ const ATENDIMENTOS_SERVICO: AtendimentoServico[] = [
   { numero: '957964', status: 'finalizado', motivo: 'CORRETIVA', tipo: 'corretiva', ordens: [{ numero: 'OS-330145', motivo: 'ELÉTRICA', status: 'Finalizada', dataEntrada: '15/11/2025', dataSaida: '21/11/2025', temAvaria: false }], placa: 'JBL5B27', chassi: '9535V6TB0PR009127', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '15/11/2025', dataEntrada: '15/11/2025', previsao: '20/11/2025', saida: '21/11/2025', dataConclusao: '21/11/2025', situacao: 'Rodando' },
   { numero: '951200', status: 'finalizado', motivo: 'REVISÃO PREVENTIVA', tipo: 'preventiva', ordens: [{ numero: 'OS-325509', motivo: 'REVISÃO PREVENTIVA', status: 'Finalizada', dataEntrada: '10/05/2026', dataSaida: '12/05/2026', temAvaria: false }, { numero: 'OS-325520', motivo: 'PNEU', status: 'Finalizada', dataEntrada: '10/05/2026', dataSaida: '11/05/2026', temAvaria: false }, { numero: 'OS-325533', motivo: 'FREIO', status: 'Finalizada', dataEntrada: '11/05/2026', dataSaida: '12/05/2026', temAvaria: true, valorReembolso: 'R$ 320,00' }], placa: 'SHQ6B80', chassi: '9535V6TB0PR009242', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '10/05/2026', dataEntrada: '10/05/2026', previsao: '12/05/2026', saida: '12/05/2026', dataConclusao: '12/05/2026', situacao: 'Rodando' },
   { numero: '948877', status: 'finalizado', motivo: 'SINISTRO', tipo: 'sinistro', ordens: [{ numero: 'OS-321880', motivo: 'SINISTRO', status: 'Finalizada', dataEntrada: '03/04/2026', dataSaida: '25/04/2026', temAvaria: true, valorReembolso: 'R$ 3.200,00' }, { numero: 'OS-321895', motivo: 'ELÉTRICA', status: 'Finalizada', dataEntrada: '10/04/2026', dataSaida: '25/04/2026', temAvaria: false }], placa: 'JBL5E88', chassi: 'YV2RT40A8LB456789', numeroSerie: '—', marcaModelo: 'Volvo FH 460', agendamento: '02/04/2026', dataEntrada: '03/04/2026', previsao: '20/04/2026', saida: '25/04/2026', dataConclusao: '25/04/2026', situacao: 'Rodando' },
-  { numero: '2066903', status: 'aberta', motivo: 'DESMOBILIZAÇÃO', tipo: 'outros', ordens: [{ numero: 'OS-344012', motivo: 'DESMOBILIZAÇÃO', status: 'Em execução', dataEntrada: '03/07/2026', dataSaida: '—', temAvaria: false }], placa: 'SIE8F02', chassi: '9BM958074HB778812', numeroSerie: '—', marcaModelo: 'Mercedes Accelo 815', agendamento: '02/07/2026', dataEntrada: '03/07/2026', previsao: '20/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
-  { numero: '2066895', status: 'aberta', motivo: 'AFERIÇÃO TACÓGRAFO', tipo: 'preventiva', ordens: [{ numero: 'OS-343988', motivo: 'AFERIÇÃO TACÓGRAFO', status: 'Aguardando peça', dataEntrada: '09/07/2026', dataSaida: '—', temAvaria: false }, { numero: 'OS-343999', motivo: 'ELÉTRICA', status: 'Em execução', dataEntrada: '10/07/2026', dataSaida: '—', temAvaria: false }], placa: 'BXW9D72', chassi: '9535V6TB0PR010455', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '08/07/2026', dataEntrada: '09/07/2026', previsao: '18/07/2026', saida: '—', dataConclusao: '—', situacao: 'Aguardando peça' },
+  { numero: '2066903', status: 'aberta', motivo: 'DESMOBILIZAÇÃO', tipo: 'outros', ordens: [{ numero: 'OS-344012', motivo: 'DESMOBILIZAÇÃO', status: 'Aberta', dataEntrada: '—', dataSaida: '—', temAvaria: false }], placa: 'SIE8F02', chassi: '9BM958074HB778812', numeroSerie: '—', marcaModelo: 'Mercedes Accelo 815', agendamento: '02/07/2026', dataEntrada: '—', previsao: '20/07/2026', saida: '—', dataConclusao: '—', situacao: 'Agendado' },
+  { numero: '2066895', status: 'aberta', motivo: 'AFERIÇÃO TACÓGRAFO', tipo: 'preventiva', ordens: [{ numero: 'OS-343988', motivo: 'AFERIÇÃO TACÓGRAFO', status: 'Aberta', dataEntrada: '09/07/2026', dataSaida: '—', temAvaria: false }, { numero: 'OS-343999', motivo: 'ELÉTRICA', status: 'Aberta', dataEntrada: '10/07/2026', dataSaida: '—', temAvaria: false }], placa: 'BXW9D72', chassi: '9535V6TB0PR010455', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '08/07/2026', dataEntrada: '09/07/2026', previsao: '18/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em avaliação' },
   { numero: '2066894', status: 'aberta', motivo: 'PNEU', tipo: 'corretiva', ordens: [{ numero: 'OS-343970', motivo: 'PNEU', status: 'Em execução', dataEntrada: '11/07/2026', dataSaida: '—', temAvaria: true, valorReembolso: 'R$ 1.150,00' }], placa: 'TXI3F16', chassi: '9BM958074HB779340', numeroSerie: '—', marcaModelo: 'Mercedes Accelo 815', agendamento: '10/07/2026', dataEntrada: '11/07/2026', previsao: '17/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
-  { numero: '2066880', status: 'aberta', motivo: 'CORRETIVA', tipo: 'corretiva', ordens: [{ numero: 'OS-343900', motivo: 'SUSPENSÃO', status: 'Aberta', dataEntrada: '12/07/2026', dataSaida: '—', temAvaria: false }, { numero: 'OS-343911', motivo: 'FREIO', status: 'Em execução', dataEntrada: '13/07/2026', dataSaida: '—', temAvaria: true, valorReembolso: 'R$ 390,00' }], placa: '—', chassi: '—', numeroSerie: 'SN-JCB-099887', marcaModelo: 'JCB 3CX', agendamento: '12/07/2026', dataEntrada: '12/07/2026', previsao: '19/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
+  { numero: '2066880', status: 'aberta', motivo: 'CORRETIVA', tipo: 'corretiva', ordens: [{ numero: 'OS-343900', motivo: 'SUSPENSÃO', status: 'Finalizada', dataEntrada: '12/07/2026', dataSaida: '18/07/2026', temAvaria: false }, { numero: 'OS-343911', motivo: 'FREIO', status: 'Finalizada', dataEntrada: '13/07/2026', dataSaida: '19/07/2026', temAvaria: true, valorReembolso: 'R$ 390,00' }], placa: '—', chassi: '—', numeroSerie: 'SN-JCB-099887', marcaModelo: 'JCB 3CX', agendamento: '12/07/2026', dataEntrada: '12/07/2026', previsao: '19/07/2026', saida: '19/07/2026', dataConclusao: '—', situacao: 'Aguardando liberação' },
 ];
 
 /** Cor do badge por status de OS. */
@@ -690,8 +689,11 @@ export default function ServicosPage() {
 
   const abertos = ATENDIMENTOS_SERVICO.filter((a) => a.status === 'aberta');
 
-  /* Funil: visão geral da frota por etapa (fonte única — igual na Central de Chamados). */
-  const funil = ETAPAS_MANUTENCAO.map((e) => ({ ...e, count: CONTAGEM_ETAPAS[e.key] }));
+  /* Funil: conta os atendimentos reais por etapa (bate com a lista abaixo). */
+  const funil = useMemo(
+    () => ETAPAS_MANUTENCAO.map((e) => ({ ...e, count: ATENDIMENTOS_SERVICO.filter((a) => etapaAtendimento(a) === e.key).length })),
+    [],
+  );
 
   /* KPIs operacionais calculados a partir dos dados. */
   const kpis = useMemo(() => {
@@ -851,8 +853,8 @@ export default function ServicosPage() {
 
       {/* Funil: manutenções em aberto por etapa (pré-filtro da tabela) */}
       <FunilEtapas
-        titulo="Frota em manutenção por etapa"
-        subtitulo="Visão geral da frota · clique numa etapa para filtrar a lista abaixo"
+        titulo="Atendimentos por etapa"
+        subtitulo="Clique numa etapa para filtrar a lista abaixo"
         etapas={funil}
         ativo={etapaFiltro}
         onSelecionar={(k) => setEtapaFiltro(k as EtapaManutencaoKey | null)}

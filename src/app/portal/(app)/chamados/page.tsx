@@ -12,8 +12,7 @@ import {
   ColunaFiltro, ThFiltro, useFiltrosColuna, FunilEtapas, type ColDef,
 } from '@/components/portal/ui';
 import {
-  slaInfo, EsteiraManutencao, BlocoSla, BlocoConversa,
-  ETAPAS_MANUTENCAO, CONTAGEM_ETAPAS,
+  slaInfo, EsteiraManutencao, BlocoSla, BlocoConversa, ETAPAS_MANUTENCAO,
   type EtapaManutencao, type EtapaManutencaoKey,
 } from '@/lib/acompanhamento';
 
@@ -25,18 +24,35 @@ const STATUS_LABEL: Record<ChamadoStatus, string> = {
   resolvido: 'Resolvido',
 };
 
-/** Deriva a esteira de manutenção a partir do status do chamado. */
+/** Etapa de cada chamado na linha do tempo da manutenção (mesma do modal e do funil).
+ *  Distribuída por chamado para representar toda a esteira (Agendado → Saída). */
+const ETAPA_CHAMADO: Record<string, EtapaManutencaoKey> = {
+  'CH-3352': 'agendado', 'CH-3410': 'agendado',
+  'CH-3391': 'entrada',
+  'CH-3406': 'manutencao', 'CH-3388': 'manutencao', 'CH-3379': 'manutencao',
+  'CH-3345': 'saida',
+};
+function etapaChamado(c: Chamado): EtapaManutencaoKey {
+  if (c.status === 'resolvido') return 'finalizado';
+  return ETAPA_CHAMADO[c.id] ?? 'manutencao';
+}
+
+const ETAPA_IDX: Record<EtapaManutencaoKey, number> = {
+  agendado: 0, entrada: 1, manutencao: 2, saida: 3, finalizado: 4,
+};
+const DETALHE_ETAPA: Record<EtapaManutencaoKey, string | undefined> = {
+  agendado: 'Aguardando agendamento',
+  entrada: 'Veículo na oficina',
+  manutencao: 'Serviços em execução',
+  saida: 'Aguardando liberação',
+  finalizado: undefined,
+};
+
+/** Deriva a esteira de manutenção a partir da etapa do chamado. */
 function etapasDoChamado(c: Chamado): EtapaManutencao[] {
-  const resolvido = c.status === 'resolvido';
-  let idx = 0;
-  let detalhe: string | undefined;
-  switch (c.status) {
-    case 'aberto': idx = 0; detalhe = 'Aguardando agendamento'; break;
-    case 'atendimento': idx = 2; detalhe = 'Serviços em execução'; break;
-    case 'aguardando': idx = 2; detalhe = 'Aguardando retorno'; break;
-    case 'escalonado': idx = 2; detalhe = 'Chamado escalonado'; break;
-    case 'resolvido': idx = 4; break;
-  }
+  const etapa = etapaChamado(c);
+  const idx = ETAPA_IDX[etapa];
+  const resolvido = etapa === 'finalizado';
   const base = [
     { label: 'Agendado', icon: CalendarClock },
     { label: 'Entrada na oficina', icon: LogIn },
@@ -48,22 +64,13 @@ function etapasDoChamado(c: Chamado): EtapaManutencao[] {
     ...b,
     data: i === 0 ? c.abertoHa : '—',
     estado: resolvido ? 'concluido' : i < idx ? 'concluido' : i === idx ? 'atual' : 'pendente',
-    detalhe: i === idx && !resolvido ? detalhe : undefined,
+    detalhe: i === idx && !resolvido ? DETALHE_ETAPA[etapa] : undefined,
   }));
 }
 
 /** Status considerados "em aberto" — os únicos exibidos na Central de Chamados.
  *  Chamados resolvidos/finalizados ficam na aba Serviços. */
 const STATUS_EM_ABERTO: ChamadoStatus[] = ['aberto', 'atendimento', 'aguardando', 'escalonado'];
-
-/** Etapa de um chamado na linha do tempo da manutenção (mesma do modal). */
-function etapaChamado(c: Chamado): EtapaManutencaoKey {
-  switch (c.status) {
-    case 'aberto': return 'agendado';
-    case 'resolvido': return 'finalizado';
-    default: return 'manutencao'; // atendimento, aguardando, escalonado
-  }
-}
 
 function ModalChamado({ chamado, onFechar }: { chamado: Chamado; onFechar: () => void }) {
   const sla = slaInfo(chamado.slaMin);
@@ -147,8 +154,11 @@ export default function ChamadosPage() {
     return { abertos: abertos.length, foraDoSla, escalonados, mediaSla: slaInfo(mediaMin) };
   }, [chamadosEmAberto]);
 
-  /* Funil: visão geral da frota por etapa (fonte única — igual em Serviços). */
-  const funil = ETAPAS_MANUTENCAO.map((e) => ({ ...e, count: CONTAGEM_ETAPAS[e.key] }));
+  /* Funil: conta os chamados em aberto por etapa (bate com a lista abaixo). */
+  const funil = useMemo(
+    () => ETAPAS_MANUTENCAO.map((e) => ({ ...e, count: chamadosEmAberto.filter((c) => etapaChamado(c) === e.key).length })),
+    [chamadosEmAberto],
+  );
 
   return (
     <div>
@@ -177,8 +187,8 @@ export default function ChamadosPage() {
       </KpiRow>
 
       <FunilEtapas
-        titulo="Frota em manutenção por etapa"
-        subtitulo="Visão geral da frota · clique numa etapa para filtrar a lista abaixo"
+        titulo="Chamados por etapa"
+        subtitulo="Clique numa etapa para filtrar a lista abaixo"
         etapas={funil}
         ativo={etapaFiltro}
         onSelecionar={(k) => setEtapaFiltro(k as EtapaManutencaoKey | null)}

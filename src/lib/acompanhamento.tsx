@@ -19,15 +19,6 @@ export const ETAPAS_MANUTENCAO: { key: EtapaManutencaoKey; label: string; icon: 
   { key: 'finalizado', label: 'Finalizado', icon: Flag },
 ];
 
-/** Visão geral da frota por etapa (mesma em todas as telas). */
-export const CONTAGEM_ETAPAS: Record<EtapaManutencaoKey, number> = {
-  agendado: 3,
-  entrada: 2,
-  manutencao: 6,
-  saida: 1,
-  finalizado: 6,
-};
-
 export interface EtapaManutencao {
   label: string;
   data: string;
