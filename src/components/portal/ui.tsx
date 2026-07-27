@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, ChevronDown } from 'lucide-react';
 
 /** Peças visuais compartilhadas das telas do Portal do Cliente. */
 
@@ -292,6 +292,34 @@ export function ColunaFiltro({
         className="w-full rounded-md border border-slate-200 bg-white py-1.5 pl-2 pr-6 text-[11px] font-normal normal-case tracking-normal text-slate-700 outline-none placeholder:text-slate-400 focus:border-primary-400 focus:ring-1 focus:ring-primary-300"
       />
       <Search className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" aria-hidden />
+    </div>
+  );
+}
+
+/** Filtro por coluna em formato de lista suspensa (para colunas com valores fechados). */
+export function ColunaDropdown({
+  value, onChange, options, placeholder = 'Todos', ariaLabel,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: Array<{ value: string; label: string }>;
+  placeholder?: string;
+  ariaLabel?: string;
+}) {
+  return (
+    <div className="relative min-w-[7rem]">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={ariaLabel ?? placeholder}
+        className={`w-full appearance-none rounded-md border border-slate-200 bg-white py-1.5 pl-2 pr-6 text-[11px] font-normal normal-case tracking-normal outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-300 ${value ? 'text-slate-700' : 'text-slate-400'}`}
+      >
+        <option value="">{placeholder}</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value} className="text-slate-700">{o.label}</option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" aria-hidden />
     </div>
   );
 }

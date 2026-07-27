@@ -1,15 +1,16 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   Download, Info, Wrench, FileText, X, AlertTriangle, Clock,
   CheckCircle2, CalendarClock, ChevronRight, ChevronDown,
-  Eye, LogIn, LogOut, Flag, Send,
+  Eye, LogIn, LogOut, Flag, Send, CalendarPlus,
 } from 'lucide-react';
 import {
-  PageTitle, KpiCard, FilterChip, KpiRow, SectionCard, SectionHeader,
-  Toolbar, ToolbarDivider, DataTable, Th, TablePagination, usePaginacao,
-  ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
+  PageTitle, KpiCard, KpiRow, SectionCard, SectionHeader,
+  DataTable, Th, TablePagination, usePaginacao,
+  ColunaFiltro, ColunaDropdown, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
 import {
   EsteiraManutencao, BlocoSla, BlocoConversa,
@@ -662,17 +663,15 @@ function GraficoEmpilhado() {
   );
 }
 
-const FILTROS_TIPO: Array<{ key: TipoServico | 'todos'; label: string }> = [
-  { key: 'todos', label: 'Todos' },
-  { key: 'preventiva', label: 'Preventiva' },
-  { key: 'corretiva', label: 'Corretiva' },
-  { key: 'sinistro', label: 'Sinistro' },
-  { key: 'outros', label: 'Outros' },
+/** Opções da lista suspensa de tipo (na coluna "Motivo do atendimento"). */
+const OPCOES_TIPO = TIPOS_ORDEM.map((t) => ({ value: TIPO_INFO[t].label, label: TIPO_INFO[t].label }));
+/** Opções da lista suspensa de status do atendimento. */
+const OPCOES_STATUS = [
+  { value: 'Em aberto', label: 'Em aberto' },
+  { value: 'Finalizado', label: 'Finalizado' },
 ];
 
 export default function ServicosPage() {
-  const [filtroTipo, setFiltroTipo] = useState<TipoServico | 'todos'>('todos');
-  const [filtroStatus, setFiltroStatus] = useState<'todos' | 'aberta' | 'finalizado'>('todos');
   const [detalhe, setDetalhe] = useState<{ atendimento: AtendimentoServico; tipo: DetalheTipo; os?: OrdemServico } | null>(null);
   const [osExpandida, setOsExpandida] = useState<string | null>(null);
   const [osDetalhe, setOsDetalhe] = useState<{ atendimento: AtendimentoServico; os: OrdemServico } | null>(null);
@@ -707,17 +706,12 @@ export default function ServicosPage() {
       .map(([motivo, qtd]) => ({ motivo, qtd, pct: Math.round((qtd / total) * 100) }));
   }, []);
 
-  const linhasBase = useMemo(
-    () =>
-      ATENDIMENTOS_SERVICO
-        .filter((a) => filtroStatus === 'todos' || a.status === filtroStatus)
-        .filter((a) => filtroTipo === 'todos' || a.tipo === filtroTipo),
-    [filtroStatus, filtroTipo],
-  );
+  const linhasBase = ATENDIMENTOS_SERVICO;
   const cols = useMemo<ColDef<AtendimentoServico>[]>(() => [
     { key: 'numero', get: (a) => a.numero, multi: true },
     { key: 'statusAt', get: (a) => (a.status === 'finalizado' ? 'Finalizado' : 'Em aberto') },
-    { key: 'motivo', get: (a) => a.motivo },
+    // A coluna "Motivo" filtra pelo tipo do serviço (Preventiva/Corretiva/Sinistro/Outros).
+    { key: 'motivo', get: (a) => TIPO_INFO[a.tipo].label },
     { key: 'placa', get: (a) => a.placa, multi: true },
     { key: 'chassi', get: (a) => a.chassi, multi: true },
     { key: 'serie', get: (a) => a.numeroSerie, multi: true },
@@ -844,26 +838,16 @@ export default function ServicosPage() {
         subtitulo="Atendimentos e ordens de serviço da frota"
         className="mb-3"
         acao={
-          <button className="btn-secondary gap-1.5 px-3 py-2 text-xs">
-            <Download size={13} /> Baixar planilha
-          </button>
+          <div className="flex items-center gap-2">
+            <button className="btn-secondary gap-1.5 px-3 py-2 text-xs">
+              <Download size={13} /> Baixar planilha
+            </button>
+            <Link href="/portal/chamados" className="btn-primary gap-1.5 px-3 py-2 text-xs">
+              <CalendarPlus size={13} /> Agendar Manutenção
+            </Link>
+          </div>
         }
       />
-
-      {/* Filtros */}
-      <Toolbar>
-        {FILTROS_TIPO.map((f) => (
-          <FilterChip key={f.key} label={f.label} active={filtroTipo === f.key} onClick={() => setFiltroTipo(f.key)} />
-        ))}
-        <ToolbarDivider />
-        {([
-          { key: 'todos', label: 'Todos os status' },
-          { key: 'aberta', label: 'Em aberto' },
-          { key: 'finalizado', label: 'Finalizados' },
-        ] as const).map((f) => (
-          <FilterChip key={f.key} label={f.label} active={filtroStatus === f.key} onClick={() => setFiltroStatus(f.key)} />
-        ))}
-      </Toolbar>
 
       <DataTable
         colSpan={16}
@@ -892,8 +876,8 @@ export default function ServicosPage() {
         filterRow={
           <>
             <ThFiltro><ColunaFiltro value={val('numero')} onChange={set('numero')} placeholder="Nº atend." multi ariaLabel="Filtrar nº de atendimento" /></ThFiltro>
-            <ThFiltro><ColunaFiltro value={val('statusAt')} onChange={set('statusAt')} placeholder="Status" /></ThFiltro>
-            <ThFiltro><ColunaFiltro value={val('motivo')} onChange={set('motivo')} placeholder="Motivo" /></ThFiltro>
+            <ThFiltro><ColunaDropdown value={val('statusAt')} onChange={set('statusAt')} options={OPCOES_STATUS} placeholder="Todos os status" ariaLabel="Filtrar status do atendimento" /></ThFiltro>
+            <ThFiltro><ColunaDropdown value={val('motivo')} onChange={set('motivo')} options={OPCOES_TIPO} placeholder="Todos os tipos" ariaLabel="Filtrar tipo de serviço" /></ThFiltro>
             <ThFiltro />
             <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa" multi ariaLabel="Filtrar placa" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('chassi')} onChange={set('chassi')} placeholder="Chassi" multi ariaLabel="Filtrar chassi" /></ThFiltro>
