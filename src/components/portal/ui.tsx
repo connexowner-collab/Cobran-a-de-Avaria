@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Search, ChevronDown } from 'lucide-react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Search, ChevronDown, ChevronRight, X, type LucideIcon } from 'lucide-react';
 
 /** Peças visuais compartilhadas das telas do Portal do Cliente. */
 
@@ -320,6 +320,76 @@ export function ColunaDropdown({
         ))}
       </select>
       <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" aria-hidden />
+    </div>
+  );
+}
+
+/** Uma etapa do funil (linha do tempo) de manutenções em aberto. */
+export interface EtapaFunil { key: string; label: string; icon: LucideIcon; count: number }
+
+/** Linha do tempo/funil de etapas: cada card mostra a contagem e, ao clicar,
+ *  funciona como pré-filtro da(s) tabela(s) da tela. Clicar de novo (ou em
+ *  "Limpar filtro") volta ao estado inicial. */
+export function FunilEtapas({
+  titulo, subtitulo, etapas, ativo, onSelecionar, className = '',
+}: {
+  titulo: string;
+  subtitulo?: string;
+  etapas: EtapaFunil[];
+  ativo: string | null;
+  onSelecionar: (key: string | null) => void;
+  className?: string;
+}) {
+  return (
+    <div className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold text-slate-800">{titulo}</p>
+          {subtitulo && <p className="text-xs text-slate-500">{subtitulo}</p>}
+        </div>
+        {ativo && (
+          <button
+            type="button"
+            onClick={() => onSelecionar(null)}
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+          >
+            <X size={13} /> Limpar filtro
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap items-stretch gap-2">
+        {etapas.map((e, i) => {
+          const Icon = e.icon;
+          const sel = ativo === e.key;
+          return (
+            <Fragment key={e.key}>
+              <button
+                type="button"
+                onClick={() => onSelecionar(sel ? null : e.key)}
+                aria-pressed={sel}
+                className={`group flex min-w-[9rem] flex-1 items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition ${
+                  sel
+                    ? 'border-primary-500 bg-primary-50 shadow-sm'
+                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition ${
+                  sel ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'
+                }`}>
+                  <Icon size={20} />
+                </span>
+                <span className="min-w-0">
+                  <span className={`block text-2xl font-extrabold leading-none ${sel ? 'text-primary-700' : 'text-slate-900'}`}>{e.count}</span>
+                  <span className="mt-1 block text-[12px] font-semibold text-slate-500">{e.label}</span>
+                </span>
+              </button>
+              {i < etapas.length - 1 && (
+                <span className="hidden items-center text-slate-300 sm:flex" aria-hidden><ChevronRight size={18} /></span>
+              )}
+            </Fragment>
+          );
+        })}
+      </div>
     </div>
   );
 }

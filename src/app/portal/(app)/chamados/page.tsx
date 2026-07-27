@@ -3,13 +3,14 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  Plus, Send, X, Eye, CalendarClock, LogIn, LogOut, Wrench, Flag,
+  Plus, Send, X, Eye, CalendarClock, LogIn, LogOut, Wrench, Flag, Clock, AlertTriangle,
+  type LucideIcon,
 } from 'lucide-react';
 import { CHAMADOS, type Chamado, type ChamadoStatus } from '@/lib/portalData';
 import {
-  PageTitle, StatusBadge, FilterChip, KpiCard, KpiRow, Toolbar, ToolbarSpacer,
+  PageTitle, StatusBadge, KpiCard, KpiRow,
   DataTable, Th, TablePagination, usePaginacao,
-  ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
+  ColunaFiltro, ThFiltro, useFiltrosColuna, FunilEtapas, type ColDef,
 } from '@/components/portal/ui';
 import {
   slaInfo, EsteiraManutencao, BlocoSla, BlocoConversa, type EtapaManutencao,
@@ -54,12 +55,12 @@ function etapasDoChamado(c: Chamado): EtapaManutencao[] {
  *  Chamados resolvidos/finalizados ficam na aba Serviços. */
 const STATUS_EM_ABERTO: ChamadoStatus[] = ['aberto', 'atendimento', 'aguardando', 'escalonado'];
 
-const FILTROS: Array<{ key: ChamadoStatus | 'todos'; label: string }> = [
-  { key: 'todos', label: 'Todos' },
-  { key: 'aberto', label: 'Aberto' },
-  { key: 'atendimento', label: 'Em atendimento' },
-  { key: 'aguardando', label: 'Aguardando' },
-  { key: 'escalonado', label: 'Escalonado' },
+/* Etapas da linha do tempo dos chamados em aberto (funil). */
+const ETAPAS_CHAMADO: { key: ChamadoStatus; label: string; icon: LucideIcon }[] = [
+  { key: 'aberto', label: 'Aberto', icon: CalendarClock },
+  { key: 'atendimento', label: 'Em atendimento', icon: Wrench },
+  { key: 'aguardando', label: 'Aguardando', icon: Clock },
+  { key: 'escalonado', label: 'Escalonado', icon: AlertTriangle },
 ];
 
 function ModalChamado({ chamado, onFechar }: { chamado: Chamado; onFechar: () => void }) {
@@ -144,6 +145,12 @@ export default function ChamadosPage() {
     return { abertos: abertos.length, foraDoSla, escalonados, mediaSla: slaInfo(mediaMin) };
   }, [chamadosEmAberto]);
 
+  /* Contagem de chamados em aberto por etapa (para o funil). */
+  const funil = useMemo(
+    () => ETAPAS_CHAMADO.map((e) => ({ ...e, count: chamadosEmAberto.filter((c) => c.status === e.key).length })),
+    [chamadosEmAberto],
+  );
+
   return (
     <div>
       <PageTitle
@@ -170,11 +177,14 @@ export default function ChamadosPage() {
         <KpiCard label="Escalonados" valor={String(kpis.escalonados)} detalhe="requerem acompanhamento" cor="border-l-rose-500" detalheCor="text-rose-600" />
       </KpiRow>
 
-      <Toolbar>
-        {FILTROS.map((f) => (
-          <FilterChip key={f.key} label={f.label} active={filtro === f.key} onClick={() => setFiltro(f.key)} />
-        ))}
-      </Toolbar>
+      <FunilEtapas
+        titulo="Chamados em aberto por etapa"
+        subtitulo="Clique numa etapa para filtrar a tabela abaixo"
+        etapas={funil}
+        ativo={filtro === 'todos' ? null : filtro}
+        onSelecionar={(k) => setFiltro((k as ChamadoStatus) ?? 'todos')}
+        className="mb-6"
+      />
 
       <DataTable
         colSpan={8}

@@ -10,7 +10,7 @@ import {
 import {
   PageTitle, KpiCard, KpiRow, SectionCard, SectionHeader,
   DataTable, Th, TablePagination, usePaginacao,
-  ColunaFiltro, ColunaDropdown, ThFiltro, useFiltrosColuna, type ColDef,
+  ColunaFiltro, ColunaDropdown, ThFiltro, useFiltrosColuna, FunilEtapas, type ColDef,
 } from '@/components/portal/ui';
 import {
   EsteiraManutencao, BlocoSla, BlocoConversa,
@@ -671,13 +671,37 @@ const OPCOES_STATUS = [
   { value: 'Finalizado', label: 'Finalizado' },
 ];
 
+/* Etapas da linha do tempo das manutenções em aberto (funil). */
+type EtapaKey = 'agendado' | 'entrada' | 'manutencao' | 'aguardando';
+const ETAPAS_FUNIL: { key: EtapaKey; label: string; icon: typeof CalendarClock }[] = [
+  { key: 'agendado', label: 'Agendado', icon: CalendarClock },
+  { key: 'entrada', label: 'Entrada na oficina', icon: LogIn },
+  { key: 'manutencao', label: 'Em manutenção', icon: Wrench },
+  { key: 'aguardando', label: 'Aguardando peça', icon: Clock },
+];
+/** Etapa atual de um atendimento em aberto (null para finalizados). */
+function etapaAtendimento(a: AtendimentoServico): EtapaKey | null {
+  if (a.status !== 'aberta') return null;
+  if (a.dataEntrada === '—') return 'agendado';
+  if (a.ordens.some((o) => o.status === 'Aguardando peça')) return 'aguardando';
+  if (a.ordens.some((o) => o.status === 'Em execução')) return 'manutencao';
+  return 'entrada';
+}
+
 export default function ServicosPage() {
+  const [etapaFiltro, setEtapaFiltro] = useState<EtapaKey | null>(null);
   const [detalhe, setDetalhe] = useState<{ atendimento: AtendimentoServico; tipo: DetalheTipo; os?: OrdemServico } | null>(null);
   const [osExpandida, setOsExpandida] = useState<string | null>(null);
   const [osDetalhe, setOsDetalhe] = useState<{ atendimento: AtendimentoServico; os: OrdemServico } | null>(null);
   const [acompanhar, setAcompanhar] = useState<AtendimentoServico | null>(null);
 
   const abertos = ATENDIMENTOS_SERVICO.filter((a) => a.status === 'aberta');
+
+  /* Contagem de ativos em aberto por etapa (para o funil). */
+  const funil = useMemo(
+    () => ETAPAS_FUNIL.map((e) => ({ ...e, count: abertos.filter((a) => etapaAtendimento(a) === e.key).length })),
+    [abertos],
+  );
 
   /* KPIs operacionais calculados a partir dos dados. */
   const kpis = useMemo(() => {
@@ -706,7 +730,10 @@ export default function ServicosPage() {
       .map(([motivo, qtd]) => ({ motivo, qtd, pct: Math.round((qtd / total) * 100) }));
   }, []);
 
-  const linhasBase = ATENDIMENTOS_SERVICO;
+  const linhasBase = useMemo(
+    () => (etapaFiltro ? ATENDIMENTOS_SERVICO.filter((a) => etapaAtendimento(a) === etapaFiltro) : ATENDIMENTOS_SERVICO),
+    [etapaFiltro],
+  );
   const cols = useMemo<ColDef<AtendimentoServico>[]>(() => [
     { key: 'numero', get: (a) => a.numero, multi: true },
     { key: 'statusAt', get: (a) => (a.status === 'finalizado' ? 'Finalizado' : 'Em aberto') },
@@ -831,6 +858,16 @@ export default function ServicosPage() {
           ))}
         </div>
       </SectionCard>
+
+      {/* Funil: manutenções em aberto por etapa (pré-filtro da tabela) */}
+      <FunilEtapas
+        titulo="Manutenções em aberto por etapa"
+        subtitulo="Clique numa etapa para filtrar a tabela abaixo"
+        etapas={funil}
+        ativo={etapaFiltro}
+        onSelecionar={(k) => setEtapaFiltro(k as EtapaKey | null)}
+        className="mb-6"
+      />
 
       {/* Relatório de veículos */}
       <SectionHeader
