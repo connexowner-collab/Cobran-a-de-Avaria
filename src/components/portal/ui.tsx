@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, ChevronDown, X, type LucideIcon } from 'lucide-react';
+import { Search, ChevronDown, X, ArrowUpRight, type LucideIcon } from 'lucide-react';
 
 /** Peças visuais compartilhadas das telas do Portal do Cliente. */
 
@@ -325,7 +325,7 @@ export function ColunaDropdown({
 }
 
 /** Uma etapa do funil (linha do tempo) de manutenções em aberto. */
-export interface EtapaFunil { key: string; label: string; icon: LucideIcon; count: number }
+export interface EtapaFunil { key: string; label: string; icon: LucideIcon; count: number | null }
 
 /** Linha do tempo/funil de etapas: cada card mostra a contagem e, ao clicar,
  *  funciona como pré-filtro da(s) tabela(s) da tela. Clicar de novo (ou em
@@ -392,7 +392,9 @@ export function FunilEtapas({
                   </span>
                 </div>
                 {mostrarContagem && (
-                  <span className={`mt-1.5 text-2xl font-extrabold leading-none ${sel ? 'text-primary-700' : 'text-slate-900'}`}>{e.count}</span>
+                  e.count === null
+                    ? <ArrowUpRight size={22} className="mt-1.5 text-slate-400 group-hover:text-primary-600" aria-hidden />
+                    : <span className={`mt-1.5 text-2xl font-extrabold leading-none ${sel ? 'text-primary-700' : 'text-slate-900'}`}>{e.count}</span>
                 )}
                 <span className={`${mostrarContagem ? 'mt-1' : 'mt-2'} max-w-[7.5rem] text-center text-[11px] font-semibold leading-tight ${sel ? 'text-primary-700' : 'text-slate-500'}`}>{e.label}</span>
               </button>
