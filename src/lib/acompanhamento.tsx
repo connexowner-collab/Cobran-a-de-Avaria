@@ -1,8 +1,32 @@
 'use client';
 
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, CalendarClock, LogIn, Wrench, LogOut, Flag, type LucideIcon } from 'lucide-react';
 
 export type EstadoEtapa = 'concluido' | 'atual' | 'pendente';
+
+/* ------------------------------------------------------------------ *
+ * Etapas da manutenção — MESMA linha do tempo usada no modal (esteira).
+ * Fonte única para o funil das telas de Serviços e Central de Chamados,
+ * garantindo que os números batam entre as duas telas.
+ * ------------------------------------------------------------------ */
+export type EtapaManutencaoKey = 'agendado' | 'entrada' | 'manutencao' | 'saida' | 'finalizado';
+
+export const ETAPAS_MANUTENCAO: { key: EtapaManutencaoKey; label: string; icon: LucideIcon }[] = [
+  { key: 'agendado', label: 'Agendado', icon: CalendarClock },
+  { key: 'entrada', label: 'Entrada na oficina', icon: LogIn },
+  { key: 'manutencao', label: 'Em manutenção', icon: Wrench },
+  { key: 'saida', label: 'Saída da oficina', icon: LogOut },
+  { key: 'finalizado', label: 'Finalizado', icon: Flag },
+];
+
+/** Visão geral da frota por etapa (mesma em todas as telas). */
+export const CONTAGEM_ETAPAS: Record<EtapaManutencaoKey, number> = {
+  agendado: 3,
+  entrada: 2,
+  manutencao: 6,
+  saida: 1,
+  finalizado: 6,
+};
 
 export interface EtapaManutencao {
   label: string;

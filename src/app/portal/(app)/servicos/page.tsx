@@ -14,7 +14,8 @@ import {
 } from '@/components/portal/ui';
 import {
   EsteiraManutencao, BlocoSla, BlocoConversa,
-  type EtapaManutencao, type Interacao, type SlaVisual,
+  ETAPAS_MANUTENCAO, CONTAGEM_ETAPAS,
+  type EtapaManutencao, type EtapaManutencaoKey, type Interacao, type SlaVisual,
 } from '@/lib/acompanhamento';
 
 /* Data de referência do protótipo (para calcular imobilização/atrasos). */
@@ -671,25 +672,17 @@ const OPCOES_STATUS = [
   { value: 'Finalizado', label: 'Finalizado' },
 ];
 
-/* Etapas da linha do tempo das manutenções em aberto (funil). */
-type EtapaKey = 'agendado' | 'entrada' | 'manutencao' | 'aguardando';
-const ETAPAS_FUNIL: { key: EtapaKey; label: string; icon: typeof CalendarClock }[] = [
-  { key: 'agendado', label: 'Agendado', icon: CalendarClock },
-  { key: 'entrada', label: 'Entrada na oficina', icon: LogIn },
-  { key: 'manutencao', label: 'Em manutenção', icon: Wrench },
-  { key: 'aguardando', label: 'Aguardando peça', icon: Clock },
-];
-/** Etapa atual de um atendimento em aberto (null para finalizados). */
-function etapaAtendimento(a: AtendimentoServico): EtapaKey | null {
-  if (a.status !== 'aberta') return null;
+/** Etapa atual de um atendimento (mesma linha do tempo do modal). */
+function etapaAtendimento(a: AtendimentoServico): EtapaManutencaoKey {
+  if (a.status === 'finalizado') return 'finalizado';
   if (a.dataEntrada === '—') return 'agendado';
-  if (a.ordens.some((o) => o.status === 'Aguardando peça')) return 'aguardando';
-  if (a.ordens.some((o) => o.status === 'Em execução')) return 'manutencao';
+  if (a.saida !== '—') return 'saida';
+  if (a.ordens.some((o) => o.status === 'Aguardando peça' || o.status === 'Em execução')) return 'manutencao';
   return 'entrada';
 }
 
 export default function ServicosPage() {
-  const [etapaFiltro, setEtapaFiltro] = useState<EtapaKey | null>(null);
+  const [etapaFiltro, setEtapaFiltro] = useState<EtapaManutencaoKey | null>(null);
   const [detalhe, setDetalhe] = useState<{ atendimento: AtendimentoServico; tipo: DetalheTipo; os?: OrdemServico } | null>(null);
   const [osExpandida, setOsExpandida] = useState<string | null>(null);
   const [osDetalhe, setOsDetalhe] = useState<{ atendimento: AtendimentoServico; os: OrdemServico } | null>(null);
@@ -697,11 +690,8 @@ export default function ServicosPage() {
 
   const abertos = ATENDIMENTOS_SERVICO.filter((a) => a.status === 'aberta');
 
-  /* Contagem de ativos em aberto por etapa (para o funil). */
-  const funil = useMemo(
-    () => ETAPAS_FUNIL.map((e) => ({ ...e, count: abertos.filter((a) => etapaAtendimento(a) === e.key).length })),
-    [abertos],
-  );
+  /* Funil: visão geral da frota por etapa (fonte única — igual na Central de Chamados). */
+  const funil = ETAPAS_MANUTENCAO.map((e) => ({ ...e, count: CONTAGEM_ETAPAS[e.key] }));
 
   /* KPIs operacionais calculados a partir dos dados. */
   const kpis = useMemo(() => {
@@ -861,11 +851,11 @@ export default function ServicosPage() {
 
       {/* Funil: manutenções em aberto por etapa (pré-filtro da tabela) */}
       <FunilEtapas
-        titulo="Manutenções em aberto por etapa"
-        subtitulo="Clique numa etapa para filtrar a tabela abaixo"
+        titulo="Frota em manutenção por etapa"
+        subtitulo="Visão geral da frota · clique numa etapa para filtrar a lista abaixo"
         etapas={funil}
         ativo={etapaFiltro}
-        onSelecionar={(k) => setEtapaFiltro(k as EtapaKey | null)}
+        onSelecionar={(k) => setEtapaFiltro(k as EtapaManutencaoKey | null)}
         className="mb-6"
       />
 

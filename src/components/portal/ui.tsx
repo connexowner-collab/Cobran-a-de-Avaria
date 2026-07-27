@@ -1,7 +1,7 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useState } from 'react';
-import { Search, ChevronDown, ChevronRight, X, type LucideIcon } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Search, ChevronDown, X, type LucideIcon } from 'lucide-react';
 
 /** Peças visuais compartilhadas das telas do Portal do Cliente. */
 
@@ -357,38 +357,44 @@ export function FunilEtapas({
           </button>
         )}
       </div>
-      <div className="flex flex-wrap items-stretch gap-2">
-        {etapas.map((e, i) => {
-          const Icon = e.icon;
-          const sel = ativo === e.key;
-          return (
-            <Fragment key={e.key}>
+      {/* Linha do tempo horizontal — mesmo estilo da esteira do modal:
+          círculo com ícone + linha conectando as etapas. */}
+      <div className="overflow-x-auto">
+        <div className="flex min-w-[34rem]">
+          {etapas.map((e, i) => {
+            const Icon = e.icon;
+            const sel = ativo === e.key;
+            const primeiro = i === 0;
+            const ultimo = i === etapas.length - 1;
+            return (
               <button
+                key={e.key}
                 type="button"
                 onClick={() => onSelecionar(sel ? null : e.key)}
                 aria-pressed={sel}
-                className={`group flex min-w-[9rem] flex-1 items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition ${
-                  sel
-                    ? 'border-primary-500 bg-primary-50 shadow-sm'
-                    : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                }`}
+                title={`Filtrar por: ${e.label}`}
+                className="group flex flex-1 flex-col items-center pt-1 focus:outline-none"
               >
-                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition ${
-                  sel ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'
-                }`}>
-                  <Icon size={20} />
-                </span>
-                <span className="min-w-0">
-                  <span className={`block text-2xl font-extrabold leading-none ${sel ? 'text-primary-700' : 'text-slate-900'}`}>{e.count}</span>
-                  <span className="mt-1 block text-[12px] font-semibold text-slate-500">{e.label}</span>
-                </span>
+                {/* Trilho: linhas laterais + círculo central */}
+                <div className="relative flex h-14 w-full items-center justify-center">
+                  {!primeiro && <span className="absolute left-0 top-1/2 h-0.5 w-1/2 -translate-y-1/2 bg-slate-200" aria-hidden />}
+                  {!ultimo && <span className="absolute right-0 top-1/2 h-0.5 w-1/2 -translate-y-1/2 bg-slate-200" aria-hidden />}
+                  <span
+                    className={`relative z-10 flex h-12 w-12 items-center justify-center rounded-full border-2 transition ${
+                      sel
+                        ? 'border-primary-600 bg-primary-600 text-white shadow-md shadow-primary-600/25'
+                        : 'border-slate-200 bg-white text-slate-500 group-hover:border-primary-300 group-hover:text-primary-600'
+                    }`}
+                  >
+                    <Icon size={20} />
+                  </span>
+                </div>
+                <span className={`mt-1.5 text-2xl font-extrabold leading-none ${sel ? 'text-primary-700' : 'text-slate-900'}`}>{e.count}</span>
+                <span className="mt-1 max-w-[7.5rem] text-center text-[11px] font-semibold leading-tight text-slate-500">{e.label}</span>
               </button>
-              {i < etapas.length - 1 && (
-                <span className="hidden items-center text-slate-300 sm:flex" aria-hidden><ChevronRight size={18} /></span>
-              )}
-            </Fragment>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

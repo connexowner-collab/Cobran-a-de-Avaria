@@ -3,8 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  Plus, Send, X, Eye, CalendarClock, LogIn, LogOut, Wrench, Flag, Clock, AlertTriangle,
-  type LucideIcon,
+  Plus, Send, X, Eye, CalendarClock, LogIn, LogOut, Wrench, Flag,
 } from 'lucide-react';
 import { CHAMADOS, type Chamado, type ChamadoStatus } from '@/lib/portalData';
 import {
@@ -13,7 +12,9 @@ import {
   ColunaFiltro, ThFiltro, useFiltrosColuna, FunilEtapas, type ColDef,
 } from '@/components/portal/ui';
 import {
-  slaInfo, EsteiraManutencao, BlocoSla, BlocoConversa, type EtapaManutencao,
+  slaInfo, EsteiraManutencao, BlocoSla, BlocoConversa,
+  ETAPAS_MANUTENCAO, CONTAGEM_ETAPAS,
+  type EtapaManutencao, type EtapaManutencaoKey,
 } from '@/lib/acompanhamento';
 
 const STATUS_LABEL: Record<ChamadoStatus, string> = {
@@ -55,13 +56,14 @@ function etapasDoChamado(c: Chamado): EtapaManutencao[] {
  *  Chamados resolvidos/finalizados ficam na aba Serviços. */
 const STATUS_EM_ABERTO: ChamadoStatus[] = ['aberto', 'atendimento', 'aguardando', 'escalonado'];
 
-/* Etapas da linha do tempo dos chamados em aberto (funil). */
-const ETAPAS_CHAMADO: { key: ChamadoStatus; label: string; icon: LucideIcon }[] = [
-  { key: 'aberto', label: 'Aberto', icon: CalendarClock },
-  { key: 'atendimento', label: 'Em atendimento', icon: Wrench },
-  { key: 'aguardando', label: 'Aguardando', icon: Clock },
-  { key: 'escalonado', label: 'Escalonado', icon: AlertTriangle },
-];
+/** Etapa de um chamado na linha do tempo da manutenção (mesma do modal). */
+function etapaChamado(c: Chamado): EtapaManutencaoKey {
+  switch (c.status) {
+    case 'aberto': return 'agendado';
+    case 'resolvido': return 'finalizado';
+    default: return 'manutencao'; // atendimento, aguardando, escalonado
+  }
+}
 
 function ModalChamado({ chamado, onFechar }: { chamado: Chamado; onFechar: () => void }) {
   const sla = slaInfo(chamado.slaMin);
@@ -112,7 +114,7 @@ function ModalChamado({ chamado, onFechar }: { chamado: Chamado; onFechar: () =>
 }
 
 export default function ChamadosPage() {
-  const [filtro, setFiltro] = useState<ChamadoStatus | 'todos'>('todos');
+  const [etapaFiltro, setEtapaFiltro] = useState<EtapaManutencaoKey | null>(null);
   const [aberto, setAberto] = useState<Chamado | null>(null);
 
   /** Base da Central de Chamados: somente chamados em aberto. */
@@ -122,8 +124,8 @@ export default function ChamadosPage() {
   );
 
   const listaBase = useMemo(
-    () => chamadosEmAberto.filter((c) => filtro === 'todos' || c.status === filtro),
-    [chamadosEmAberto, filtro],
+    () => chamadosEmAberto.filter((c) => !etapaFiltro || etapaChamado(c) === etapaFiltro),
+    [chamadosEmAberto, etapaFiltro],
   );
   const cols = useMemo<ColDef<Chamado>[]>(() => [
     { key: 'id', get: (c) => c.id, multi: true },
@@ -145,11 +147,8 @@ export default function ChamadosPage() {
     return { abertos: abertos.length, foraDoSla, escalonados, mediaSla: slaInfo(mediaMin) };
   }, [chamadosEmAberto]);
 
-  /* Contagem de chamados em aberto por etapa (para o funil). */
-  const funil = useMemo(
-    () => ETAPAS_CHAMADO.map((e) => ({ ...e, count: chamadosEmAberto.filter((c) => c.status === e.key).length })),
-    [chamadosEmAberto],
-  );
+  /* Funil: visão geral da frota por etapa (fonte única — igual em Serviços). */
+  const funil = ETAPAS_MANUTENCAO.map((e) => ({ ...e, count: CONTAGEM_ETAPAS[e.key] }));
 
   return (
     <div>
@@ -178,11 +177,11 @@ export default function ChamadosPage() {
       </KpiRow>
 
       <FunilEtapas
-        titulo="Chamados em aberto por etapa"
-        subtitulo="Clique numa etapa para filtrar a tabela abaixo"
+        titulo="Frota em manutenção por etapa"
+        subtitulo="Visão geral da frota · clique numa etapa para filtrar a lista abaixo"
         etapas={funil}
-        ativo={filtro === 'todos' ? null : filtro}
-        onSelecionar={(k) => setFiltro((k as ChamadoStatus) ?? 'todos')}
+        ativo={etapaFiltro}
+        onSelecionar={(k) => setEtapaFiltro(k as EtapaManutencaoKey | null)}
         className="mb-6"
       />
 
