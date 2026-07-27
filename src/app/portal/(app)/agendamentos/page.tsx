@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   Check, CalendarClock, CalendarCheck, Clock, ArrowLeft, ArrowRight, Upload, X, Gauge,
   ImagePlus, Truck, Wrench, Camera, MapPin, User, Mail, Phone, Info, Barcode, Hash, Lock,
+  Copy, ClipboardCheck,
   AlertTriangle, Disc3, Cog, Snowflake, CircleDot, Zap, Waves, Paintbrush2, Square,
   ShieldAlert, Ellipsis, type LucideIcon,
 } from 'lucide-react';
@@ -161,6 +162,16 @@ export default function AgendamentosPage() {
   const [email, setEmail] = useState('');
   const [celular, setCelular] = useState('');
   const [concluido, setConcluido] = useState(false);
+  const [protocolo, setProtocolo] = useState('');
+  const [copiado, setCopiado] = useState(false);
+
+  const copiarProtocolo = async () => {
+    try {
+      await navigator.clipboard.writeText(protocolo);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch { /* ignora */ }
+  };
 
   const setDetalhe = (nome: string, detalhes: string) =>
     setServicos((prev) => prev.map((s) => (s.servico === nome ? { ...s, detalhes } : s)));
@@ -182,12 +193,17 @@ export default function AgendamentosPage() {
     (passo === 3 && !!endereco && !!data && !!horario && !!condutor && !!email && !!celular);
 
   const avancar = () => {
-    if (passo === 3) { setConcluido(true); return; }
+    if (passo === 3) {
+      // Gera o número do atendimento (protocolo) para acompanhamento em Serviços/Central de Chamados.
+      setProtocolo(String(2066904 + Math.floor(Math.random() * 990)));
+      setConcluido(true);
+      return;
+    }
     setPasso((p) => p + 1);
   };
 
   const resetar = () => {
-    setConcluido(false); setPasso(0);
+    setConcluido(false); setPasso(0); setProtocolo(''); setCopiado(false);
     setTipoIdent(''); setPlaca(''); setKm('');
     setServicos([]); setObservacoes(''); setAnexos([]);
     setFotoHodometro([]); setFotoPlaca([]); setMaisFotos([]);
@@ -212,7 +228,7 @@ export default function AgendamentosPage() {
         {/* Wizard */}
         <div className="card overflow-hidden">
           {concluido ? (
-            <div className="flex flex-col items-center px-6 py-14 text-center">
+            <div className="flex flex-col items-center px-6 py-12 text-center">
               <span className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-8 ring-emerald-50/60">
                 <Check size={32} />
               </span>
@@ -221,9 +237,39 @@ export default function AgendamentosPage() {
                 Veículo <b className="font-mono">{placa.toUpperCase()}</b> · {servicosSelecionados.join(', ')}
                 {data && <> · {dataFmt}{horario && ` às ${horario}`}</>}. Você receberá a confirmação da oficina em até 2h úteis.
               </p>
-              <button className="btn-secondary mt-6 text-[13px]" onClick={resetar}>
-                Fazer novo agendamento
-              </button>
+
+              {/* Número do atendimento gerado — para acompanhar em Serviços / Central de Chamados */}
+              <div className="mt-6 w-full max-w-sm rounded-2xl border border-primary-100 bg-primary-50/60 px-5 py-4">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-primary-700">Número do atendimento</p>
+                <div className="mt-1.5 flex items-center justify-center gap-2">
+                  <span className="font-mono text-2xl font-extrabold tracking-wide text-slate-900">{protocolo}</span>
+                  <button
+                    type="button"
+                    onClick={copiarProtocolo}
+                    aria-label="Copiar número do atendimento"
+                    className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold transition ${
+                      copiado ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {copiado ? <><ClipboardCheck size={13} /> Copiado</> : <><Copy size={13} /> Copiar</>}
+                  </button>
+                </div>
+                <p className="mt-2 text-[12px] text-slate-500">
+                  Guarde este número para acompanhar o atendimento em <b className="text-slate-700">Serviços</b> e na <b className="text-slate-700">Central de Chamados</b>.
+                </p>
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
+                <Link href="/portal/servicos" className="btn-primary gap-1.5 text-[13px]">
+                  <Wrench size={15} /> Acompanhar em Serviços
+                </Link>
+                <Link href="/portal/chamados" className="btn-secondary gap-1.5 text-[13px]">
+                  <ArrowLeft size={15} /> Central de Chamados
+                </Link>
+                <button className="btn-secondary text-[13px]" onClick={resetar}>
+                  Fazer novo agendamento
+                </button>
+              </div>
             </div>
           ) : (
             <>
@@ -306,7 +352,7 @@ export default function AgendamentosPage() {
                   </Campo>
 
                   <Campo label="Km do Veículo" obrigatorio>
-                    <InputIcone icon={Gauge} value={km} onChange={(e) => setKm(e.target.value)} placeholder="Km atual do veículo" inputMode="numeric" className="font-mono" />
+                    <InputIcone icon={Gauge} value={km} onChange={(e) => setKm(e.target.value.replace(/\D/g, ''))} placeholder="Km atual do veículo" inputMode="numeric" className="font-mono" />
                   </Campo>
 
                   <div className="flex items-start gap-2 rounded-lg bg-sky-50 px-3.5 py-2.5 text-[12px] text-sky-800">
