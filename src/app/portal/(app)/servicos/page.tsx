@@ -73,6 +73,16 @@ function diasEmManutencao(a: AtendimentoServico): number | null {
 const situacaoVeiculo = (a: AtendimentoServico): 'Parado' | 'Rodando' =>
   a.status === 'finalizado' ? 'Rodando' : 'Parado';
 
+/** Converte "R$ 1.150,00" em número. */
+const valorBRL = (s: string): number =>
+  Number(s.replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+/** Formata número em "R$ 1.150,00". */
+const fmtBRL = (n: number): string =>
+  `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+/** Item só tem valor divulgado quando a OS a que pertence tem Cobrança de Avaria. */
+const itemTemAvaria = (a: AtendimentoServico, osNumero: string): boolean =>
+  a.ordens.find((o) => o.numero === osNumero)?.temAvaria ?? false;
+
 /* Evolução mensal por tipo (empilhado). */
 const EVOLUCAO_MENSAL: { mes: string; valores: Record<TipoServico, number> }[] = [
   { mes: 'Jul/25', valores: { preventiva: 1, corretiva: 1, sinistro: 0, outros: 0 } },
@@ -278,10 +288,20 @@ function ModalDetalheAtendimento({
           </div>
         )}
 
-        {/* DETALHE DE SERVIÇO: serviços e peças trocadas, separados por OS */}
-        {tipo === 'servico' && (
+        {/* DETALHE DE SERVIÇO: valores apenas dos itens com Cobrança de Avaria */}
+        {tipo === 'servico' && (() => {
+          const totServ = det.itens.filter((i) => i.tipo === 'servico' && itemTemAvaria(atendimento, i.os)).reduce((s, i) => s + valorBRL(i.valorTotal), 0);
+          const totPecas = det.itens.filter((i) => i.tipo === 'peca' && itemTemAvaria(atendimento, i.os)).reduce((s, i) => s + valorBRL(i.valorTotal), 0);
+          return (
           <div className="space-y-3 text-[13px]">
-            <p className="text-xs text-slate-500">Serviços e peças registrados pela oficina, separados por ordem de serviço.</p>
+            <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-amber-800">Sobre os valores exibidos</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-slate-700">
+                Os valores apresentados referem-se <b>apenas a itens marcados como Avaria</b> na Ordem de Serviço — os
+                valores internos <b>não são divulgados</b>. Estes valores <b>não confirmam uma cobrança de avaria</b> e
+                podem sofrer alterações, que serão tratadas no momento da cobrança da avaria.
+              </p>
+            </div>
             {atendimento.ordens.map((os) => {
               const itensOS = det.itens.filter((i) => i.os === os.numero);
               return (
@@ -291,7 +311,10 @@ function ModalDetalheAtendimento({
                       <span className="font-mono text-xs font-bold text-slate-700">{os.numero}</span>
                       <span className="text-xs font-semibold text-slate-600">{os.motivo}</span>
                     </span>
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${COR_STATUS_OS[os.status]}`}>{os.status}</span>
+                    <span className="flex items-center gap-1.5">
+                      {os.temAvaria && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">Avaria</span>}
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${COR_STATUS_OS[os.status]}`}>{os.status}</span>
+                    </span>
                   </div>
                   <table className="w-full text-left">
                     <tbody>
@@ -310,7 +333,9 @@ function ModalDetalheAtendimento({
                               </span>
                             </td>
                             <td className="px-3 py-2 text-center font-mono">{it.qtde}</td>
-                            <td className="px-3 py-2 text-right font-mono font-semibold text-slate-700">{it.valorTotal}</td>
+                            <td className={`px-3 py-2 text-right font-mono font-semibold ${os.temAvaria ? 'text-slate-700' : 'text-slate-400'}`}>
+                              {os.temAvaria ? it.valorTotal : 'R$ 0,00'}
+                            </td>
                           </tr>
                         ))
                       )}
@@ -320,12 +345,13 @@ function ModalDetalheAtendimento({
               );
             })}
             <div className="flex flex-col items-end gap-0.5 text-[13px]">
-              <span className="text-slate-500">Total dos Serviços: <b className="font-mono text-slate-700">{det.totalServicos}</b></span>
-              <span className="text-slate-500">Total das Peças: <b className="font-mono text-slate-700">{det.totalPecas}</b></span>
-              <span className="text-slate-800">Total do Atendimento: <b className="font-mono">{det.totalAtendimento}</b></span>
+              <span className="text-slate-500">Total de Mão de Obra (avaria): <b className="font-mono text-slate-700">{fmtBRL(totServ)}</b></span>
+              <span className="text-slate-500">Total de Peças (avaria): <b className="font-mono text-slate-700">{fmtBRL(totPecas)}</b></span>
+              <span className="text-slate-800">Total estimado de avaria: <b className="font-mono">{fmtBRL(totServ + totPecas)}</b></span>
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* RESUMO: documento igual ao arquivo oficial + download/impressão */}
         {tipo === 'resumo' && (
