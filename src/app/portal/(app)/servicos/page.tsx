@@ -69,6 +69,10 @@ function diasEmManutencao(a: AtendimentoServico): number | null {
   return Math.max(0, diasEntre(entrada, fim));
 }
 
+/** Situação do veículo: Parado (manutenção em aberto) ou Rodando (finalizado). */
+const situacaoVeiculo = (a: AtendimentoServico): 'Parado' | 'Rodando' =>
+  a.status === 'finalizado' ? 'Rodando' : 'Parado';
+
 /* Evolução mensal por tipo (empilhado). */
 const EVOLUCAO_MENSAL: { mes: string; valores: Record<TipoServico, number> }[] = [
   { mes: 'Jul/25', valores: { preventiva: 1, corretiva: 1, sinistro: 0, outros: 0 } },
@@ -270,7 +274,7 @@ function ModalDetalheAtendimento({
               <div><dt className="text-xs font-bold uppercase text-slate-400">Placa</dt><dd className="font-mono font-semibold">{atendimento.placa}</dd></div>
               <div><dt className="text-xs font-bold uppercase text-slate-400">{identificacaoLabel}</dt><dd className="font-mono font-semibold">{identificacaoValor}</dd></div>
               <div><dt className="text-xs font-bold uppercase text-slate-400">Marca/Modelo</dt><dd className="font-semibold">{atendimento.marcaModelo}</dd></div>
-              <div><dt className="text-xs font-bold uppercase text-slate-400">Situação do veículo</dt><dd>{atendimento.situacao}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Situação do veículo</dt><dd>{situacaoVeiculo(atendimento)}</dd></div>
             </dl>
           </div>
         )}
@@ -479,6 +483,11 @@ const OPCOES_STATUS = [
   { value: 'Em aberto', label: 'Em aberto' },
   { value: 'Finalizado', label: 'Finalizado' },
 ];
+/** Opções da lista suspensa de situação do veículo. */
+const OPCOES_SITUACAO = [
+  { value: 'Parado', label: 'Parado' },
+  { value: 'Rodando', label: 'Rodando' },
+];
 
 
 export default function ServicosPage() {
@@ -538,7 +547,7 @@ export default function ServicosPage() {
     { key: 'entrada', get: (a) => a.dataEntrada },
     { key: 'saida', get: (a) => a.saida },
     { key: 'conclusao', get: (a) => a.dataConclusao },
-    { key: 'situacao', get: (a) => a.situacao },
+    { key: 'situacao', get: (a) => situacaoVeiculo(a) },
   ], []);
   const { val, set, filtradas: linhas } = useFiltrosColuna(linhasBase, cols);
   const pag = usePaginacao(linhas, 10);
@@ -662,7 +671,7 @@ export default function ServicosPage() {
             <ThFiltro><ColunaFiltro value={val('saida')} onChange={set('saida')} placeholder="Data" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('conclusao')} onChange={set('conclusao')} placeholder="Data" /></ThFiltro>
             <ThFiltro />
-            <ThFiltro><ColunaFiltro value={val('situacao')} onChange={set('situacao')} placeholder="Situação" /></ThFiltro>
+            <ThFiltro><ColunaDropdown value={val('situacao')} onChange={set('situacao')} options={OPCOES_SITUACAO} placeholder="Todas" ariaLabel="Filtrar situação do veículo" /></ThFiltro>
             <ThFiltro />
           </>
         }
@@ -715,13 +724,17 @@ export default function ServicosPage() {
                   <td className="whitespace-nowrap px-4 py-3.5">
                     {dias != null ? (
                       <span className={`font-mono text-xs font-semibold ${emAberto ? 'text-sky-700' : 'text-slate-600'}`}>
-                        {dias}d{emAberto ? ' · em curso' : ''}
+                        {dias}d{emAberto ? ' · Em andamento' : ''}
                       </span>
                     ) : (
                       <span className="text-xs text-slate-400">—</span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3.5 text-xs text-slate-500">{a.situacao}</td>
+                  <td className="whitespace-nowrap px-4 py-3.5">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${a.status === 'finalizado' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                      {situacaoVeiculo(a)}
+                    </span>
+                  </td>
                   <td className="whitespace-nowrap px-4 py-3.5" onClick={stopExpand}>
                     <div className="flex gap-1">
                       {emAberto && (
@@ -788,7 +801,7 @@ export default function ServicosPage() {
                                   <td className="whitespace-nowrap px-3 py-2 font-mono font-semibold text-slate-700">{os.numero}</td>
                                   <td className="whitespace-nowrap px-3 py-2 font-semibold text-slate-600">{os.motivo}</td>
                                   <td className="whitespace-nowrap px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${COR_STATUS_OS[os.status]}`}>{os.status}</span></td>
-                                  <td className="whitespace-nowrap px-3 py-2 text-center font-mono">{d != null ? `${d}d${os.dataSaida === '—' ? ' · em curso' : ''}` : '—'}</td>
+                                  <td className="whitespace-nowrap px-3 py-2 text-center font-mono">{d != null ? `${d}d${os.dataSaida === '—' ? ' · Em andamento' : ''}` : '—'}</td>
                                   <td className="whitespace-nowrap px-3 py-2 font-mono">{os.dataEntrada}</td>
                                   <td className="whitespace-nowrap px-3 py-2 font-mono">{a.previsao}</td>
                                   <td className="whitespace-nowrap px-3 py-2 font-mono">{os.dataSaida}</td>
@@ -879,7 +892,7 @@ function ModalDetalheOS({ atendimento, os, onFechar }: { atendimento: Atendiment
           <div><dt className="text-xs font-bold uppercase text-slate-400">Status</dt><dd><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${COR_STATUS_OS[os.status]}`}>{os.status}</span></dd></div>
           <div><dt className="text-xs font-bold uppercase text-slate-400">Entrada</dt><dd className="font-mono">{os.dataEntrada}</dd></div>
           <div><dt className="text-xs font-bold uppercase text-slate-400">Saída</dt><dd className="font-mono">{os.dataSaida}</dd></div>
-          <div><dt className="text-xs font-bold uppercase text-slate-400">Dias em manutenção</dt><dd className="font-semibold">{d != null ? `${d} dias${os.dataSaida === '—' ? ' (em curso)' : ''}` : '—'}</dd></div>
+          <div><dt className="text-xs font-bold uppercase text-slate-400">Dias em manutenção</dt><dd className="font-semibold">{d != null ? `${d} dias${os.dataSaida === '—' ? ' (Em andamento)' : ''}` : '—'}</dd></div>
           <div><dt className="text-xs font-bold uppercase text-slate-400">Placa / Ativo</dt><dd className="font-mono font-semibold">{atendimento.placa !== '—' ? atendimento.placa : atendimento.numeroSerie}</dd></div>
         </dl>
 
