@@ -31,6 +31,9 @@ const TIPO_INFO: Record<TipoServico, { label: string; dot: string; bar: string }
 };
 const TIPOS_ORDEM: TipoServico[] = ['preventiva', 'corretiva', 'sinistro', 'outros'];
 
+/** Frota total da operação (mesmo valor usado na aba Modelos). */
+const FROTA_TOTAL = 42;
+
 /** Cor do badge por status de OS. */
 const COR_STATUS_OS: Record<OrdemServico['status'], string> = {
   Aberta: 'bg-indigo-100 text-indigo-700',
@@ -47,27 +50,6 @@ function diasOS(os: OrdemServico): number | null {
   return Math.max(0, diasEntre(entrada, fim));
 }
 
-/** Dias de imobilização + atraso frente à previsão (para abertos). */
-function imobilizacao(a: AtendimentoServico): { dias: number | null; atrasoDias: number } {
-  const ag = parseBR(a.agendamento);
-  if (a.status === 'finalizado') {
-    const sa = parseBR(a.saida);
-    return { dias: ag && sa ? diasEntre(ag, sa) : null, atrasoDias: 0 };
-  }
-  const prev = parseBR(a.previsao);
-  return {
-    dias: ag ? diasEntre(ag, HOJE) : null,
-    atrasoDias: prev ? Math.max(0, diasEntre(prev, HOJE)) : 0,
-  };
-}
-
-/** Dias em manutenção: da data de entrada até a saída (ou até hoje, se ainda em aberto). */
-function diasEmManutencao(a: AtendimentoServico): number | null {
-  const entrada = parseBR(a.dataEntrada);
-  if (!entrada) return null;
-  const fim = parseBR(a.saida) ?? HOJE;
-  return Math.max(0, diasEntre(entrada, fim));
-}
 
 /** Situação do veículo: Parado (manutenção em aberto) ou Rodando (finalizado). */
 const situacaoVeiculo = (a: AtendimentoServico): 'Parado' | 'Rodando' =>
@@ -521,18 +503,7 @@ export default function ServicosPage() {
   );
 
   /* KPIs operacionais calculados a partir dos dados. */
-  const kpis = useMemo(() => {
-    const finalizados = ATENDIMENTOS_SERVICO.filter((a) => a.status === 'finalizado');
-    const imobs = finalizados.map((a) => imobilizacao(a).dias ?? 0);
-    const tempoMedio = imobs.length ? imobs.reduce((s, v) => s + v, 0) / imobs.length : 0;
-    const frotaTotal = 42;
-    const disponivel = frotaTotal - abertos.length;
-    return {
-      emOficina: abertos.length,
-      tempoMedio: tempoMedio.toFixed(1).replace('.', ','),
-      disponibilidade: ((disponivel / frotaTotal) * 100).toFixed(1).replace('.', ','),
-    };
-  }, [abertos]);
+  const kpis = useMemo(() => ({ emOficina: abertos.length }), [abertos]);
 
   /* Top motivos recorrentes. */
   const topMotivos = useMemo(() => {
@@ -576,9 +547,8 @@ export default function ServicosPage() {
 
       {/* KPIs operacionais */}
       <KpiRow>
-        <KpiCard label="Em oficina agora" valor={String(kpis.emOficina)} detalhe="veículos imobilizados" cor="border-l-[#0e2233]" />
-        <KpiCard label="Tempo médio de imobilização" valor={`${kpis.tempoMedio} d`} detalhe="da entrada à liberação" cor="border-l-sky-600" />
-        <KpiCard label="Disponibilidade da frota" valor={`${kpis.disponibilidade}%`} detalhe="veículos operacionais" cor="border-l-sky-600" detalheCor="text-sky-700" />
+        <KpiCard label="Frota total" valor={String(FROTA_TOTAL)} detalhe="veículos e equipamentos" cor="border-l-[#0e2233]" />
+        <KpiCard label="Em oficina agora" valor={String(kpis.emOficina)} detalhe="veículos imobilizados" cor="border-l-sky-600" detalheCor="text-sky-700" />
       </KpiRow>
 
       {/* Gráfico + composição */}
@@ -649,7 +619,7 @@ export default function ServicosPage() {
       />
 
       <DataTable
-        colSpan={15}
+        colSpan={14}
         vazio={linhas.length === 0}
         vazioLabel="Nenhum atendimento encontrado com os filtros atuais."
         head={
@@ -666,7 +636,6 @@ export default function ServicosPage() {
             <Th className="whitespace-nowrap">Entrada</Th>
             <Th className="whitespace-nowrap">Saída</Th>
             <Th className="whitespace-nowrap">Conclusão</Th>
-            <Th className="whitespace-nowrap">Dias em Manutenção</Th>
             <Th className="whitespace-nowrap">Situação do Veículo</Th>
             <Th className="whitespace-nowrap">Mais detalhes</Th>
           </>
@@ -685,7 +654,6 @@ export default function ServicosPage() {
             <ThFiltro><ColunaFiltro value={val('entrada')} onChange={set('entrada')} placeholder="Data" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('saida')} onChange={set('saida')} placeholder="Data" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('conclusao')} onChange={set('conclusao')} placeholder="Data" /></ThFiltro>
-            <ThFiltro />
             <ThFiltro><ColunaDropdown value={val('situacao')} onChange={set('situacao')} options={OPCOES_SITUACAO} placeholder="Todas" ariaLabel="Filtrar situação do veículo" /></ThFiltro>
             <ThFiltro />
           </>
@@ -703,7 +671,6 @@ export default function ServicosPage() {
         }
       >
         {pag.pageItens.map((a) => {
-              const dias = diasEmManutencao(a);
               const emAberto = a.status === 'aberta';
               const aberto = osExpandida === a.numero;
               const stopExpand = (e: React.MouseEvent) => e.stopPropagation();
@@ -736,15 +703,6 @@ export default function ServicosPage() {
                   <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.dataEntrada}</td>
                   <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.saida}</td>
                   <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.dataConclusao}</td>
-                  <td className="whitespace-nowrap px-4 py-3.5">
-                    {dias != null ? (
-                      <span className={`font-mono text-xs font-semibold ${emAberto ? 'text-sky-700' : 'text-slate-600'}`}>
-                        {dias}d{emAberto ? ' · Em andamento' : ''}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-slate-400">—</span>
-                    )}
-                  </td>
                   <td className="whitespace-nowrap px-4 py-3.5">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${a.status === 'finalizado' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
                       {situacaoVeiculo(a)}
