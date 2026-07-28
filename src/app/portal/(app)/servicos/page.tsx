@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Download, Info, Wrench, FileText, X,
   CheckCircle2, CalendarClock, ChevronRight, ChevronDown,
-  Eye, LogIn, LogOut, Flag, Send, CalendarPlus,
+  Eye, LogOut, Flag, Send, CalendarPlus,
 } from 'lucide-react';
 import {
   PageTitle, KpiCard, KpiRow, SectionCard, SectionHeader,
@@ -169,14 +169,13 @@ function etapasManutencao(a: AtendimentoServico): EtapaManutencao[] {
       ? 'Serviços em execução'
       : 'Em avaliação pela oficina';
 
-  const manutEstado = finalizado ? 'concluido' : entrou && !saiu ? 'atual' : 'pendente';
+  const manutEstado = finalizado || saiu ? 'concluido' : entrou ? 'atual' : 'pendente';
 
   return [
     { label: 'Agendado', data: a.agendamento, icon: CalendarClock, estado: 'concluido' },
-    { label: 'Entrada na oficina', data: a.dataEntrada, icon: LogIn, estado: entrou ? 'concluido' : 'atual' },
-    { label: 'Em manutenção', data: manutEstado === 'atual' ? 'Em andamento' : '—', icon: Wrench, estado: manutEstado, detalhe: manutEstado === 'pendente' ? undefined : detManut },
-    { label: 'Saída da oficina', data: a.saida, icon: LogOut, estado: saiu ? 'concluido' : 'pendente' },
-    { label: 'Finalizado', data: a.dataConclusao, icon: Flag, estado: finalizado ? 'concluido' : 'pendente' },
+    { label: 'Em Manutenção', data: manutEstado === 'atual' ? 'Em andamento' : entrou ? a.dataEntrada : '—', icon: Wrench, estado: manutEstado, detalhe: manutEstado === 'pendente' ? undefined : detManut },
+    { label: 'Ativo disponível para o cliente', data: a.saida, icon: LogOut, estado: saiu ? 'concluido' : 'pendente' },
+    { label: 'Manutenção Finalizada', data: a.dataConclusao, icon: Flag, estado: finalizado ? 'concluido' : 'pendente' },
   ];
 }
 
@@ -307,7 +306,7 @@ function ModalDetalheAtendimento({
                             </td>
                             <td className="px-3 py-2">
                               <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${it.tipo === 'peca' ? 'bg-indigo-100 text-indigo-700' : 'bg-sky-100 text-sky-700'}`}>
-                                {it.tipo === 'peca' ? 'Peça' : 'Serviço'}
+                                {it.tipo === 'peca' ? 'Peça' : 'Mão de Obra'}
                               </span>
                             </td>
                             <td className="px-3 py-2 text-center font-mono">{it.qtde}</td>

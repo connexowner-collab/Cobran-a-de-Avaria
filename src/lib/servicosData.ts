@@ -187,6 +187,5 @@ export function etapaAtendimento(a: AtendimentoServico): EtapaManutencaoKey {
   if (a.status === 'finalizado') return 'finalizado';
   if (a.dataEntrada === '—') return 'agendado';
   if (a.saida !== '—') return 'saida';
-  if (a.ordens.some((o) => o.status === 'Aguardando peça' || o.status === 'Em execução')) return 'manutencao';
-  return 'entrada';
+  return 'manutencao';
 }
