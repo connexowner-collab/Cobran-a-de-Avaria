@@ -114,7 +114,6 @@ function gerarResumoHtml(a: AtendimentoServico, det: DetalheAtendimento, titulo 
       (it) => `<tr>
         <td>${it.os}</td><td>${it.codigo}</td><td>${it.descricao}</td><td>${it.observacao}</td>
         <td>${it.finalidade}</td><td style="text-align:center">${it.qtde}</td>
-        <td style="text-align:right">${it.valorUnitario}</td><td style="text-align:right">${it.valorTotal}</td>
       </tr>`,
     )
     .join('');
@@ -146,12 +145,9 @@ function gerarResumoHtml(a: AtendimentoServico, det: DetalheAtendimento, titulo 
     <p><b>Informações do condutor:</b> ${det.condutor} — ${det.descricaoProblema}</p>
     <h3>ITENS AUTORIZADOS PARA MANUTENÇÃO</h3>
     <table>
-      <thead><tr><th>O.S.</th><th>Nº Item</th><th>Descrição</th><th>Observação</th><th>Finalidade</th><th>Qtde</th><th>Valor unit.</th><th>Valor Total</th></tr></thead>
-      <tbody>${linhas || '<tr><td colspan="8" style="text-align:center">Sem itens</td></tr>'}</tbody>
+      <thead><tr><th>O.S.</th><th>Nº Item</th><th>Descrição</th><th>Observação</th><th>Finalidade</th><th>Qtde</th></tr></thead>
+      <tbody>${linhas || '<tr><td colspan="6" style="text-align:center">Sem itens</td></tr>'}</tbody>
     </table>
-    <div class="tot"><b>Total dos Serviços:</b> ${det.totalServicos}</div>
-    <div class="tot"><b>Total das Peças:</b> ${det.totalPecas}</div>
-    <div class="tot"><b>Total do Atendimento:</b> ${det.totalAtendimento}</div>
   </body></html>`;
 }
 
@@ -407,7 +403,6 @@ function ModalDetalheAtendimento({
                                 <td className="px-2 py-1.5 font-semibold text-slate-800">{it.descricao}</td>
                                 <td className="px-2 py-1.5 text-slate-500">{it.finalidade}</td>
                                 <td className="px-2 py-1.5 text-center font-mono">{it.qtde}</td>
-                                <td className="whitespace-nowrap px-2 py-1.5 text-right font-mono">{it.valorTotal}</td>
                               </tr>
                             ))
                           )}
@@ -416,11 +411,6 @@ function ModalDetalheAtendimento({
                     </div>
                   );
                 })}
-              </div>
-              <div className="mt-2 flex flex-col items-end gap-0.5">
-                <span className="text-slate-500">Total dos Serviços: <b className="font-mono text-slate-700">{det.totalServicos}</b></span>
-                <span className="text-slate-500">Total das Peças: <b className="font-mono text-slate-700">{det.totalPecas}</b></span>
-                <span className="text-slate-800">Total do Atendimento: <b className="font-mono">{det.totalAtendimento}</b></span>
               </div>
             </div>
           </div>
