@@ -25,7 +25,8 @@ export interface WidgetInicio {
 const ATENCAO = [
   { texto: 'Manutenção 2066894 em andamento', detalhe: 'PNEU · TXI3F16', href: '/portal/chamados', acao: 'Ver manutenção' },
   { texto: 'Fatura NF-86677 vencida (R$ 24.310,00)', detalhe: 'Venceu em 10/04/2026 — emita a 2ª via do boleto', href: '/portal/faturamento', acao: 'Ver fatura' },
-  { texto: 'Multa AIT-559102 com prazo próximo', detalhe: 'Excesso de velocidade · SHQ6B80 · prazo 28/07/2026', href: '/portal/multas', acao: 'Ver multa' },
+  { texto: 'Multa AIT-560877 aguardando identificação', detalhe: 'RTX4C12 · faltam 2 dias para identificar o condutor', href: '/portal/multas', acao: 'Identificar condutor' },
+  { texto: 'Multa AIT-559102 aguardando identificação', detalhe: 'SHQ6B80 · prazo 30/07/2026 para identificar o condutor', href: '/portal/multas', acao: 'Identificar condutor' },
 ];
 
 const REGIOES = [
