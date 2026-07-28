@@ -92,6 +92,7 @@ const BADGE_STYLES: Record<string, string> = {
   contestada: 'bg-violet-50 text-violet-700',
   paga: 'bg-emerald-50 text-emerald-700',
   notificada: 'bg-amber-50 text-amber-700',
+  aguardando_identificacao: 'bg-indigo-50 text-indigo-700',
   em_recurso: 'bg-sky-50 text-sky-700',
   vencida: 'bg-rose-50 text-rose-700',
   confirmado: 'bg-emerald-50 text-emerald-700',

@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
-import { ChevronRight, Download } from 'lucide-react';
+import { ChevronRight, Download, UserCheck, Clock, X, Upload, Check, IdCard } from 'lucide-react';
 import { MULTAS, VEICULOS, type Multa } from '@/lib/portalData';
 import {
   PageTitle, StatusBadge, KpiCard, KpiRow, FilterChip, Toolbar,
@@ -14,6 +14,7 @@ const TOP_N = 5;
 
 const STATUS_LABEL = {
   notificada: 'Notificada',
+  aguardando_identificacao: 'Aguardando Identificação Condutor',
   em_recurso: 'Em recurso',
   paga: 'Paga',
   vencida: 'Vencida',
@@ -21,11 +22,34 @@ const STATUS_LABEL = {
 
 const FILTROS: Array<{ key: Multa['status'] | 'todos'; label: string }> = [
   { key: 'todos', label: 'Todas' },
+  { key: 'aguardando_identificacao', label: 'Aguardando identificação' },
   { key: 'notificada', label: 'Notificadas' },
   { key: 'em_recurso', label: 'Em recurso' },
   { key: 'paga', label: 'Pagas' },
   { key: 'vencida', label: 'Vencidas' },
 ];
+
+/* Data de referência do protótipo (para o prazo de identificação). */
+const HOJE = new Date(2026, 6, 20); // 20/07/2026
+function parseBR(d: string): Date | null {
+  if (!d || d === '—') return null;
+  const [dd, mm, yy] = d.split('/').map(Number);
+  return new Date(yy, mm - 1, dd);
+}
+function diasEntre(a: Date, b: Date): number {
+  return Math.round((b.getTime() - a.getTime()) / 86_400_000);
+}
+
+/** SLA de identificação do condutor: quanto tempo resta e se o botão está liberado. */
+function slaIdentificacao(prazo?: string): { label: string; cls: string; liberado: boolean } | null {
+  const p = prazo ? parseBR(prazo) : null;
+  if (!p) return null;
+  const dias = diasEntre(HOJE, p);
+  if (dias < 0) return { label: 'Prazo encerrado', cls: 'text-rose-600', liberado: false };
+  if (dias === 0) return { label: 'Encerra hoje', cls: 'text-rose-600', liberado: true };
+  if (dias <= 3) return { label: `Faltam ${dias} dia${dias > 1 ? 's' : ''}`, cls: 'text-amber-600', liberado: true };
+  return { label: `Faltam ${dias} dias`, cls: 'text-emerald-600', liberado: true };
+}
 
 const RANK_STYLE = [
   'bg-amber-100 text-amber-700 border-amber-300',
@@ -40,10 +64,100 @@ function fmtBRL(n: number): string {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+/* ------------------------------------------------------------------ *
+ * Modal de identificação do condutor (dados obrigatórios + foto da CNH).
+ * ------------------------------------------------------------------ */
+function ModalIdentificarCondutor({ multa, onFechar }: { multa: Multa; onFechar: () => void }) {
+  const [nome, setNome] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [cnh, setCnh] = useState('');
+  const [foto, setFoto] = useState<File | null>(null);
+  const [enviado, setEnviado] = useState(false);
+  const sla = slaIdentificacao(multa.prazoIdentificacao);
+
+  const inputCls = 'input-field w-full py-2.5 text-[13px]';
+  const label = 'mb-1 block text-[13px] font-semibold text-slate-600';
+  const podeEnviar = nome.trim().length >= 5 && cpf.replace(/\D/g, '').length === 11 && cnh.replace(/\D/g, '').length >= 9 && !!foto;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-xs font-semibold text-slate-500">{multa.auto} · {multa.placa}</p>
+            <h3 className="text-lg font-extrabold text-slate-900">Identificar condutor</h3>
+            <p className="mt-0.5 text-[13px] text-slate-500">{multa.infracao}</p>
+          </div>
+          <button onClick={onFechar} aria-label="Fechar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X size={18} /></button>
+        </div>
+
+        {enviado ? (
+          <div className="flex flex-col items-center py-8 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check size={28} /></span>
+            <h4 className="mt-4 text-base font-extrabold text-slate-900">Condutor identificado!</h4>
+            <p className="mt-1 max-w-xs text-sm text-slate-500">
+              A identificação de <b>{nome}</b> para a multa <b className="font-mono">{multa.auto}</b> foi enviada ao órgão autuador. Você receberá a confirmação em breve.
+            </p>
+            <button className="btn-secondary mt-6 text-[13px]" onClick={onFechar}>Fechar</button>
+          </div>
+        ) : (
+          <>
+            {sla && (
+              <div className={`mb-4 flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-[12px] font-semibold ${sla.liberado ? 'bg-amber-50 text-amber-800' : 'bg-rose-50 text-rose-700'}`}>
+                <Clock size={15} /> Prazo para identificação: <b>{multa.prazoIdentificacao}</b> · {sla.label}
+              </div>
+            )}
+            <form
+              onSubmit={(e) => { e.preventDefault(); if (podeEnviar) setEnviado(true); }}
+              className="space-y-3"
+            >
+              <div>
+                <label className={label}><span className="text-primary-600">*</span>Nome completo</label>
+                <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome completo do condutor" className={inputCls} autoComplete="off" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={label}><span className="text-primary-600">*</span>CPF</label>
+                  <input value={cpf} onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))} placeholder="Somente números" inputMode="numeric" className={`${inputCls} font-mono`} autoComplete="off" />
+                </div>
+                <div>
+                  <label className={label}><span className="text-primary-600">*</span>Nº da CNH</label>
+                  <input value={cnh} onChange={(e) => setCnh(e.target.value.replace(/\D/g, '').slice(0, 11))} placeholder="Registro da CNH" inputMode="numeric" className={`${inputCls} font-mono`} autoComplete="off" />
+                </div>
+              </div>
+              <div>
+                <label className={label}><span className="text-primary-600">*</span>Foto da CNH</label>
+                <label className="group flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/60 px-4 py-5 text-center transition hover:border-primary-400 hover:bg-primary-50/40">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition group-hover:text-primary-600">
+                    {foto ? <IdCard size={17} /> : <Upload size={17} />}
+                  </span>
+                  <span className="text-[13px] font-semibold text-slate-600">{foto ? foto.name : 'Anexar foto da CNH'}</span>
+                  <span className="text-[11px] text-slate-400">Frente da CNH legível (JPG, PNG)</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => setFoto(e.target.files?.[0] ?? null)} />
+                </label>
+              </div>
+
+              <div className="flex items-start gap-2 rounded-lg bg-sky-50 px-3.5 py-2.5 text-[12px] text-sky-800">
+                <IdCard size={15} className="mt-0.5 shrink-0 text-sky-500" />
+                <p>Confirme os dados do condutor responsável pela infração. A identificação é enviada ao órgão autuador dentro do prazo legal.</p>
+              </div>
+
+              <button type="submit" disabled={!podeEnviar} className="btn-primary w-full gap-1.5 py-2.5 text-[13px]">
+                <UserCheck size={15} /> Enviar identificação
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function MultasPage() {
   const [filtro, setFiltro] = useState<Multa['status'] | 'todos'>('todos');
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [identificar, setIdentificar] = useState<Multa | null>(null);
 
   // Agrupamento acumulado por placa — a visão principal desta tela.
   const porPlacaBase = useMemo(() => {
@@ -60,7 +174,7 @@ export default function MultasPage() {
           qtd: multas.length,
           valor: multas.reduce((s, m) => s + valorNum(m.valor), 0),
           pontos: multas.reduce((s, m) => s + m.pontos, 0),
-          pendentes: multas.filter((m) => m.status === 'notificada' || m.status === 'vencida').length,
+          pendentes: multas.filter((m) => m.status === 'notificada' || m.status === 'vencida' || m.status === 'aguardando_identificacao').length,
         };
       })
       .sort((a, b) => b.qtd - a.qtd || b.valor - a.valor);
@@ -93,7 +207,7 @@ export default function MultasPage() {
           multas,
           valor: multas.reduce((s, m) => s + valorNum(m.valor), 0),
           pontos: multas.reduce((s, m) => s + m.pontos, 0),
-          pendentes: multas.filter((m) => m.status === 'notificada' || m.status === 'vencida').length,
+          pendentes: multas.filter((m) => m.status === 'notificada' || m.status === 'vencida' || m.status === 'aguardando_identificacao').length,
         };
       })
       .sort((a, b) => b.multas.length - a.multas.length);
@@ -115,6 +229,7 @@ export default function MultasPage() {
   const totalMultas = MULTAS.length;
   const valorTotal = MULTAS.reduce((s, m) => s + valorNum(m.valor), 0);
   const placasComMulta = porPlacaBase.length;
+  const aguardandoIdent = MULTAS.filter((m) => m.status === 'aguardando_identificacao').length;
 
   const todasSelecionadas = linhasFiltradas.length > 0 && linhasFiltradas.every((m) => selecionados.has(m.auto));
   const toggleTodas = () => {
@@ -143,8 +258,9 @@ export default function MultasPage() {
         subtitulo="Consulte as multas da sua frota por veículo e baixe as notificações"
       />
 
-      <KpiRow cols={3}>
+      <KpiRow>
         <KpiCard label="Total de multas" valor={String(totalMultas)} detalhe={`${placasComMulta} veículos envolvidos`} cor="border-l-[#0e2233]" />
+        <KpiCard label="Aguardando identificação" valor={String(aguardandoIdent)} detalhe="condutor a identificar" cor="border-l-indigo-500" detalheCor="text-indigo-700" />
         <KpiCard label="Valor total" valor={fmtBRL(valorTotal)} detalhe="todas as multas" cor="border-l-primary-600" detalheCor="text-primary-700" />
         <KpiCard label="Placas com multas" valor={String(placasComMulta)} detalhe={`de ${VEICULOS.length} veículos na frota`} cor="border-l-sky-600" />
       </KpiRow>
@@ -327,9 +443,29 @@ export default function MultasPage() {
                     <td className="px-4 py-3 font-mono font-semibold">{m.valor}</td>
                     <td className="px-4 py-3 text-center font-mono text-xs">{m.pontos}</td>
                     <td className="px-4 py-3 font-mono text-xs">{m.prazo}</td>
-                    <td className="px-4 py-3"><StatusBadge status={m.status} label={STATUS_LABEL[m.status]} /></td>
                     <td className="px-4 py-3">
-                      <div className="flex justify-end">
+                      <StatusBadge status={m.status} label={STATUS_LABEL[m.status]} />
+                      {m.status === 'aguardando_identificacao' && (() => {
+                        const sla = slaIdentificacao(m.prazoIdentificacao);
+                        return sla ? <p className={`mt-1 flex items-center gap-1 text-[11px] font-bold ${sla.cls}`}><Clock size={11} /> {sla.label}</p> : null;
+                      })()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-1.5">
+                        {m.status === 'aguardando_identificacao' && (() => {
+                          const sla = slaIdentificacao(m.prazoIdentificacao);
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => setIdentificar(m)}
+                              disabled={!sla?.liberado}
+                              title={sla?.liberado ? 'Identificar condutor' : 'Prazo de identificação encerrado'}
+                              className="btn-primary gap-1.5 px-3 py-1.5 text-xs"
+                            >
+                              <UserCheck size={13} /> Identificar condutor
+                            </button>
+                          );
+                        })()}
                         <button className="btn-secondary gap-1.5 px-3 py-1.5 text-xs">
                           <Download size={13} /> Notificação
                         </button>
@@ -341,6 +477,8 @@ export default function MultasPage() {
           );
         })}
       </DataTable>
+
+      {identificar && <ModalIdentificarCondutor multa={identificar} onFechar={() => setIdentificar(null)} />}
     </div>
   );
 }

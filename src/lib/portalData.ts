@@ -226,21 +226,23 @@ export interface Multa {
   data: string;
   valor: string;
   pontos: number;
-  status: 'notificada' | 'em_recurso' | 'paga' | 'vencida';
+  status: 'notificada' | 'em_recurso' | 'paga' | 'vencida' | 'aguardando_identificacao';
   prazo: string;
+  /** Prazo final para identificação do condutor (quando status = aguardando_identificacao). */
+  prazoIdentificacao?: string;
 }
 
 export const MULTAS: Multa[] = [
-  { auto: 'AIT-559102', placa: 'SHQ6B80', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Anhanguera, km 32 · SP', data: '28/06/2026', valor: 'R$ 195,23', pontos: 4, status: 'notificada', prazo: '28/07/2026' },
+  { auto: 'AIT-559102', placa: 'SHQ6B80', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Anhanguera, km 32 · SP', data: '28/06/2026', valor: 'R$ 195,23', pontos: 4, status: 'aguardando_identificacao', prazo: '28/07/2026', prazoIdentificacao: '30/07/2026' },
   { auto: 'AIT-556310', placa: 'SHQ6B80', infracao: 'Avanço de sinal vermelho', local: 'Marginal Tietê · São Paulo', data: '02/06/2026', valor: 'R$ 293,47', pontos: 7, status: 'paga', prazo: '—' },
   { auto: 'AIT-551987', placa: 'SHQ6B80', infracao: 'Estacionar em local proibido', local: 'Av. Paulista · São Paulo', data: '20/04/2026', valor: 'R$ 195,23', pontos: 4, status: 'vencida', prazo: '20/05/2026' },
   { auto: 'AIT-548876', placa: 'JBL5E88', infracao: 'Trafegar em faixa exclusiva', local: 'Av. do Estado · São Paulo', data: '11/06/2026', valor: 'R$ 293,47', pontos: 5, status: 'em_recurso', prazo: '11/08/2026' },
   { auto: 'AIT-540221', placa: 'JBL5E88', infracao: 'Excesso de velocidade até 20%', local: 'BR-116, km 214 · Registro/SP', data: '25/05/2026', valor: 'R$ 195,23', pontos: 4, status: 'notificada', prazo: '25/07/2026' },
   { auto: 'AIT-529981', placa: 'DSA9924', infracao: 'Avanço de sinal vermelho', local: 'Av. Ipanema · Sorocaba', data: '15/04/2026', valor: 'R$ 293,47', pontos: 7, status: 'vencida', prazo: '15/05/2026' },
-  { auto: 'AIT-533402', placa: 'DSA9924', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Castello Branco · Sorocaba', data: '30/04/2026', valor: 'R$ 195,23', pontos: 4, status: 'notificada', prazo: '30/07/2026' },
+  { auto: 'AIT-533402', placa: 'DSA9924', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Castello Branco · Sorocaba', data: '30/04/2026', valor: 'R$ 195,23', pontos: 4, status: 'aguardando_identificacao', prazo: '30/07/2026', prazoIdentificacao: '18/07/2026' },
   { auto: 'AIT-534210', placa: 'JBL5B26', infracao: 'Estacionar em local proibido', local: 'Centro · Campinas', data: '02/05/2026', valor: 'R$ 195,23', pontos: 4, status: 'paga', prazo: '—' },
   { auto: 'AIT-521045', placa: 'JBL5B25', infracao: 'Uso de celular ao dirigir', local: 'Rod. Anhanguera, km 88 · Campinas', data: '18/03/2026', valor: 'R$ 293,47', pontos: 7, status: 'paga', prazo: '—' },
-  { auto: 'AIT-560877', placa: 'RTX4C12', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Anhanguera, km 55 · Jundiaí', data: '05/07/2026', valor: 'R$ 195,23', pontos: 4, status: 'notificada', prazo: '05/08/2026' },
+  { auto: 'AIT-560877', placa: 'RTX4C12', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Anhanguera, km 55 · Jundiaí', data: '05/07/2026', valor: 'R$ 195,23', pontos: 4, status: 'aguardando_identificacao', prazo: '05/08/2026', prazoIdentificacao: '22/07/2026' },
 ];
 
 export interface TelemetriaVeiculo {
@@ -304,8 +306,9 @@ export interface NotificacaoPortal {
 }
 
 export const NOTIFICACOES: NotificacaoPortal[] = [
+  { titulo: 'Multa AIT-560877 aguardando identificação', detalhe: 'RTX4C12 · faltam 2 dias para identificar o condutor', tempo: 'há 10 min', tipo: 'critico', href: '/portal/multas' },
   { titulo: 'Manutenção 2066894 em andamento', detalhe: 'PNEU · TXI3F16', tempo: 'há 30 min', tipo: 'atencao', href: '/portal/chamados' },
   { titulo: 'Fatura NF-86677 vencida', detalhe: 'R$ 24.310,00 · venceu em 10/04/2026', tempo: 'há 2 dias', tipo: 'critico', href: '/portal/faturamento' },
-  { titulo: 'Multa AIT-559102 com prazo próximo', detalhe: 'Excesso de velocidade · SHQ6B80 · prazo 28/07/2026', tempo: 'há 3 dias', tipo: 'atencao', href: '/portal/multas' },
+  { titulo: 'Multa AIT-559102 aguardando identificação', detalhe: 'SHQ6B80 · prazo 30/07/2026 para identificar', tempo: 'há 3 dias', tipo: 'atencao', href: '/portal/multas' },
   { titulo: 'Agendamento AG-1102 confirmado', detalhe: 'Revisão preventiva · 22/07 às 08:30 · Barueri', tempo: 'há 4 dias', tipo: 'info', href: '/portal/agendamentos' },
 ];
