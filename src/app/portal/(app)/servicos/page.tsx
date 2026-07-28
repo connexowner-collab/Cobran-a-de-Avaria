@@ -13,8 +13,8 @@ import {
   ColunaFiltro, ColunaDropdown, ThFiltro, useFiltrosColuna, FunilEtapas, type ColDef,
 } from '@/components/portal/ui';
 import {
-  EsteiraManutencao, BlocoSla, BlocoConversa, ETAPAS_MANUTENCAO,
-  type EtapaManutencao, type EtapaManutencaoKey, type Interacao, type SlaVisual,
+  EsteiraManutencao, BlocoConversa, ETAPAS_MANUTENCAO,
+  type EtapaManutencao, type EtapaManutencaoKey, type Interacao,
 } from '@/lib/acompanhamento';
 import {
   HOJE, parseBR, diasEntre, ATENDIMENTOS_SERVICO, getDetalhe, etapaAtendimento,
@@ -176,16 +176,6 @@ function etapasManutencao(a: AtendimentoServico): EtapaManutencao[] {
   ];
 }
 
-/** Prazo de entrega derivado da previsão do atendimento (equivalente ao SLA dos chamados). */
-function slaEntrega(a: AtendimentoServico): SlaVisual {
-  const prev = parseBR(a.previsao);
-  if (!prev) return { label: 'Sem previsão', cls: 'text-slate-500', bar: 'bg-slate-400', pct: 20 };
-  const dias = diasEntre(HOJE, prev);
-  if (dias < 0) return { label: `Atrasado ${Math.abs(dias)}d`, cls: 'text-rose-600', bar: 'bg-rose-500', pct: 100 };
-  if (dias === 0) return { label: 'Previsto para hoje', cls: 'text-amber-600', bar: 'bg-amber-500', pct: 85 };
-  return { label: `${dias}d para a previsão`, cls: 'text-emerald-600', bar: 'bg-emerald-500', pct: Math.max(15, 70 - dias * 5) };
-}
-
 /** Gera a linha do tempo de interações do atendimento (mesmo formato dos chamados). */
 function interacoesDoAtendimento(a: AtendimentoServico): Interacao[] {
   const msgs: Interacao[] = [
@@ -200,7 +190,7 @@ function interacoesDoAtendimento(a: AtendimentoServico): Interacao[] {
     else if (os.status === 'Finalizada') msgs.push({ autor: 'Oficina', origem: 'oficina', horario: os.dataSaida, texto: `OS ${os.numero} (${os.motivo}) finalizada.` });
   });
   if (a.saida !== '—') msgs.push({ autor: 'Oficina', origem: 'oficina', horario: a.saida, texto: 'Veículo liberado — saída da oficina.' });
-  else msgs.push({ autor: 'Portal', origem: 'suporte', horario: '—', texto: `Previsão de entrega: ${a.previsao}.` });
+  else msgs.push({ autor: 'Portal', origem: 'suporte', horario: '—', texto: 'Manutenção em andamento na oficina.' });
   return msgs;
 }
 
@@ -218,10 +208,6 @@ function ModalAcompanhamento({ atendimento: a, onFechar }: { atendimento: Atendi
           <button onClick={onFechar} aria-label="Fechar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
             <X size={18} />
           </button>
-        </div>
-
-        <div className="mb-5">
-          <BlocoSla titulo="Prazo de entrega (previsão)" sla={slaEntrega(a)} />
         </div>
 
         <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Andamento da manutenção</p>
@@ -515,13 +501,11 @@ export default function ServicosPage() {
     const finalizados = ATENDIMENTOS_SERVICO.filter((a) => a.status === 'finalizado');
     const imobs = finalizados.map((a) => imobilizacao(a).dias ?? 0);
     const tempoMedio = imobs.length ? imobs.reduce((s, v) => s + v, 0) / imobs.length : 0;
-    const atrasados = abertos.filter((a) => imobilizacao(a).atrasoDias > 0).length;
     const frotaTotal = 42;
     const disponivel = frotaTotal - abertos.length;
     return {
       emOficina: abertos.length,
       tempoMedio: tempoMedio.toFixed(1).replace('.', ','),
-      atrasados,
       disponibilidade: ((disponivel / frotaTotal) * 100).toFixed(1).replace('.', ','),
     };
   }, [abertos]);
@@ -552,7 +536,6 @@ export default function ServicosPage() {
     { key: 'modelo', get: (a) => a.marcaModelo },
     { key: 'agendamento', get: (a) => a.agendamento },
     { key: 'entrada', get: (a) => a.dataEntrada },
-    { key: 'previsao', get: (a) => a.previsao },
     { key: 'saida', get: (a) => a.saida },
     { key: 'conclusao', get: (a) => a.dataConclusao },
     { key: 'situacao', get: (a) => a.situacao },
@@ -571,13 +554,6 @@ export default function ServicosPage() {
       <KpiRow>
         <KpiCard label="Em oficina agora" valor={String(kpis.emOficina)} detalhe="veículos imobilizados" cor="border-l-[#0e2233]" />
         <KpiCard label="Tempo médio de imobilização" valor={`${kpis.tempoMedio} d`} detalhe="da entrada à liberação" cor="border-l-sky-600" />
-        <KpiCard
-          label="Retornos atrasados"
-          valor={String(kpis.atrasados)}
-          detalhe="além da previsão"
-          cor="border-l-primary-600"
-          detalheCor="text-primary-700"
-        />
         <KpiCard label="Disponibilidade da frota" valor={`${kpis.disponibilidade}%`} detalhe="veículos operacionais" cor="border-l-sky-600" detalheCor="text-sky-700" />
       </KpiRow>
 
@@ -649,7 +625,7 @@ export default function ServicosPage() {
       />
 
       <DataTable
-        colSpan={16}
+        colSpan={15}
         vazio={linhas.length === 0}
         vazioLabel="Nenhum atendimento encontrado com os filtros atuais."
         head={
@@ -664,7 +640,6 @@ export default function ServicosPage() {
             <Th className="whitespace-nowrap">Marca/Modelo</Th>
             <Th className="whitespace-nowrap">Agendamento</Th>
             <Th className="whitespace-nowrap">Entrada</Th>
-            <Th className="whitespace-nowrap">Previsão de Saída</Th>
             <Th className="whitespace-nowrap">Saída</Th>
             <Th className="whitespace-nowrap">Conclusão</Th>
             <Th className="whitespace-nowrap">Dias em Manutenção</Th>
@@ -684,7 +659,6 @@ export default function ServicosPage() {
             <ThFiltro><ColunaFiltro value={val('modelo')} onChange={set('modelo')} placeholder="Modelo" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('agendamento')} onChange={set('agendamento')} placeholder="Data" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('entrada')} onChange={set('entrada')} placeholder="Data" /></ThFiltro>
-            <ThFiltro><ColunaFiltro value={val('previsao')} onChange={set('previsao')} placeholder="Data" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('saida')} onChange={set('saida')} placeholder="Data" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('conclusao')} onChange={set('conclusao')} placeholder="Data" /></ThFiltro>
             <ThFiltro />
@@ -736,7 +710,6 @@ export default function ServicosPage() {
                   <td className="whitespace-nowrap px-4 py-3.5 text-xs">{a.marcaModelo}</td>
                   <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.agendamento}</td>
                   <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.dataEntrada}</td>
-                  <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.previsao}</td>
                   <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.saida}</td>
                   <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs">{a.dataConclusao}</td>
                   <td className="whitespace-nowrap px-4 py-3.5">
@@ -787,7 +760,7 @@ export default function ServicosPage() {
                 </tr>
                 {aberto && (
                   <tr className="bg-slate-50/60">
-                    <td colSpan={16} className="px-6 py-3.5">
+                    <td colSpan={15} className="px-6 py-3.5">
                       <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                         Ordens de Serviço do atendimento {a.numero} ({a.ordens.length})
                       </p>
@@ -800,6 +773,7 @@ export default function ServicosPage() {
                               <th className="px-3 py-2 font-bold">Status da OS</th>
                               <th className="px-3 py-2 text-center font-bold">Dias em manut.</th>
                               <th className="px-3 py-2 font-bold">Entrada</th>
+                              <th className="px-3 py-2 font-bold">Previsão de saída</th>
                               <th className="px-3 py-2 font-bold">Saída</th>
                               <th className="px-3 py-2 font-bold">Cobrança de avaria</th>
                               <th className="px-3 py-2 font-bold">Valor de reembolso</th>
@@ -816,6 +790,7 @@ export default function ServicosPage() {
                                   <td className="whitespace-nowrap px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${COR_STATUS_OS[os.status]}`}>{os.status}</span></td>
                                   <td className="whitespace-nowrap px-3 py-2 text-center font-mono">{d != null ? `${d}d${os.dataSaida === '—' ? ' · em curso' : ''}` : '—'}</td>
                                   <td className="whitespace-nowrap px-3 py-2 font-mono">{os.dataEntrada}</td>
+                                  <td className="whitespace-nowrap px-3 py-2 font-mono">{a.previsao}</td>
                                   <td className="whitespace-nowrap px-3 py-2 font-mono">{os.dataSaida}</td>
                                   <td className="whitespace-nowrap px-3 py-2">
                                     {os.temAvaria ? (

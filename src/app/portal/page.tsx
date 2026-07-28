@@ -67,7 +67,7 @@ export default function PortalLoginPage() {
             relatórios em um só lugar, com tecnologia e inovação.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            {['Chamados com SLA', 'CRLV da frota', '2ª via de boletos', 'Telemetria em tempo real'].map((item) => (
+            {['Central de Chamados', 'CRLV da frota', '2ª via de boletos', 'Telemetria em tempo real'].map((item) => (
               <span
                 key={item}
                 className="rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/90 backdrop-blur"

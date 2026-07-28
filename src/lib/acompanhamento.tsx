@@ -36,20 +36,6 @@ export interface Interacao {
   texto: string;
 }
 
-export interface SlaVisual {
-  label: string;
-  cls: string;
-  bar: string;
-  pct: number;
-}
-
-/** SLA de resposta (usado na Central de Chamados). */
-export function slaInfo(min: number): SlaVisual {
-  if (min < 0) return { label: `Vencido há ${Math.abs(min)}min`, cls: 'text-rose-600', bar: 'bg-rose-500', pct: 100 };
-  if (min < 60) return { label: `${min}min restantes`, cls: 'text-amber-600', bar: 'bg-amber-500', pct: Math.max(10, 100 - min) };
-  return { label: `${Math.round(min / 60)}h restantes`, cls: 'text-emerald-600', bar: 'bg-emerald-500', pct: Math.max(10, 100 - min / 10) };
-}
-
 /** Esteira vertical de status da manutenção. */
 export function EsteiraManutencao({ etapas }: { etapas: EtapaManutencao[] }) {
   return (
@@ -81,21 +67,6 @@ export function EsteiraManutencao({ etapas }: { etapas: EtapaManutencao[] }) {
         );
       })}
     </ol>
-  );
-}
-
-/** Barra de SLA / prazo. */
-export function BlocoSla({ titulo, sla }: { titulo: string; sla: SlaVisual }) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3.5">
-      <div className="mb-2 flex justify-between text-xs font-bold">
-        <span className="text-slate-700">{titulo}</span>
-        <span className={sla.cls}>{sla.label}</span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-        <div className={`h-full rounded-full ${sla.bar}`} style={{ width: `${sla.pct}%` }} />
-      </div>
-    </div>
   );
 }
 

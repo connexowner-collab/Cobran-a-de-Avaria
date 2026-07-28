@@ -87,8 +87,8 @@ export default function CentralDuvidasPage() {
           </span>
           <p className="mt-3 text-sm font-bold text-slate-800">Não encontrou o que precisava?</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-500">
-            Fale com a gente pelo WhatsApp ou abra um chamado — nossa equipe responde
-            dentro do SLA contratado.
+            Fale com a gente pelo WhatsApp ou abra um chamado — nossa equipe
+            responde o mais rápido possível.
           </p>
           <button className="btn-primary mt-4 w-full text-[13px]">Falar no WhatsApp</button>
           <button className="btn-secondary mt-2 w-full text-[13px]">Abrir chamado</button>

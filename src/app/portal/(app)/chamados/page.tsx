@@ -12,11 +12,11 @@ import {
   ColunaFiltro, ThFiltro, useFiltrosColuna, FunilEtapas, type ColDef,
 } from '@/components/portal/ui';
 import {
-  EsteiraManutencao, BlocoSla, BlocoConversa, ETAPAS_MANUTENCAO,
-  type EtapaManutencao, type EtapaManutencaoKey, type Interacao, type SlaVisual,
+  EsteiraManutencao, BlocoConversa, ETAPAS_MANUTENCAO,
+  type EtapaManutencao, type EtapaManutencaoKey, type Interacao,
 } from '@/lib/acompanhamento';
 import {
-  ATENDIMENTOS_SERVICO, getDetalhe, etapaAtendimento, HOJE, parseBR, diasEntre,
+  ATENDIMENTOS_SERVICO, getDetalhe, etapaAtendimento,
   type AtendimentoServico,
 } from '@/lib/servicosData';
 
@@ -39,16 +39,6 @@ const DETALHE_ETAPA: Record<EtapaManutencaoKey, string | undefined> = {
   saida: 'Aguardando liberação',
   finalizado: undefined,
 };
-
-/** Prazo de entrega (previsão) da manutenção — equivalente ao SLA dos chamados. */
-function slaPrevisao(previsao: string): SlaVisual {
-  const prev = parseBR(previsao);
-  if (!prev) return { label: 'Sem previsão', cls: 'text-slate-500', bar: 'bg-slate-400', pct: 20 };
-  const dias = diasEntre(HOJE, prev);
-  if (dias < 0) return { label: `Atrasado ${Math.abs(dias)}d`, cls: 'text-rose-600', bar: 'bg-rose-500', pct: 100 };
-  if (dias === 0) return { label: 'Previsto para hoje', cls: 'text-amber-600', bar: 'bg-amber-500', pct: 85 };
-  return { label: `${dias}d para a previsão`, cls: 'text-emerald-600', bar: 'bg-emerald-500', pct: Math.max(15, 70 - dias * 5) };
-}
 
 /** Esteira de status da manutenção (mesma linha do tempo do modal de Serviços). */
 function etapasDaManutencao(a: AtendimentoServico): EtapaManutencao[] {
@@ -78,7 +68,7 @@ function interacoesManutencao(a: AtendimentoServico): Interacao[] {
   ];
   if (a.dataEntrada !== '—') msgs.push({ autor: 'Oficina', origem: 'oficina', horario: a.dataEntrada, texto: 'Veículo deu entrada na oficina. Início da avaliação.' });
   if (a.saida !== '—') msgs.push({ autor: 'Oficina', origem: 'oficina', horario: a.saida, texto: 'Veículo liberado — saída da oficina.' });
-  else msgs.push({ autor: 'Central Vamos', origem: 'suporte', horario: '—', texto: `Previsão de entrega: ${a.previsao}.` });
+  else msgs.push({ autor: 'Central Vamos', origem: 'suporte', horario: '—', texto: 'Manutenção em andamento na oficina.' });
   return msgs;
 }
 
@@ -106,10 +96,6 @@ function ModalManutencao({ atendimento: a, onFechar }: { atendimento: Atendiment
               <X size={18} />
             </button>
           </div>
-        </div>
-
-        <div className="mb-5">
-          <BlocoSla titulo="Prazo de entrega (previsão)" sla={slaPrevisao(a.previsao)} />
         </div>
 
         <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Andamento da manutenção</p>
@@ -157,13 +143,9 @@ export default function ChamadosPage() {
   const pag = usePaginacao(lista, 10);
 
   const kpis = useMemo(() => {
-    const atrasadas = abertas.filter((a) => {
-      const p = parseBR(a.previsao);
-      return p ? diasEntre(HOJE, p) < 0 : false;
-    }).length;
     const emManutencao = abertas.filter((a) => etapaAtendimento(a) === 'manutencao').length;
     const agendadas = abertas.filter((a) => etapaAtendimento(a) === 'agendado').length;
-    return { abertas: abertas.length, atrasadas, emManutencao, agendadas };
+    return { abertas: abertas.length, emManutencao, agendadas };
   }, [abertas]);
 
   /* Timeline com todas as etapas. "Finalizado" não tem contagem (os finalizados
@@ -191,7 +173,6 @@ export default function ChamadosPage() {
 
       <KpiRow>
         <KpiCard label="Manutenções em aberto" valor={String(kpis.abertas)} detalhe="em andamento" cor="border-l-[#0e2233]" />
-        <KpiCard label="Fora do prazo" valor={String(kpis.atrasadas)} detalhe="além da previsão" cor="border-l-primary-600" detalheCor="text-primary-700" />
         <KpiCard label="Em manutenção" valor={String(kpis.emManutencao)} detalhe="na oficina agora" cor="border-l-sky-600" detalheCor="text-sky-700" />
         <KpiCard label="Agendadas" valor={String(kpis.agendadas)} detalhe="aguardando entrada" cor="border-l-amber-500" detalheCor="text-amber-600" />
       </KpiRow>
@@ -249,7 +230,6 @@ export default function ChamadosPage() {
         {pag.pageItens.map((a) => {
           const det = getDetalhe(a.numero);
           const etapa = etapaAtendimento(a);
-          const sla = slaPrevisao(a.previsao);
           return (
             <tr
               key={a.numero}
@@ -261,9 +241,7 @@ export default function ChamadosPage() {
               <td className="px-4 py-3.5 font-mono text-xs">{identificador(a)}</td>
               <td className="px-4 py-3.5 text-xs text-slate-600">{det.condutor}</td>
               <td className="px-4 py-3.5 text-xs text-slate-500">{a.marcaModelo}</td>
-              <td className="px-4 py-3.5">
-                <span className={`text-xs font-bold ${sla.cls}`}>{a.previsao}</span>
-              </td>
+              <td className="px-4 py-3.5 font-mono text-xs">{a.previsao}</td>
               <td className="px-4 py-3.5">
                 <div className="flex items-center justify-between gap-2">
                   <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${ETAPA_INFO[etapa].cls}`}>{ETAPA_INFO[etapa].label}</span>

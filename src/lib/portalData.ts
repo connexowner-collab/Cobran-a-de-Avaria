@@ -304,7 +304,7 @@ export interface NotificacaoPortal {
 }
 
 export const NOTIFICACOES: NotificacaoPortal[] = [
-  { titulo: 'Chamado CH-3391 fora do SLA', detalhe: 'Falha no sistema de freios · SHQ6B80', tempo: 'há 30 min', tipo: 'critico', href: '/portal/chamados' },
+  { titulo: 'Manutenção 2066894 em andamento', detalhe: 'PNEU · TXI3F16', tempo: 'há 30 min', tipo: 'atencao', href: '/portal/chamados' },
   { titulo: 'Fatura NF-86677 vencida', detalhe: 'R$ 24.310,00 · venceu em 10/04/2026', tempo: 'há 2 dias', tipo: 'critico', href: '/portal/faturamento' },
   { titulo: 'Multa AIT-559102 com prazo próximo', detalhe: 'Excesso de velocidade · SHQ6B80 · prazo 28/07/2026', tempo: 'há 3 dias', tipo: 'atencao', href: '/portal/multas' },
   { titulo: 'Agendamento AG-1102 confirmado', detalhe: 'Revisão preventiva · 22/07 às 08:30 · Barueri', tempo: 'há 4 dias', tipo: 'info', href: '/portal/agendamentos' },

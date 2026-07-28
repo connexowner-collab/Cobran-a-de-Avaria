@@ -23,7 +23,7 @@ export interface WidgetInicio {
  * Dados de apoio (mesmos números exibidos no panorama padrão).
  * ------------------------------------------------------------------ */
 const ATENCAO = [
-  { texto: 'Chamado CH-3391 está fora do SLA', detalhe: 'Falha no sistema de freios · SHQ6B80', href: '/portal/chamados', acao: 'Ver chamado' },
+  { texto: 'Manutenção 2066894 em andamento', detalhe: 'PNEU · TXI3F16', href: '/portal/chamados', acao: 'Ver manutenção' },
   { texto: 'Fatura NF-86677 vencida (R$ 24.310,00)', detalhe: 'Venceu em 10/04/2026 — emita a 2ª via do boleto', href: '/portal/faturamento', acao: 'Ver fatura' },
   { texto: 'Multa AIT-559102 com prazo próximo', detalhe: 'Excesso de velocidade · SHQ6B80 · prazo 28/07/2026', href: '/portal/multas', acao: 'Ver multa' },
 ];
@@ -135,7 +135,7 @@ export const CATALOGO_WIDGETS: WidgetInicio[] = [
     render: () => (
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <KpiCard label="Frota total" valor="42" detalhe="100% ativa" cor="border-l-[#0e2233]" detalheCor="text-emerald-600" />
-        <KpiCard label="Chamados abertos" valor="6" detalhe="2 fora do SLA" cor="border-l-primary-600" detalheCor="text-primary-700" />
+        <KpiCard label="Chamados abertos" valor="4" detalhe="em andamento" cor="border-l-primary-600" detalheCor="text-primary-700" />
         <KpiCard label="Manutenções no mês" valor="11" detalhe="+3 vs mês anterior" cor="border-l-sky-600" />
         <KpiCard label="Multas em aberto" valor="2" detalhe="1 com prazo próximo" cor="border-l-amber-500" detalheCor="text-amber-600" />
       </div>
