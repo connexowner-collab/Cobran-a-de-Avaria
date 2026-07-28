@@ -166,15 +166,13 @@ export default function ChamadosPage() {
     return { abertas: abertas.length, atrasadas, emManutencao, agendadas };
   }, [abertas]);
 
-  /* Timeline: só as etapas em aberto (sem Finalizado). "Saída da oficina" não tem
-     contagem e, ao clicar, leva o usuário para a tela de Serviços. */
+  /* Timeline com todas as etapas. "Finalizado" não tem contagem (os finalizados
+     ficam em Serviços) e, ao clicar, leva o usuário para a tela de Serviços. */
   const funil = useMemo(
-    () => ETAPAS_MANUTENCAO
-      .filter((e) => e.key !== 'finalizado')
-      .map((e) => ({
-        ...e,
-        count: e.key === 'saida' ? null : abertas.filter((a) => etapaAtendimento(a) === e.key).length,
-      })),
+    () => ETAPAS_MANUTENCAO.map((e) => ({
+      ...e,
+      count: e.key === 'finalizado' ? null : abertas.filter((a) => etapaAtendimento(a) === e.key).length,
+    })),
     [abertas],
   );
 
@@ -200,11 +198,11 @@ export default function ChamadosPage() {
 
       <FunilEtapas
         titulo="Manutenções por etapa"
-        subtitulo="Clique numa etapa para filtrar a lista · 'Saída da oficina' abre em Serviços"
+        subtitulo="Clique numa etapa para filtrar a lista · 'Finalizado' abre em Serviços"
         etapas={funil}
         ativo={etapaFiltro}
         onSelecionar={(k) => {
-          if (k === 'saida') { router.push('/portal/servicos'); return; }
+          if (k === 'finalizado') { router.push('/portal/servicos'); return; }
           setEtapaFiltro(k as EtapaManutencaoKey | null);
         }}
         className="mb-6"

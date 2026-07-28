@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  Download, Info, Wrench, FileText, X, AlertTriangle, Clock,
+  Download, Info, Wrench, FileText, X,
   CheckCircle2, CalendarClock, ChevronRight, ChevronDown,
   Eye, LogIn, LogOut, Flag, Send, CalendarPlus,
 } from 'lucide-react';
@@ -580,51 +580,6 @@ export default function ServicosPage() {
         />
         <KpiCard label="Disponibilidade da frota" valor={`${kpis.disponibilidade}%`} detalhe="veículos operacionais" cor="border-l-sky-600" detalheCor="text-sky-700" />
       </KpiRow>
-
-      {/* Em atendimento agora */}
-      <div className="mb-6">
-        <div className="mb-3 flex items-center gap-2">
-          <Clock size={15} className="text-slate-400" />
-          <p className="text-sm font-bold text-slate-800">Em atendimento agora</p>
-          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">
-            {abertos.length}
-          </span>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {abertos.map((a) => {
-            const imob = imobilizacao(a);
-            const atrasado = imob.atrasoDias > 0;
-            return (
-              <div
-                key={a.numero}
-                className={`card p-4 ${atrasado ? 'border-primary-200 bg-primary-50/30' : ''}`}
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-mono text-sm font-bold text-slate-800">{a.placa}</p>
-                    <p className="text-xs text-slate-500">{a.motivo}</p>
-                  </div>
-                  <span className={`flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold ${
-                    atrasado ? 'bg-primary-100 text-primary-700' : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {atrasado ? <AlertTriangle size={12} /> : <CalendarClock size={12} />}
-                    {atrasado ? `Atrasado ${imob.atrasoDias}d` : 'No prazo'}
-                  </span>
-                </div>
-                <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
-                  <span className="text-slate-500">
-                    <b className="text-slate-800">{imob.dias}</b> dias parado
-                  </span>
-                  <span className="text-slate-500">
-                    Previsão <b className="font-mono text-slate-800">{a.previsao}</b>
-                  </span>
-                </div>
-                <p className="mt-1 text-[11px] text-slate-400">{a.situacao}</p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Gráfico + composição */}
       <div className="mb-6 grid gap-4 xl:grid-cols-[1.6fr_1fr]">
