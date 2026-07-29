@@ -53,7 +53,7 @@ export interface AtendimentoServico {
   situacao: string;
 }
 
-export const ATENDIMENTOS_SERVICO: AtendimentoServico[] = [
+const ATENDIMENTOS_BASE: AtendimentoServico[] = [
   { numero: '972972', status: 'finalizado', motivo: 'PNEU', tipo: 'corretiva', ordens: [{ numero: 'OS-338271', motivo: 'PNEU', status: 'Finalizada', dataEntrada: '26/06/2026', dataSaida: '05/07/2026', temAvaria: false }, { numero: 'OS-338290', motivo: 'FREIO', status: 'Finalizada', dataEntrada: '06/07/2026', dataSaida: '13/07/2026', temAvaria: true, valorReembolso: 'R$ 210,00' }], placa: 'JBL5B25', chassi: '9535V6TB0PR009032', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '25/06/2026', dataEntrada: '26/06/2026', previsao: '28/06/2026', saida: '13/07/2026', dataConclusao: '13/07/2026', situacao: 'Rodando' },
   { numero: '957964', status: 'finalizado', motivo: 'CORRETIVA', tipo: 'corretiva', ordens: [{ numero: 'OS-330145', motivo: 'ELÉTRICA', status: 'Finalizada', dataEntrada: '15/11/2025', dataSaida: '21/11/2025', temAvaria: false }], placa: 'JBL5B27', chassi: '9535V6TB0PR009127', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '15/11/2025', dataEntrada: '15/11/2025', previsao: '20/11/2025', saida: '21/11/2025', dataConclusao: '21/11/2025', situacao: 'Rodando' },
   { numero: '951200', status: 'finalizado', motivo: 'REVISÃO PREVENTIVA', tipo: 'preventiva', ordens: [{ numero: 'OS-325509', motivo: 'REVISÃO PREVENTIVA', status: 'Finalizada', dataEntrada: '10/05/2026', dataSaida: '12/05/2026', temAvaria: false }, { numero: 'OS-325520', motivo: 'PNEU', status: 'Finalizada', dataEntrada: '10/05/2026', dataSaida: '11/05/2026', temAvaria: false }, { numero: 'OS-325533', motivo: 'FREIO', status: 'Finalizada', dataEntrada: '11/05/2026', dataSaida: '12/05/2026', temAvaria: true, valorReembolso: 'R$ 320,00' }], placa: 'SHQ6B80', chassi: '9535V6TB0PR009242', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '10/05/2026', dataEntrada: '10/05/2026', previsao: '12/05/2026', saida: '12/05/2026', dataConclusao: '12/05/2026', situacao: 'Rodando' },
@@ -94,7 +94,7 @@ export interface DetalheAtendimento {
   totalAtendimento: string;
 }
 
-export const DETALHES_ATENDIMENTO: Record<string, DetalheAtendimento> = {
+const DETALHES_BASE: Record<string, DetalheAtendimento> = {
   '972972': {
     descricaoProblema: 'Pneus dianteiros com desgaste acentuado e vibração acima de 80 km/h. Solicitada recapagem.',
     condutor: 'Marcos Lima', cliente: 'Bebidas Fruki Sa', numeroContrato: '119791', centroCusto: 'NOVO CLIENTE',
@@ -189,6 +189,117 @@ export const DETALHE_PADRAO: DetalheAtendimento = {
   condutor: '—', cliente: '—', numeroContrato: '—', centroCusto: '—', km: '—', anoVeiculo: '—', modeloCompleto: '—',
   itens: [], totalServicos: 'R$ 0,00', totalPecas: 'R$ 0,00', totalAtendimento: 'R$ 0,00',
 };
+
+/* ------------------------------------------------------------------ *
+ * Gerador de manutenções fictícias — popula as tabelas com bastante dados.
+ * Determinístico (sem random), para o build/SSR ficar estável.
+ * ------------------------------------------------------------------ */
+function gerarManutencoes(n: number): { atendimentos: AtendimentoServico[]; detalhes: Record<string, DetalheAtendimento> } {
+  const MODELOS = ['VW 11-180 Delivery', 'Mercedes Accelo 815', 'Volvo FH 460', 'Scania R 450', 'VW Constellation 24.280', 'Iveco Tector 240E28', 'Ford Cargo 1719'];
+  const MOTIVOS: { motivo: string; tipo: TipoServico }[] = [
+    { motivo: 'REVISÃO PREVENTIVA', tipo: 'preventiva' },
+    { motivo: 'PNEU', tipo: 'corretiva' },
+    { motivo: 'FREIO', tipo: 'corretiva' },
+    { motivo: 'ELÉTRICA', tipo: 'corretiva' },
+    { motivo: 'MOTOR', tipo: 'corretiva' },
+    { motivo: 'SUSPENSÃO', tipo: 'corretiva' },
+    { motivo: 'AR-CONDICIONADO', tipo: 'corretiva' },
+    { motivo: 'SINISTRO', tipo: 'sinistro' },
+    { motivo: 'AFERIÇÃO TACÓGRAFO', tipo: 'preventiva' },
+    { motivo: 'DESMOBILIZAÇÃO', tipo: 'outros' },
+  ];
+  const CONDUTORES = ['Marcos Lima', 'Fernanda Reis', 'Carlos Mota', 'Patrícia Nunes', 'Rafael Dias', 'Juliana Alves', 'Bruno Costa', 'Sandra Melo', 'Eduardo Pires', 'Camila Rocha'];
+  const CLIENTES = ['Bebidas Fruki Sa', 'Matriz SP Ltda', 'Delta Logística Ltda', 'Obra Jundiaí S.A.', 'Transportes Vale Verde'];
+  const CENTROS = ['MATRIZ', 'MATRIZ SP', 'OPERAÇÃO SP', 'OBRA JUNDIAÍ', 'FILIAL CAMPINAS'];
+  const ESTAGIOS: EtapaManutencaoKey[] = ['finalizado', 'finalizado', 'finalizado', 'manutencao', 'agendado', 'finalizado', 'saida', 'manutencao', 'finalizado', 'aguardando_agendamento'];
+
+  const L = 'ABCDEFGHJKLMNPRSTUVWXYZ';
+  const placaDe = (i: number) => `${L[(i * 7 + 2) % L.length]}${L[(i * 5 + 9) % L.length]}${L[(i * 11 + 4) % L.length]}${(i * 3) % 10}${L[(i * 13 + 6) % L.length]}${(i * 7) % 10}${(i * 9 + 1) % 10}`;
+  const dd = (offset: number) => {
+    const d = new Date(HOJE);
+    d.setDate(d.getDate() + offset);
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  };
+
+  const atendimentos: AtendimentoServico[] = [];
+  const detalhes: Record<string, DetalheAtendimento> = {};
+
+  for (let i = 0; i < n; i++) {
+    const numero = String(2067000 + i);
+    const etapa = ESTAGIOS[i % ESTAGIOS.length];
+    const mo = MOTIVOS[i % MOTIVOS.length];
+    const modelo = MODELOS[i % MODELOS.length];
+    const condutor = CONDUTORES[i % CONDUTORES.length];
+    const cliente = CLIENTES[i % CLIENTES.length];
+    const centro = CENTROS[i % CENTROS.length];
+    const placa = placaDe(i);
+    const temAvaria = i % 4 === 0;
+    const reembolso = `R$ ${200 + (i % 12) * 85},00`;
+    const baseAg = -(20 + (i % 40));
+
+    let agendamento = '—', dataEntrada = '—', previsao = '—', saida = '—', dataConclusao = '—';
+    let status: AtendimentoServico['status'] = 'aberta';
+    let situacao = 'Aguardando agendamento';
+    let osStatus: OrdemServico['status'] = 'Aberta';
+
+    switch (etapa) {
+      case 'aguardando_agendamento':
+        situacao = 'Aguardando agendamento'; osStatus = 'Aberta';
+        break;
+      case 'agendado':
+        agendamento = dd(3 + (i % 10)); previsao = dd(8 + (i % 10));
+        situacao = 'Agendado'; osStatus = 'Aberta';
+        break;
+      case 'manutencao':
+        agendamento = dd(baseAg); dataEntrada = dd(baseAg + 2); previsao = dd(2 + (i % 6));
+        situacao = 'Em oficina'; osStatus = 'Em execução';
+        break;
+      case 'saida':
+        agendamento = dd(baseAg); dataEntrada = dd(baseAg + 1); previsao = dd(baseAg + 5); saida = dd(-(1 + (i % 3)));
+        situacao = 'Aguardando liberação'; osStatus = 'Finalizada';
+        break;
+      case 'finalizado':
+        agendamento = dd(baseAg); dataEntrada = dd(baseAg + 1); previsao = dd(baseAg + 4); saida = dd(baseAg + 6); dataConclusao = saida;
+        status = 'finalizado'; situacao = 'Rodando'; osStatus = 'Finalizada';
+        break;
+    }
+
+    const dataSaidaOS = etapa === 'finalizado' || etapa === 'saida' ? saida : '—';
+    const ordens: OrdemServico[] = [
+      { numero: `OS-${400000 + i * 2}`, motivo: mo.motivo, status: osStatus, dataEntrada, dataSaida: dataSaidaOS, temAvaria, ...(temAvaria ? { valorReembolso: reembolso } : {}) },
+    ];
+    if (i % 3 === 0) {
+      const mo2 = MOTIVOS[(i + 3) % MOTIVOS.length];
+      ordens.push({ numero: `OS-${400001 + i * 2}`, motivo: mo2.motivo, status: osStatus, dataEntrada, dataSaida: dataSaidaOS, temAvaria: false });
+    }
+
+    atendimentos.push({
+      numero, status, motivo: mo.motivo, tipo: mo.tipo, ordens,
+      placa, chassi: `9BW${String(100000000 + i * 137).slice(0, 9)}`, numeroSerie: '—',
+      marcaModelo: modelo, agendamento, dataEntrada, previsao, saida, dataConclusao, situacao,
+    });
+
+    detalhes[numero] = {
+      descricaoProblema: `Atendimento de ${mo.motivo.toLowerCase()} registrado para o veículo ${placa}.`,
+      condutor, cliente, numeroContrato: String(120000 + (i % 900)), centroCusto: centro,
+      km: String((30 + (i % 200)) * 1000), anoVeiculo: `${2021 + (i % 4)}/${2021 + (i % 4)}`, modeloCompleto: modelo,
+      itens: ordens.map((o, k) => ({
+        os: o.numero, codigo: String(100000 + (i % 900) + k), descricao: o.motivo, observacao: '—',
+        finalidade: 'MANUTENCAO/CONSERVACAO - FROTA', qtde: 1,
+        valorUnitario: temAvaria ? reembolso : 'R$ 0,00', valorTotal: temAvaria ? reembolso : 'R$ 0,00',
+        tipo: o.motivo === 'REVISÃO PREVENTIVA' || o.motivo === 'AFERIÇÃO TACÓGRAFO' ? 'servico' : 'peca',
+      })),
+      totalServicos: 'R$ 0,00', totalPecas: temAvaria ? reembolso : 'R$ 0,00', totalAtendimento: temAvaria ? reembolso : 'R$ 0,00',
+    };
+  }
+
+  return { atendimentos, detalhes };
+}
+
+const GERADOS = gerarManutencoes(50);
+
+export const ATENDIMENTOS_SERVICO: AtendimentoServico[] = [...ATENDIMENTOS_BASE, ...GERADOS.atendimentos];
+export const DETALHES_ATENDIMENTO: Record<string, DetalheAtendimento> = { ...DETALHES_BASE, ...GERADOS.detalhes };
 
 export const getDetalhe = (numero: string): DetalheAtendimento => DETALHES_ATENDIMENTO[numero] ?? DETALHE_PADRAO;
 
