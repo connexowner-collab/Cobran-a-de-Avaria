@@ -55,16 +55,6 @@ function diasOS(os: OrdemServico): number | null {
 const situacaoVeiculo = (a: AtendimentoServico): 'Parado' | 'Rodando' =>
   a.status === 'finalizado' ? 'Rodando' : 'Parado';
 
-/** Converte "R$ 1.150,00" em número. */
-const valorBRL = (s: string): number =>
-  Number(s.replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
-/** Formata número em "R$ 1.150,00". */
-const fmtBRL = (n: number): string =>
-  `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-/** Item só tem valor divulgado quando a OS a que pertence tem Cobrança de Avaria. */
-const itemTemAvaria = (a: AtendimentoServico, osNumero: string): boolean =>
-  a.ordens.find((o) => o.numero === osNumero)?.temAvaria ?? false;
-
 /* Evolução mensal por tipo (empilhado). */
 const EVOLUCAO_MENSAL: { mes: string; valores: Record<TipoServico, number> }[] = [
   { mes: 'Jul/25', valores: { preventiva: 1, corretiva: 1, sinistro: 0, outros: 0 } },
@@ -268,20 +258,10 @@ function ModalDetalheAtendimento({
           </div>
         )}
 
-        {/* DETALHE DE SERVIÇO: valores apenas dos itens com Cobrança de Avaria */}
-        {tipo === 'servico' && (() => {
-          const totServ = det.itens.filter((i) => i.tipo === 'servico' && itemTemAvaria(atendimento, i.os)).reduce((s, i) => s + valorBRL(i.valorTotal), 0);
-          const totPecas = det.itens.filter((i) => i.tipo === 'peca' && itemTemAvaria(atendimento, i.os)).reduce((s, i) => s + valorBRL(i.valorTotal), 0);
-          return (
+        {/* DETALHE DE SERVIÇO: itens (mão de obra / peças) por OS, sem valores */}
+        {tipo === 'servico' && (
           <div className="space-y-3 text-[13px]">
-            <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-wide text-amber-800">Sobre os valores exibidos</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-slate-700">
-                Os valores apresentados referem-se <b>apenas a itens marcados como Avaria</b> na Ordem de Serviço — os
-                valores internos <b>não são divulgados</b>. Estes valores <b>não confirmam uma cobrança de avaria</b> e
-                podem sofrer alterações, que serão tratadas no momento da cobrança da avaria.
-              </p>
-            </div>
+            <p className="text-xs text-slate-500">Itens de mão de obra e peças registrados pela oficina, separados por ordem de serviço.</p>
             {atendimento.ordens.map((os) => {
               const itensOS = det.itens.filter((i) => i.os === os.numero);
               return (
@@ -312,9 +292,10 @@ function ModalDetalheAtendimento({
                                 {it.tipo === 'peca' ? 'Peça' : 'Mão de Obra'}
                               </span>
                             </td>
-                            <td className="px-3 py-2 text-center font-mono">{it.qtde}</td>
-                            <td className={`px-3 py-2 text-right font-mono font-semibold ${os.temAvaria ? 'text-slate-700' : 'text-slate-400'}`}>
-                              {os.temAvaria ? it.valorTotal : 'R$ 0,00'}
+                            <td className="px-3 py-2 text-right">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                                <span className="text-slate-400">Qtd</span> {it.qtde}
+                              </span>
                             </td>
                           </tr>
                         ))
@@ -324,14 +305,8 @@ function ModalDetalheAtendimento({
                 </div>
               );
             })}
-            <div className="flex flex-col items-end gap-0.5 text-[13px]">
-              <span className="text-slate-500">Total de Mão de Obra (avaria): <b className="font-mono text-slate-700">{fmtBRL(totServ)}</b></span>
-              <span className="text-slate-500">Total de Peças (avaria): <b className="font-mono text-slate-700">{fmtBRL(totPecas)}</b></span>
-              <span className="text-slate-800">Total estimado de avaria: <b className="font-mono">{fmtBRL(totServ + totPecas)}</b></span>
-            </div>
           </div>
-          );
-        })()}
+        )}
 
         {/* RESUMO: documento igual ao arquivo oficial + download/impressão */}
         {tipo === 'resumo' && (
@@ -764,7 +739,6 @@ export default function ServicosPage() {
                               <th className="px-3 py-2 font-bold">Previsão de saída</th>
                               <th className="px-3 py-2 font-bold">Saída</th>
                               <th className="px-3 py-2 font-bold">Cobrança de avaria</th>
-                              <th className="px-3 py-2 font-bold">Valor de reembolso</th>
                               <th className="px-3 py-2 text-right font-bold">Mais detalhes</th>
                             </tr>
                           </thead>
@@ -788,9 +762,6 @@ export default function ServicosPage() {
                                     ) : (
                                       <span className="text-slate-400">Não</span>
                                     )}
-                                  </td>
-                                  <td className="whitespace-nowrap px-3 py-2 font-mono font-semibold text-slate-700">
-                                    {os.temAvaria ? os.valorReembolso : <span className="font-sans font-normal text-slate-400">—</span>}
                                   </td>
                                   <td className="whitespace-nowrap px-3 py-2 text-right">
                                     <div className="flex justify-end gap-1">
@@ -889,11 +860,11 @@ function ModalDetalheOS({ atendimento, os, onFechar }: { atendimento: Atendiment
           <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Cobrança de avaria</p>
           {os.temAvaria ? (
             <>
-              <p className="mt-1 text-[15px] font-extrabold text-amber-800">{os.valorReembolso}</p>
-              <p className="text-xs text-slate-500">Valor de reembolso estimado para esta OS. O detalhamento aparecerá na <b>Cobrança desta Avarias</b>.</p>
+              <span className="mt-1 inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-[13px] font-bold text-amber-800">Sim</span>
+              <p className="mt-1.5 text-xs text-slate-500">Esta OS possui cobrança de avaria. O detalhamento será tratado no momento da cobrança da avaria.</p>
             </>
           ) : (
-            <p className="mt-1 text-sm font-semibold text-slate-600">Sem cobrança de avaria para esta OS.</p>
+            <p className="mt-1 text-sm font-semibold text-slate-600">Não · sem cobrança de avaria para esta OS.</p>
           )}
         </div>
       </div>

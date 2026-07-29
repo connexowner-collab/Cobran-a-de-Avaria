@@ -20,6 +20,9 @@ import {
   type AtendimentoServico,
 } from '@/lib/servicosData';
 
+/** Frota total da operação (mesmo valor usado em Serviços e na aba Modelos). */
+const FROTA_TOTAL = 42;
+
 /** Rótulo + cor do badge por etapa da manutenção. */
 const ETAPA_INFO: Record<EtapaManutencaoKey, { label: string; cls: string }> = {
   aguardando_agendamento: { label: 'Aguardando Agendamento', cls: 'bg-slate-100 text-slate-600' },
@@ -142,12 +145,6 @@ export default function ChamadosPage() {
 
   const pag = usePaginacao(lista, 10);
 
-  const kpis = useMemo(() => {
-    const emManutencao = abertas.filter((a) => etapaAtendimento(a) === 'manutencao').length;
-    const agendadas = abertas.filter((a) => etapaAtendimento(a) === 'agendado').length;
-    return { abertas: abertas.length, emManutencao, agendadas };
-  }, [abertas]);
-
   /* Timeline com todas as etapas. "Finalizado" não tem contagem (os finalizados
      ficam em Serviços) e, ao clicar, leva o usuário para a tela de Serviços. */
   const funil = useMemo(
@@ -172,9 +169,8 @@ export default function ChamadosPage() {
       />
 
       <KpiRow>
-        <KpiCard label="Manutenções em aberto" valor={String(kpis.abertas)} detalhe="em andamento" cor="border-l-[#0e2233]" />
-        <KpiCard label="Em manutenção" valor={String(kpis.emManutencao)} detalhe="na oficina agora" cor="border-l-sky-600" detalheCor="text-sky-700" />
-        <KpiCard label="Agendadas" valor={String(kpis.agendadas)} detalhe="aguardando entrada" cor="border-l-amber-500" detalheCor="text-amber-600" />
+        <KpiCard label="Frota total" valor={String(FROTA_TOTAL)} detalhe="veículos e equipamentos" cor="border-l-[#0e2233]" />
+        <KpiCard label="Em oficina agora" valor={String(abertas.length)} detalhe="veículos imobilizados" cor="border-l-sky-600" detalheCor="text-sky-700" />
       </KpiRow>
 
       <FunilEtapas
