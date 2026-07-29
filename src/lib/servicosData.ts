@@ -185,6 +185,7 @@ export const getDetalhe = (numero: string): DetalheAtendimento => DETALHES_ATEND
 /** Etapa atual de um atendimento (mesma linha do tempo do modal). */
 export function etapaAtendimento(a: AtendimentoServico): EtapaManutencaoKey {
   if (a.status === 'finalizado') return 'finalizado';
+  if (a.agendamento === '—') return 'aguardando_agendamento';
   if (a.dataEntrada === '—') return 'agendado';
   if (a.saida !== '—') return 'saida';
   return 'manutencao';

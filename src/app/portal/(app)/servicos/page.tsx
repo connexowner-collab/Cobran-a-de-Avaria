@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  Download, Info, Wrench, FileText, X,
+  Download, Info, Wrench, FileText, X, Clock,
   CheckCircle2, CalendarClock, ChevronRight, ChevronDown,
   Eye, LogOut, Flag, Send, CalendarPlus,
 } from 'lucide-react';
@@ -145,6 +145,7 @@ function abrirResumoImpressao(a: AtendimentoServico, det: DetalheAtendimento, ti
 
 /** Monta as etapas da esteira de manutenção de um atendimento. */
 function etapasManutencao(a: AtendimentoServico): EtapaManutencao[] {
+  const agendou = a.agendamento !== '—';
   const entrou = a.dataEntrada !== '—';
   const saiu = a.saida !== '—';
   const finalizado = a.status === 'finalizado' || a.dataConclusao !== '—';
@@ -160,9 +161,10 @@ function etapasManutencao(a: AtendimentoServico): EtapaManutencao[] {
   const manutEstado = finalizado || saiu ? 'concluido' : entrou ? 'atual' : 'pendente';
 
   return [
-    { label: 'Agendado', data: a.agendamento, icon: CalendarClock, estado: 'concluido' },
+    { label: 'Aguardando Agendamento', data: agendou ? a.agendamento : 'Em andamento', icon: Clock, estado: agendou ? 'concluido' : 'atual' },
+    { label: 'Agendado', data: a.agendamento, icon: CalendarClock, estado: agendou ? 'concluido' : 'pendente' },
     { label: 'Em Manutenção', data: manutEstado === 'atual' ? 'Em andamento' : entrou ? a.dataEntrada : '—', icon: Wrench, estado: manutEstado, detalhe: manutEstado === 'pendente' ? undefined : detManut },
-    { label: 'Ativo disponível para o cliente', data: a.saida, icon: LogOut, estado: saiu ? 'concluido' : 'pendente' },
+    { label: 'Disponível retirada da manutenção', data: a.saida, icon: LogOut, estado: saiu ? 'concluido' : 'pendente' },
     { label: 'Manutenção Finalizada', data: a.dataConclusao, icon: Flag, estado: finalizado ? 'concluido' : 'pendente' },
   ];
 }

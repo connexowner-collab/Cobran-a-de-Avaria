@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, CalendarClock, Wrench, LogOut, Flag, type LucideIcon } from 'lucide-react';
+import { CheckCircle2, Clock, CalendarClock, Wrench, LogOut, Flag, type LucideIcon } from 'lucide-react';
 
 export type EstadoEtapa = 'concluido' | 'atual' | 'pendente';
 
@@ -9,12 +9,13 @@ export type EstadoEtapa = 'concluido' | 'atual' | 'pendente';
  * Fonte única para o funil das telas de Serviços e Central de Chamados,
  * garantindo que os números batam entre as duas telas.
  * ------------------------------------------------------------------ */
-export type EtapaManutencaoKey = 'agendado' | 'manutencao' | 'saida' | 'finalizado';
+export type EtapaManutencaoKey = 'aguardando_agendamento' | 'agendado' | 'manutencao' | 'saida' | 'finalizado';
 
 export const ETAPAS_MANUTENCAO: { key: EtapaManutencaoKey; label: string; icon: LucideIcon }[] = [
+  { key: 'aguardando_agendamento', label: 'Aguardando Agendamento', icon: Clock },
   { key: 'agendado', label: 'Agendado', icon: CalendarClock },
   { key: 'manutencao', label: 'Em Manutenção', icon: Wrench },
-  { key: 'saida', label: 'Ativo disponível para o cliente', icon: LogOut },
+  { key: 'saida', label: 'Disponível retirada da manutenção', icon: LogOut },
   { key: 'finalizado', label: 'Manutenção Finalizada', icon: Flag },
 ];
 

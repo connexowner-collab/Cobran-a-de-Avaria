@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Plus, Send, X, Eye, CalendarClock, LogOut, Wrench, Flag,
+  Plus, Send, X, Eye, Clock, CalendarClock, LogOut, Wrench, Flag,
 } from 'lucide-react';
 import {
   PageTitle, KpiCard, KpiRow,
@@ -22,19 +22,21 @@ import {
 
 /** Rótulo + cor do badge por etapa da manutenção. */
 const ETAPA_INFO: Record<EtapaManutencaoKey, { label: string; cls: string }> = {
+  aguardando_agendamento: { label: 'Aguardando Agendamento', cls: 'bg-slate-100 text-slate-600' },
   agendado: { label: 'Agendado', cls: 'bg-slate-100 text-slate-700' },
   manutencao: { label: 'Em Manutenção', cls: 'bg-sky-100 text-sky-700' },
-  saida: { label: 'Ativo disponível para o cliente', cls: 'bg-amber-100 text-amber-800' },
+  saida: { label: 'Disponível retirada da manutenção', cls: 'bg-amber-100 text-amber-800' },
   finalizado: { label: 'Manutenção Finalizada', cls: 'bg-emerald-100 text-emerald-700' },
 };
 
 const ETAPA_IDX: Record<EtapaManutencaoKey, number> = {
-  agendado: 0, manutencao: 1, saida: 2, finalizado: 3,
+  aguardando_agendamento: 0, agendado: 1, manutencao: 2, saida: 3, finalizado: 4,
 };
 const DETALHE_ETAPA: Record<EtapaManutencaoKey, string | undefined> = {
-  agendado: 'Aguardando agendamento',
+  aguardando_agendamento: 'Aguardando agendamento',
+  agendado: 'Agendamento confirmado',
   manutencao: 'Serviços em execução',
-  saida: 'Ativo disponível para o cliente',
+  saida: 'Disponível para retirada',
   finalizado: undefined,
 };
 
@@ -44,9 +46,10 @@ function etapasDaManutencao(a: AtendimentoServico): EtapaManutencao[] {
   const idx = ETAPA_IDX[etapa];
   const finalizado = etapa === 'finalizado';
   const base = [
+    { label: 'Aguardando Agendamento', icon: Clock, data: '—' },
     { label: 'Agendado', icon: CalendarClock, data: a.agendamento },
     { label: 'Em Manutenção', icon: Wrench, data: a.dataEntrada },
-    { label: 'Ativo disponível para o cliente', icon: LogOut, data: a.saida },
+    { label: 'Disponível retirada da manutenção', icon: LogOut, data: a.saida },
     { label: 'Manutenção Finalizada', icon: Flag, data: a.dataConclusao },
   ];
   return base.map((b, i) => ({
