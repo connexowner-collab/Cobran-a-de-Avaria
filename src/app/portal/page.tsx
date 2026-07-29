@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, ShieldCheck, Truck, Headset } from 'lucide-react';
 import { LogoVamos } from '@/components/portal/ui';
 import ModalSolicitacaoAcesso from '@/components/ModalSolicitacaoAcesso';
+import { ROTA_PADRAO } from '@/lib/liberacao';
 
 /** Login do Portal do Cliente (protótipo — qualquer credencial entra). */
 export default function PortalLoginPage() {
@@ -29,7 +30,7 @@ export default function PortalLoginPage() {
     } catch {
       /* segue para o portal normalmente */
     }
-    router.push('/portal/inicio');
+    router.push(ROTA_PADRAO);
   };
 
   return (

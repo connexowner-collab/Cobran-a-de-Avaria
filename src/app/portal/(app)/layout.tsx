@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -12,6 +12,9 @@ import { NOTIFICACOES, GRUPOS_DISTRIBUICAO } from '@/lib/portalData';
 import { NAV, type NavItem } from '@/lib/portalNav';
 import { useFavoritos } from '@/lib/favoritos';
 import { LogoVamos } from '@/components/portal/ui';
+import GuardaLiberacao from '@/components/portal/GuardaLiberacao';
+import { rotaLiberada, ROTA_PADRAO } from '@/lib/liberacao';
+import { useLiberarTudo } from '@/lib/useLiberacao';
 
 const GRUPO_STORAGE_KEY = 'portal_grupo_selecionado';
 
@@ -24,6 +27,20 @@ function NotifIcon({ tipo }: { tipo: string }) {
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { liberarTudo, modoDev } = useLiberarTudo();
+
+  /** Menu e notificações filtrados conforme os módulos liberados (reativo ao modo dev). */
+  const navVisivel = useMemo(
+    () => NAV
+      .map(({ grupo, itens }) => ({
+        grupo,
+        itens: itens.filter((it) => rotaLiberada(it.href, liberarTudo) || (it.children ?? []).some((c) => rotaLiberada(c.href, liberarTudo))),
+      }))
+      .filter((g) => g.itens.length > 0),
+    [liberarTudo],
+  );
+  const notifVisivel = useMemo(() => NOTIFICACOES.filter((n) => rotaLiberada(n.href, liberarTudo)), [liberarTudo]);
+
   const [notifOpen, setNotifOpen] = useState(false);
   const [colapsado, setColapsado] = useState(false);
   const [grupoOpen, setGrupoOpen] = useState(false);
@@ -97,7 +114,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       >
         <div className={`flex items-center pb-2 pt-5 ${colapsado ? 'justify-center px-2' : 'px-4'}`}>
           <Link
-            href="/portal/inicio"
+            href={ROTA_PADRAO}
             className={`flex items-center justify-center rounded-xl bg-white ${colapsado ? 'h-11 w-11 p-1.5' : 'flex-1 px-4 py-2.5'}`}
             title="Início"
           >
@@ -115,7 +132,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         </div>
 
         <nav className="flex-1 px-3 py-3">
-          {NAV.map(({ grupo, itens }) => (
+          {navVisivel.map(({ grupo, itens }) => (
             <div key={grupo} className="mb-4">
               {colapsado ? (
                 <div className="mx-2 mb-2 border-t border-white/10" />
@@ -221,6 +238,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           ))}
         </nav>
 
+        {modoDev && !colapsado && (
+          <div className="mx-3 mb-2 flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-[11px] font-semibold text-amber-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> Modo desenvolvedor (acesso total)
+          </div>
+        )}
         {!colapsado && (
           <div className="border-t border-white/10 px-6 py-4 text-[11px] text-white/40">
             Grupo JSL · Vamos Locação
@@ -295,7 +317,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             >
               <Bell size={16} />
               <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary-600 px-1 text-[9px] font-bold text-white">
-                {NOTIFICACOES.length}
+                {notifVisivel.length}
               </span>
             </button>
             {notifOpen && (
@@ -303,7 +325,10 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                 <div className="border-b border-slate-100 px-4 py-3 text-sm font-bold text-slate-800">
                   Notificações
                 </div>
-                {NOTIFICACOES.map((n) => (
+                {notifVisivel.length === 0 && (
+                  <p className="px-4 py-6 text-center text-[13px] text-slate-400">Nenhuma notificação.</p>
+                )}
+                {notifVisivel.map((n) => (
                   <Link
                     key={n.titulo}
                     href={n.href}
@@ -359,7 +384,9 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 px-8 py-7">{children}</main>
+        <main className="min-w-0 flex-1 px-8 py-7">
+          <GuardaLiberacao>{children}</GuardaLiberacao>
+        </main>
       </div>
 
       {senhaModalOpen && <ModalTrocarSenha onClose={() => setSenhaModalOpen(false)} />}
