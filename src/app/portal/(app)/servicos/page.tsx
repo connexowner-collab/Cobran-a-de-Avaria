@@ -849,7 +849,9 @@ function ModalDetalheOS({ atendimento, os, onFechar }: { atendimento: Atendiment
               {itens.map((it) => (
                 <div key={it.codigo} className="flex items-center justify-between gap-2 rounded-md border border-slate-200 px-3 py-2 text-[13px]">
                   <span className="font-semibold text-slate-700">{it.descricao}</span>
-                  <span className="font-mono text-slate-500">{it.qtde}× · {it.valorTotal}</span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+                    <span className="text-slate-400">Qtd</span> {it.qtde}
+                  </span>
                 </div>
               ))}
             </div>
