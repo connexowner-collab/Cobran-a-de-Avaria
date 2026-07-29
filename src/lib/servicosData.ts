@@ -62,6 +62,7 @@ export const ATENDIMENTOS_SERVICO: AtendimentoServico[] = [
   { numero: '2066895', status: 'aberta', motivo: 'AFERIÇÃO TACÓGRAFO', tipo: 'preventiva', ordens: [{ numero: 'OS-343988', motivo: 'AFERIÇÃO TACÓGRAFO', status: 'Aberta', dataEntrada: '09/07/2026', dataSaida: '—', temAvaria: false }, { numero: 'OS-343999', motivo: 'ELÉTRICA', status: 'Aberta', dataEntrada: '10/07/2026', dataSaida: '—', temAvaria: false }], placa: 'BXW9D72', chassi: '9535V6TB0PR010455', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '08/07/2026', dataEntrada: '09/07/2026', previsao: '18/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em avaliação' },
   { numero: '2066894', status: 'aberta', motivo: 'PNEU', tipo: 'corretiva', ordens: [{ numero: 'OS-343970', motivo: 'PNEU', status: 'Em execução', dataEntrada: '11/07/2026', dataSaida: '—', temAvaria: true, valorReembolso: 'R$ 1.150,00' }], placa: 'TXI3F16', chassi: '9BM958074HB779340', numeroSerie: '—', marcaModelo: 'Mercedes Accelo 815', agendamento: '10/07/2026', dataEntrada: '11/07/2026', previsao: '17/07/2026', saida: '—', dataConclusao: '—', situacao: 'Em oficina' },
   { numero: '2066880', status: 'aberta', motivo: 'CORRETIVA', tipo: 'corretiva', ordens: [{ numero: 'OS-343900', motivo: 'SUSPENSÃO', status: 'Finalizada', dataEntrada: '12/07/2026', dataSaida: '18/07/2026', temAvaria: false }, { numero: 'OS-343911', motivo: 'FREIO', status: 'Finalizada', dataEntrada: '13/07/2026', dataSaida: '19/07/2026', temAvaria: true, valorReembolso: 'R$ 390,00' }], placa: '—', chassi: '—', numeroSerie: 'SN-JCB-099887', marcaModelo: 'JCB 3CX', agendamento: '12/07/2026', dataEntrada: '12/07/2026', previsao: '19/07/2026', saida: '19/07/2026', dataConclusao: '—', situacao: 'Aguardando liberação' },
+  { numero: '2066910', status: 'aberta', motivo: 'REVISÃO PREVENTIVA', tipo: 'preventiva', ordens: [{ numero: 'OS-344050', motivo: 'REVISÃO PREVENTIVA', status: 'Aberta', dataEntrada: '—', dataSaida: '—', temAvaria: false }], placa: 'FQA7H21', chassi: '9BWZZZ377VT004321', numeroSerie: '—', marcaModelo: 'VW 11-180 Delivery', agendamento: '—', dataEntrada: '—', previsao: '—', saida: '—', dataConclusao: '—', situacao: 'Aguardando agendamento' },
 ];
 
 /** Item autorizado para manutenção (peça ou serviço). */
@@ -171,6 +172,15 @@ export const DETALHES_ATENDIMENTO: Record<string, DetalheAtendimento> = {
       { os: 'OS-343911', codigo: '204120', descricao: 'KIT DE VEDAÇÃO HIDRÁULICA', observacao: '—', finalidade: 'MANUTENCAO/CONSERVACAO - FROTA', qtde: 1, valorUnitario: 'R$ 390,00', valorTotal: 'R$ 390,00', tipo: 'peca' },
     ],
     totalServicos: 'R$ 1.480,00', totalPecas: 'R$ 390,00', totalAtendimento: 'R$ 1.870,00',
+  },
+  '2066910': {
+    descricaoProblema: 'Solicitação de revisão preventiva; aguardando agendamento com a oficina.',
+    condutor: 'Rafael Dias', cliente: 'Bebidas Fruki Sa', numeroContrato: '119791', centroCusto: 'MATRIZ',
+    km: '54.900', anoVeiculo: '2023/2023', modeloCompleto: 'VW - VolksWagen - 11-180 Delivery 4x2 2p (diesel)(E5)',
+    itens: [
+      { os: 'OS-344050', codigo: '400010', descricao: 'REVISÃO PREVENTIVA', observacao: '—', finalidade: 'MANUTENCAO/CONSERVACAO - FROTA', qtde: 1, valorUnitario: 'R$ 0,00', valorTotal: 'R$ 0,00', tipo: 'servico' },
+    ],
+    totalServicos: 'R$ 0,00', totalPecas: 'R$ 0,00', totalAtendimento: 'R$ 0,00',
   },
 };
 
