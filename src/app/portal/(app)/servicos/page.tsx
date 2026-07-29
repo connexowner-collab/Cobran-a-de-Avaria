@@ -462,6 +462,13 @@ const OPCOES_SITUACAO = [
   { value: 'Parado', label: 'Parado' },
   { value: 'Rodando', label: 'Rodando' },
 ];
+/** Opções da lista suspensa de cobrança de avaria. */
+const OPCOES_AVARIA = [
+  { value: 'Sim', label: 'Sim' },
+  { value: 'Não', label: 'Não' },
+];
+/** Um atendimento tem cobrança de avaria se qualquer OS dele tiver. */
+const atendimentoComAvaria = (a: AtendimentoServico): boolean => a.ordens.some((o) => o.temAvaria);
 
 
 export default function ServicosPage() {
@@ -511,6 +518,7 @@ export default function ServicosPage() {
     { key: 'saida', get: (a) => a.saida },
     { key: 'conclusao', get: (a) => a.dataConclusao },
     { key: 'situacao', get: (a) => situacaoVeiculo(a) },
+    { key: 'avaria', get: (a) => (atendimentoComAvaria(a) ? 'Sim' : 'Não') },
   ], []);
   const { val, set, filtradas: linhas } = useFiltrosColuna(linhasBase, cols);
   const pag = usePaginacao(linhas, 10);
@@ -596,7 +604,7 @@ export default function ServicosPage() {
       />
 
       <DataTable
-        colSpan={14}
+        colSpan={15}
         vazio={linhas.length === 0}
         vazioLabel="Nenhum atendimento encontrado com os filtros atuais."
         head={
@@ -614,6 +622,7 @@ export default function ServicosPage() {
             <Th className="whitespace-nowrap">Saída</Th>
             <Th className="whitespace-nowrap">Conclusão</Th>
             <Th className="whitespace-nowrap">Situação do Veículo</Th>
+            <Th className="whitespace-nowrap">Cobrança de avaria</Th>
             <Th className="whitespace-nowrap">Mais detalhes</Th>
           </>
         }
@@ -632,6 +641,7 @@ export default function ServicosPage() {
             <ThFiltro><ColunaFiltro value={val('saida')} onChange={set('saida')} placeholder="Data" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('conclusao')} onChange={set('conclusao')} placeholder="Data" /></ThFiltro>
             <ThFiltro><ColunaDropdown value={val('situacao')} onChange={set('situacao')} options={OPCOES_SITUACAO} placeholder="Todas" ariaLabel="Filtrar situação do veículo" /></ThFiltro>
+            <ThFiltro><ColunaDropdown value={val('avaria')} onChange={set('avaria')} options={OPCOES_AVARIA} placeholder="Todas" ariaLabel="Filtrar cobrança de avaria" /></ThFiltro>
             <ThFiltro />
           </>
         }
@@ -684,6 +694,13 @@ export default function ServicosPage() {
                     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${a.status === 'finalizado' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
                       {situacaoVeiculo(a)}
                     </span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3.5">
+                    {atendimentoComAvaria(a) ? (
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">Sim</span>
+                    ) : (
+                      <span className="text-xs text-slate-400">Não</span>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3.5" onClick={stopExpand}>
                     <div className="flex gap-1">
