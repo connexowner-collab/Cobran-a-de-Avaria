@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import {
   ChevronRight, Download, UserCheck, Clock, X, Check,
-  FileDown, Bell, ArrowLeft, ArrowRight,
+  FileDown, Bell,
 } from 'lucide-react';
 import { MULTAS, VEICULOS, type Multa } from '@/lib/portalData';
 import {
@@ -104,10 +104,7 @@ function baixarProcuracao(m: Multa) {
 /* ------------------------------------------------------------------ *
  * Wizard de identificação do condutor: passo a passo + procuração + envio.
  * ------------------------------------------------------------------ */
-const PASSOS_IDENT = ['Procuração', 'Revisão'];
-
 function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Multa; onFechar: () => void; onRegistrar: (auto: string, resultado: 'identificado' | 'nao') => void }) {
-  const [passo, setPasso] = useState(0);
   // Dados da empresa/proprietário — vêm do PDV, não são preenchidos pelo cliente.
   const empresa = { razaoSocial: 'Vamos Locação S.A.', cnpj: '12.345.678/0001-90', responsavel: 'Lucas Pessoa Duarte' };
   const [resultado, setResultado] = useState<'' | 'identificado' | 'nao'>('');
@@ -117,14 +114,7 @@ function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Mul
   const prazoVencido = !!sla && !sla.liberado;
   const protocolo = `ID-${multa.auto.replace(/\D/g, '').slice(-6)}-${new Date().getFullYear()}`;
 
-
-  const podeAvancar = passo === 0 || (passo === 1 && resultado !== '');
-
   const registrar = (r: 'identificado' | 'nao') => { onRegistrar(multa.auto, r); setEnviado(true); };
-  const avancar = () => {
-    if (passo === 1) { if (resultado) registrar(resultado); return; }
-    setPasso((p) => p + 1);
-  };
 
   /* Pergunta final (reutilizada no fluxo normal e no caso de prazo vencido). */
   const blocoPergunta = (
@@ -204,69 +194,39 @@ function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Mul
               </div>
             )}
 
-            {/* Stepper */}
-            <div className="mb-5 flex items-center gap-2">
-              {PASSOS_IDENT.map((p, i) => (
-                <div key={p} className="flex items-center gap-2">
-                  <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${i < passo ? 'bg-emerald-500 text-white' : i === passo ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                    {i < passo ? <Check size={12} /> : i + 1}
-                  </span>
-                  <span className={`text-[12px] font-semibold ${i === passo ? 'text-slate-900' : 'text-slate-400'}`}>{p}</span>
-                  {i < PASSOS_IDENT.length - 1 && <span className="h-px w-6 bg-slate-200" />}
+            {/* Procuração + dados da empresa (PDV) */}
+            <div className="space-y-3">
+              <div className="rounded-lg bg-sky-50 px-3.5 py-3 text-[12px] text-sky-900">
+                <p className="mb-1 font-bold">Como fazer a indicação:</p>
+                <ol className="ml-4 list-decimal space-y-0.5">
+                  <li>Baixe o modelo de procuração já preenchido com os dados da multa.</li>
+                  <li>Preencha os dados do condutor no documento e colha as assinaturas.</li>
+                </ol>
+              </div>
+              <button type="button" onClick={() => baixarProcuracao(multa)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary-200 bg-primary-50 py-2.5 text-[13px] font-semibold text-primary-700 hover:bg-primary-100">
+                <FileDown size={16} /> Baixar modelo de procuração
+              </button>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/60">
+                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
+                  <p className="text-[13px] font-bold text-slate-700">Dados da empresa / proprietário</p>
+                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-500">via PDV</span>
                 </div>
-              ))}
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-3 text-[13px]">
+                  <div><dt className="text-[11px] text-slate-400">Razão social</dt><dd className="font-semibold text-slate-800">{empresa.razaoSocial}</dd></div>
+                  <div><dt className="text-[11px] text-slate-400">CNPJ</dt><dd className="font-mono text-slate-700">{empresa.cnpj}</dd></div>
+                  <div className="col-span-2"><dt className="text-[11px] text-slate-400">Responsável</dt><dd className="font-semibold text-slate-800">{empresa.responsavel}</dd></div>
+                </dl>
+              </div>
             </div>
 
-            {/* Passo 1 — Procuração + dados da empresa */}
-            {passo === 0 && (
-              <div className="space-y-3">
-                <div className="rounded-lg bg-sky-50 px-3.5 py-3 text-[12px] text-sky-900">
-                  <p className="mb-1 font-bold">Como fazer a indicação:</p>
-                  <ol className="ml-4 list-decimal space-y-0.5">
-                    <li>Baixe o modelo de procuração já preenchido com os dados da multa.</li>
-                    <li>Preencha os dados do condutor no documento e colha as assinaturas.</li>
-                    <li>Anexe a procuração assinada.</li>
-                  </ol>
-                </div>
-                <button type="button" onClick={() => baixarProcuracao(multa)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary-200 bg-primary-50 py-2.5 text-[13px] font-semibold text-primary-700 hover:bg-primary-100">
-                  <FileDown size={16} /> Baixar modelo de procuração
-                </button>
-                <div className="rounded-lg border border-slate-200 bg-slate-50/60">
-                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
-                    <p className="text-[13px] font-bold text-slate-700">Dados da empresa / proprietário</p>
-                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-500">via PDV</span>
-                  </div>
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-3 text-[13px]">
-                    <div><dt className="text-[11px] text-slate-400">Razão social</dt><dd className="font-semibold text-slate-800">{empresa.razaoSocial}</dd></div>
-                    <div><dt className="text-[11px] text-slate-400">CNPJ</dt><dd className="font-mono text-slate-700">{empresa.cnpj}</dd></div>
-                    <div className="col-span-2"><dt className="text-[11px] text-slate-400">Responsável</dt><dd className="font-semibold text-slate-800">{empresa.responsavel}</dd></div>
-                  </dl>
-                </div>
-              </div>
-            )}
-
-            {/* Passo 2 — Revisão + pergunta final */}
-            {passo === 1 && (
-              <div className="space-y-4 text-[13px]">
-                <div className="rounded-lg border border-slate-200">
-                  <div className="border-b border-slate-100 px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-500">Empresa / proprietário</div>
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-3">
-                    <div><dt className="text-[11px] text-slate-400">Razão social</dt><dd className="font-semibold text-slate-800">{empresa.razaoSocial}</dd></div>
-                    <div><dt className="text-[11px] text-slate-400">CNPJ</dt><dd className="font-mono text-slate-700">{empresa.cnpj}</dd></div>
-                    <div className="col-span-2"><dt className="text-[11px] text-slate-400">Responsável</dt><dd className="font-semibold text-slate-800">{empresa.responsavel}</dd></div>
-                  </dl>
-                </div>
-                {blocoPergunta}
-              </div>
-            )}
+            {/* Pergunta direto */}
+            <div className="mt-4">{blocoPergunta}</div>
 
             {/* Rodapé */}
             <div className="mt-5 flex justify-between gap-2 border-t border-slate-100 pt-4">
-              <button type="button" onClick={() => (passo === 0 ? onFechar() : setPasso((p) => p - 1))} className="btn-secondary gap-1.5 text-[13px]">
-                {passo === 0 ? 'Cancelar' : <><ArrowLeft size={14} /> Voltar</>}
-              </button>
-              <button type="button" onClick={avancar} disabled={!podeAvancar} className="btn-primary gap-1.5 text-[13px]">
-                {passo === 1 ? (resultado === 'nao' ? <><Check size={15} /> Registrar</> : <><UserCheck size={15} /> Enviar identificação</>) : <>Continuar <ArrowRight size={14} /></>}
+              <button type="button" onClick={onFechar} className="btn-secondary text-[13px]">Cancelar</button>
+              <button type="button" onClick={() => resultado && registrar(resultado)} disabled={!resultado} className="btn-primary gap-1.5 text-[13px]">
+                {resultado === 'nao' ? <><Check size={15} /> Registrar</> : <><UserCheck size={15} /> Enviar identificação</>}
               </button>
             </div>
           </>
@@ -278,6 +238,8 @@ function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Mul
 
 export default function MultasPage() {
   const [filtro, setFiltro] = useState<Multa['status'] | 'todos'>('todos');
+  /** Filtro pelo prazo de identificação (semáforo) — null = sem filtro. */
+  const [filtroPrazo, setFiltroPrazo] = useState<'vermelho' | 'amarelo' | 'verde' | null>(null);
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [identificar, setIdentificar] = useState<Multa | null>(null);
@@ -307,7 +269,14 @@ export default function MultasPage() {
   const topPlacas = porPlacaBase.slice(0, TOP_N);
 
   // Multas que batem com o filtro de status + filtros por coluna.
-  const multasBase = useMemo(() => MULTAS.filter((m) => filtro === 'todos' || m.status === filtro), [filtro]);
+  const multasBase = useMemo(() => MULTAS.filter((m) => {
+    if (filtro !== 'todos' && m.status !== filtro) return false;
+    if (filtroPrazo) {
+      if (m.status !== 'aguardando_identificacao') return false;
+      if (bucketPrazo(m.prazoIdentificacao) !== filtroPrazo) return false;
+    }
+    return true;
+  }), [filtro, filtroPrazo]);
   const cols = useMemo<ColDef<Multa>[]>(() => [
     { key: 'placa', get: (m) => m.placa, multi: true },
     { key: 'auto', get: (m) => m.auto, multi: true },
@@ -341,7 +310,7 @@ export default function MultasPage() {
   const pag = usePaginacao(grupos, 10);
 
   // Com filtro de status ou busca ativos, expande automaticamente os grupos com resultado.
-  const filtroAtivo = filtro !== 'todos';
+  const filtroAtivo = filtro !== 'todos' || filtroPrazo !== null;
   const estaExpandido = (placa: string) => filtroAtivo || expandidos.has(placa);
   const toggleExpandido = (placa: string) => {
     setExpandidos((prev) => {
@@ -412,16 +381,25 @@ export default function MultasPage() {
           </div>
           <div className="grid grid-cols-3 divide-x divide-slate-100">
             {([
-              { k: 'vermelho', label: 'Urgente', sub: 'vencidas ou vence hoje', dot: 'bg-rose-500', txt: 'text-rose-600', n: identSemaforo.vermelho },
-              { k: 'amarelo', label: 'Prazo próximo', sub: 'até 7 dias', dot: 'bg-amber-500', txt: 'text-amber-600', n: identSemaforo.amarelo },
-              { k: 'verde', label: 'No prazo', sub: 'mais de 7 dias', dot: 'bg-emerald-500', txt: 'text-emerald-600', n: identSemaforo.verde },
-            ] as const).map((s) => (
-              <button key={s.k} onClick={() => setFiltro('aguardando_identificacao')} className="flex flex-col items-start gap-1 px-5 py-4 text-left transition hover:bg-slate-50">
+              { k: 'vermelho', label: 'Urgente', sub: 'vencidas ou vence hoje', dot: 'bg-rose-500', txt: 'text-rose-600', ativoBg: 'bg-rose-50 ring-1 ring-inset ring-rose-200', n: identSemaforo.vermelho },
+              { k: 'amarelo', label: 'Prazo próximo', sub: 'até 7 dias', dot: 'bg-amber-500', txt: 'text-amber-600', ativoBg: 'bg-amber-50 ring-1 ring-inset ring-amber-200', n: identSemaforo.amarelo },
+              { k: 'verde', label: 'No prazo', sub: 'mais de 7 dias', dot: 'bg-emerald-500', txt: 'text-emerald-600', ativoBg: 'bg-emerald-50 ring-1 ring-inset ring-emerald-200', n: identSemaforo.verde },
+            ] as const).map((s) => {
+              const ativo = filtroPrazo === s.k;
+              return (
+              <button
+                key={s.k}
+                onClick={() => setFiltroPrazo((prev) => (prev === s.k ? null : s.k))}
+                aria-pressed={ativo}
+                className={`relative flex flex-col items-start gap-1 px-5 py-4 text-left transition ${ativo ? s.ativoBg : 'hover:bg-slate-50'}`}
+              >
+                {ativo && <Check size={14} className={`absolute right-3 top-3 ${s.txt}`} />}
                 <span className="flex items-center gap-2 text-[12px] font-semibold text-slate-500"><i className={`h-2.5 w-2.5 rounded-full ${s.dot}`} /> {s.label}</span>
                 <span className={`text-3xl font-extrabold ${s.txt}`}>{s.n}</span>
                 <span className="text-[11px] text-slate-400">{s.sub}</span>
               </button>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -433,14 +411,17 @@ export default function MultasPage() {
         className="mb-6"
       >
         <div className="divide-y divide-slate-100">
-          {topPlacas.map((p, i) => (
+          {topPlacas.map((p, i) => {
+            const ativo = val('placa') === p.placa;
+            return (
             <button
               key={p.placa}
               onClick={() => {
-                set('placa')(val('placa') === p.placa ? '' : p.placa);
+                set('placa')(ativo ? '' : p.placa);
                 setExpandidos((prev) => new Set(prev).add(p.placa));
               }}
-              className="flex w-full items-center gap-4 py-3 text-left transition first:pt-0 last:pb-0 hover:bg-slate-50"
+              aria-pressed={ativo}
+              className={`-mx-2 flex w-[calc(100%+1rem)] items-center gap-4 rounded-lg px-2 py-3 text-left transition ${ativo ? 'bg-primary-50 ring-1 ring-inset ring-primary-200' : 'hover:bg-slate-50'}`}
             >
               <span className={`flex h-7 w-7 flex-none items-center justify-center rounded-full border text-[11px] font-black ${RANK_STYLE[i] ?? 'border-slate-200 bg-slate-50 text-slate-400'}`}>
                 {i + 1}º
@@ -461,7 +442,8 @@ export default function MultasPage() {
                 </span>
               )}
             </button>
-          ))}
+            );
+          })}
         </div>
       </SectionCard>
 
