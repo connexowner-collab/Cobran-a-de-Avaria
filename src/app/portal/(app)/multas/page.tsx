@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import {
   ChevronRight, Download, UserCheck, Clock, X, Check,
-  FileSignature, FileDown, Bell, ArrowLeft, ArrowRight,
+  FileDown, Bell, ArrowLeft, ArrowRight,
 } from 'lucide-react';
 import { MULTAS, VEICULOS, type Multa } from '@/lib/portalData';
 import {
@@ -101,20 +101,6 @@ function baixarProcuracao(m: Multa) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/* Área de upload compacta e reutilizável. */
-function UploadDoc({ file, onFile, icon, titulo, dica }: { file: File | null; onFile: (f: File | null) => void; icon: React.ReactNode; titulo: string; dica: string }) {
-  return (
-    <label className="group flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/60 px-4 py-5 text-center transition hover:border-primary-400 hover:bg-primary-50/40">
-      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition group-hover:text-primary-600">
-        {file ? <Check size={17} className="text-emerald-600" /> : icon}
-      </span>
-      <span className="text-[13px] font-semibold text-slate-600">{file ? file.name : titulo}</span>
-      <span className="text-[11px] text-slate-400">{dica}</span>
-      <input type="file" accept="image/*,application/pdf,.doc,.docx" className="hidden" onChange={(e) => onFile(e.target.files?.[0] ?? null)} />
-    </label>
-  );
-}
-
 /* ------------------------------------------------------------------ *
  * Wizard de identificação do condutor: passo a passo + procuração + envio.
  * ------------------------------------------------------------------ */
@@ -122,11 +108,8 @@ const PASSOS_IDENT = ['Procuração', 'Revisão'];
 
 function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Multa; onFechar: () => void; onRegistrar: (auto: string, resultado: 'identificado' | 'nao') => void }) {
   const [passo, setPasso] = useState(0);
-  // Dados da empresa/proprietário (o condutor é identificado na própria procuração).
-  const [razaoSocial, setRazaoSocial] = useState('Vamos Locação S.A.');
-  const [cnpj, setCnpj] = useState('12.345.678/0001-90');
-  const [responsavel, setResponsavel] = useState('');
-  const [procuracao, setProcuracao] = useState<File | null>(null);
+  // Dados da empresa/proprietário — vêm do PDV, não são preenchidos pelo cliente.
+  const empresa = { razaoSocial: 'Vamos Locação S.A.', cnpj: '12.345.678/0001-90', responsavel: 'Lucas Pessoa Duarte' };
   const [resultado, setResultado] = useState<'' | 'identificado' | 'nao'>('');
   const [motivoNao, setMotivoNao] = useState('');
   const [enviado, setEnviado] = useState(false);
@@ -134,11 +117,8 @@ function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Mul
   const prazoVencido = !!sla && !sla.liberado;
   const protocolo = `ID-${multa.auto.replace(/\D/g, '').slice(-6)}-${new Date().getFullYear()}`;
 
-  const inputCls = 'input-field w-full py-2.5 text-[13px]';
-  const label = 'mb-1 block text-[13px] font-semibold text-slate-600';
 
-  const validEmpresa = razaoSocial.trim().length >= 3 && cnpj.replace(/\D/g, '').length === 14 && responsavel.trim().length >= 3;
-  const podeAvancar = (passo === 0 && validEmpresa && !!procuracao) || (passo === 1 && resultado !== '');
+  const podeAvancar = passo === 0 || (passo === 1 && resultado !== '');
 
   const registrar = (r: 'identificado' | 'nao') => { onRegistrar(multa.auto, r); setEnviado(true); };
   const avancar = () => {
@@ -251,28 +231,16 @@ function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Mul
                 <button type="button" onClick={() => baixarProcuracao(multa)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary-200 bg-primary-50 py-2.5 text-[13px] font-semibold text-primary-700 hover:bg-primary-100">
                   <FileDown size={16} /> Baixar modelo de procuração
                 </button>
-                <div>
-                  <label className={label}><span className="text-primary-600">*</span>Procuração assinada</label>
-                  <UploadDoc file={procuracao} onFile={setProcuracao} icon={<FileSignature size={17} />} titulo="Anexar procuração assinada" dica="PDF, imagem ou Word" />
-                </div>
-                <div className="border-t border-slate-100 pt-3">
-                  <p className="mb-2 text-[13px] font-bold text-slate-700">Dados da empresa / proprietário</p>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className={label}><span className="text-primary-600">*</span>Razão social</label>
-                        <input value={razaoSocial} onChange={(e) => setRazaoSocial(e.target.value)} className={inputCls} autoComplete="off" />
-                      </div>
-                      <div>
-                        <label className={label}><span className="text-primary-600">*</span>CNPJ</label>
-                        <input value={cnpj} onChange={(e) => setCnpj(e.target.value)} className={`${inputCls} font-mono`} inputMode="numeric" autoComplete="off" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className={label}><span className="text-primary-600">*</span>Responsável pela indicação</label>
-                      <input value={responsavel} onChange={(e) => setResponsavel(e.target.value)} placeholder="Nome do responsável" className={inputCls} autoComplete="off" />
-                    </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50/60">
+                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
+                    <p className="text-[13px] font-bold text-slate-700">Dados da empresa / proprietário</p>
+                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-500">via PDV</span>
                   </div>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-3 text-[13px]">
+                    <div><dt className="text-[11px] text-slate-400">Razão social</dt><dd className="font-semibold text-slate-800">{empresa.razaoSocial}</dd></div>
+                    <div><dt className="text-[11px] text-slate-400">CNPJ</dt><dd className="font-mono text-slate-700">{empresa.cnpj}</dd></div>
+                    <div className="col-span-2"><dt className="text-[11px] text-slate-400">Responsável</dt><dd className="font-semibold text-slate-800">{empresa.responsavel}</dd></div>
+                  </dl>
                 </div>
               </div>
             )}
@@ -283,10 +251,9 @@ function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Mul
                 <div className="rounded-lg border border-slate-200">
                   <div className="border-b border-slate-100 px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-500">Empresa / proprietário</div>
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-3">
-                    <div><dt className="text-[11px] text-slate-400">Razão social</dt><dd className="font-semibold text-slate-800">{razaoSocial}</dd></div>
-                    <div><dt className="text-[11px] text-slate-400">CNPJ</dt><dd className="font-mono text-slate-700">{cnpj}</dd></div>
-                    <div><dt className="text-[11px] text-slate-400">Responsável</dt><dd className="font-semibold text-slate-800">{responsavel}</dd></div>
-                    <div><dt className="text-[11px] text-slate-400">Procuração</dt><dd className="font-semibold text-emerald-700">Anexada</dd></div>
+                    <div><dt className="text-[11px] text-slate-400">Razão social</dt><dd className="font-semibold text-slate-800">{empresa.razaoSocial}</dd></div>
+                    <div><dt className="text-[11px] text-slate-400">CNPJ</dt><dd className="font-mono text-slate-700">{empresa.cnpj}</dd></div>
+                    <div className="col-span-2"><dt className="text-[11px] text-slate-400">Responsável</dt><dd className="font-semibold text-slate-800">{empresa.responsavel}</dd></div>
                   </dl>
                 </div>
                 {blocoPergunta}
