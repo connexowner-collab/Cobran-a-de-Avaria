@@ -1,7 +1,10 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
-import { ChevronRight, Download, UserCheck, Clock, X, Upload, Check, IdCard } from 'lucide-react';
+import {
+  ChevronRight, Download, UserCheck, Clock, X, Check, IdCard,
+  FileSignature, FileDown, Bell, ArrowLeft, ArrowRight,
+} from 'lucide-react';
 import { MULTAS, VEICULOS, type Multa } from '@/lib/portalData';
 import {
   PageTitle, StatusBadge, KpiCard, KpiRow, FilterChip, Toolbar,
@@ -64,24 +67,115 @@ function fmtBRL(n: number): string {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+/** Classifica o prazo de identificação em semáforo (para o KPI). */
+function bucketPrazo(prazo?: string): 'vermelho' | 'amarelo' | 'verde' | null {
+  const p = prazo ? parseBR(prazo) : null;
+  if (!p) return null;
+  const dias = diasEntre(HOJE, p);
+  if (dias <= 0) return 'vermelho';
+  if (dias <= 7) return 'amarelo';
+  return 'verde';
+}
+
+const CATEGORIAS_CNH = ['A', 'B', 'C', 'D', 'E', 'AB', 'AC', 'AD', 'AE'];
+
+/** Gera e baixa um modelo de procuração (.doc editável) pré-preenchido com os dados da multa. */
+function baixarProcuracao(m: Multa) {
+  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Procuração - ${m.auto}</title>
+<style>body{font-family:Arial,Helvetica,sans-serif;font-size:12pt;line-height:1.7;margin:2.5cm}h1{text-align:center;font-size:14pt;margin-bottom:24px}.linha{margin-top:22px}.ass{margin-top:52px}</style></head>
+<body>
+<h1>PROCURAÇÃO PARA INDICAÇÃO DE CONDUTOR</h1>
+<p>Pelo presente instrumento particular, o(a) <b>OUTORGANTE</b> (proprietário(a)/possuidor(a) do veículo de placa <b>${m.placa}</b>) nomeia e constitui seu bastante procurador(a) o(a) <b>OUTORGADO(A)</b> abaixo qualificado(a), condutor(a) responsável pela infração de trânsito registrada no Auto de Infração <b>${m.auto}</b> — ${m.infracao}, ocorrida em <b>${m.data}</b>, no local ${m.local} — com poderes específicos para assumir a responsabilidade pela referida infração e assinar o formulário de identificação do condutor junto ao órgão autuador.</p>
+<p class="linha"><b>OUTORGANTE (empresa / proprietário):</b><br>Nome / Razão social: ____________________________________________<br>CNPJ / CPF: ______________________________</p>
+<p class="linha"><b>OUTORGADO (condutor responsável):</b><br>Nome: ____________________________________________<br>CPF: ____________________&nbsp;&nbsp;CNH nº: ____________________&nbsp;&nbsp;Categoria: ______</p>
+<p class="linha">Local e data: ______________________________, ______ / ______ / __________.</p>
+<p class="ass">_________________________________________<br>Assinatura do OUTORGANTE</p>
+<p class="ass">_________________________________________<br>Assinatura do OUTORGADO (condutor)</p>
+</body></html>`;
+  const blob = new Blob(['﻿', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Procuracao-${m.auto}.doc`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/* Área de upload compacta e reutilizável. */
+function UploadDoc({ file, onFile, icon, titulo, dica }: { file: File | null; onFile: (f: File | null) => void; icon: React.ReactNode; titulo: string; dica: string }) {
+  return (
+    <label className="group flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/60 px-4 py-5 text-center transition hover:border-primary-400 hover:bg-primary-50/40">
+      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition group-hover:text-primary-600">
+        {file ? <Check size={17} className="text-emerald-600" /> : icon}
+      </span>
+      <span className="text-[13px] font-semibold text-slate-600">{file ? file.name : titulo}</span>
+      <span className="text-[11px] text-slate-400">{dica}</span>
+      <input type="file" accept="image/*,application/pdf,.doc,.docx" className="hidden" onChange={(e) => onFile(e.target.files?.[0] ?? null)} />
+    </label>
+  );
+}
+
 /* ------------------------------------------------------------------ *
- * Modal de identificação do condutor (dados obrigatórios + foto da CNH).
+ * Wizard de identificação do condutor: passo a passo + procuração + envio.
  * ------------------------------------------------------------------ */
-function ModalIdentificarCondutor({ multa, onFechar }: { multa: Multa; onFechar: () => void }) {
+const PASSOS_IDENT = ['Condutor', 'Documentos', 'Revisão'];
+
+function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Multa; onFechar: () => void; onRegistrar: (auto: string, resultado: 'identificado' | 'nao') => void }) {
+  const [passo, setPasso] = useState(0);
   const [nome, setNome] = useState('');
   const [cpf, setCpf] = useState('');
   const [cnh, setCnh] = useState('');
-  const [foto, setFoto] = useState<File | null>(null);
+  const [categoria, setCategoria] = useState('');
+  const [fotoCnh, setFotoCnh] = useState<File | null>(null);
+  const [procuracao, setProcuracao] = useState<File | null>(null);
+  const [resultado, setResultado] = useState<'' | 'identificado' | 'nao'>('');
+  const [motivoNao, setMotivoNao] = useState('');
   const [enviado, setEnviado] = useState(false);
   const sla = slaIdentificacao(multa.prazoIdentificacao);
+  const prazoVencido = !!sla && !sla.liberado;
+  const protocolo = `ID-${multa.auto.replace(/\D/g, '').slice(-6)}-${new Date().getFullYear()}`;
 
   const inputCls = 'input-field w-full py-2.5 text-[13px]';
   const label = 'mb-1 block text-[13px] font-semibold text-slate-600';
-  const podeEnviar = nome.trim().length >= 5 && cpf.replace(/\D/g, '').length === 11 && cnh.replace(/\D/g, '').length >= 9 && !!foto;
+
+  const validCondutor = nome.trim().length >= 5 && cpf.replace(/\D/g, '').length === 11 && cnh.replace(/\D/g, '').length >= 9 && !!categoria;
+  const validDocs = !!fotoCnh && !!procuracao;
+  const podeAvancar = (passo === 0 && validCondutor) || (passo === 1 && validDocs) || (passo === 2 && resultado !== '');
+
+  const registrar = (r: 'identificado' | 'nao') => { onRegistrar(multa.auto, r); setEnviado(true); };
+  const avancar = () => {
+    if (passo === 2) { if (resultado) registrar(resultado); return; }
+    setPasso((p) => p + 1);
+  };
+
+  /* Pergunta final (reutilizada no fluxo normal e no caso de prazo vencido). */
+  const blocoPergunta = (
+    <div>
+      <p className="mb-2 text-[13px] font-semibold text-slate-700">O condutor foi identificado?</p>
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => setResultado('identificado')} className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-[13px] font-semibold transition ${resultado === 'identificado' ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+          <UserCheck size={16} /> Sim, identificado
+        </button>
+        <button type="button" onClick={() => setResultado('nao')} className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-[13px] font-semibold transition ${resultado === 'nao' ? 'border-slate-400 bg-slate-100 text-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+          <X size={16} /> Não identificado
+        </button>
+      </div>
+      {resultado === 'nao' && (
+        <div className="mt-3 space-y-2">
+          <div className="rounded-lg bg-amber-50 px-3.5 py-2.5 text-[12px] text-amber-900">
+            O proprietário/empresa assume a infração — pontos e pagamento seguem no veículo. A ação fica registrada no histórico.
+          </div>
+          <textarea value={motivoNao} onChange={(e) => setMotivoNao(e.target.value)} placeholder="Motivo (opcional): condutor não localizado, veículo compartilhado…" className="input-field w-full py-2.5 text-[13px]" rows={2} />
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <p className="font-mono text-xs font-semibold text-slate-500">{multa.auto} · {multa.placa}</p>
@@ -93,59 +187,137 @@ function ModalIdentificarCondutor({ multa, onFechar }: { multa: Multa; onFechar:
 
         {enviado ? (
           <div className="flex flex-col items-center py-8 text-center">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check size={28} /></span>
-            <h4 className="mt-4 text-base font-extrabold text-slate-900">Condutor identificado!</h4>
-            <p className="mt-1 max-w-xs text-sm text-slate-500">
-              A identificação de <b>{nome}</b> para a multa <b className="font-mono">{multa.auto}</b> foi enviada ao órgão autuador. Você receberá a confirmação em breve.
-            </p>
+            {resultado === 'nao' ? (
+              <>
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-600"><X size={26} /></span>
+                <h4 className="mt-4 text-base font-extrabold text-slate-900">Registrado: condutor não identificado</h4>
+                <p className="mt-1 max-w-sm text-sm text-slate-500">
+                  A multa <b className="font-mono">{multa.auto}</b> permanece de responsabilidade do proprietário/empresa — pontuação e pagamento seguem no veículo. Registro adicionado ao histórico.
+                </p>
+              </>
+            ) : (
+              <>
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check size={28} /></span>
+                <h4 className="mt-4 text-base font-extrabold text-slate-900">Condutor identificado!</h4>
+                <p className="mt-1 max-w-sm text-sm text-slate-500">
+                  A identificação {nome ? <>de <b>{nome}</b> </> : ''}para a multa <b className="font-mono">{multa.auto}</b> foi registrada. Registro adicionado ao histórico.
+                </p>
+              </>
+            )}
+            <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 font-mono text-[13px] font-bold text-slate-700">Protocolo: {protocolo}</p>
             <button className="btn-secondary mt-6 text-[13px]" onClick={onFechar}>Fechar</button>
+          </div>
+        ) : prazoVencido ? (
+          /* Prazo vencido: só a pergunta, sem o wizard */
+          <div className="space-y-3">
+            <div className="rounded-lg bg-rose-50 px-3.5 py-2.5 text-[12px] font-semibold text-rose-700">
+              <Clock size={14} className="mr-1 inline" />Prazo de identificação encerrado ({multa.prazoIdentificacao}). Não é mais possível indicar o condutor ao órgão — registre o desfecho:
+            </div>
+            {blocoPergunta}
+            <div className="mt-5 flex justify-between gap-2 border-t border-slate-100 pt-4">
+              <button type="button" onClick={onFechar} className="btn-secondary text-[13px]">Cancelar</button>
+              <button type="button" onClick={() => resultado && registrar(resultado)} disabled={!resultado} className="btn-primary gap-1.5 text-[13px]"><Check size={15} /> Registrar</button>
+            </div>
           </div>
         ) : (
           <>
+            {/* Prazo */}
             {sla && (
-              <div className={`mb-4 flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-[12px] font-semibold ${sla.liberado ? 'bg-amber-50 text-amber-800' : 'bg-rose-50 text-rose-700'}`}>
+              <div className={`mb-4 flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-[12px] font-semibold ${bucketPrazo(multa.prazoIdentificacao) === 'amarelo' ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-800'}`}>
                 <Clock size={15} /> Prazo para identificação: <b>{multa.prazoIdentificacao}</b> · {sla.label}
               </div>
             )}
-            <form
-              onSubmit={(e) => { e.preventDefault(); if (podeEnviar) setEnviado(true); }}
-              className="space-y-3"
-            >
-              <div>
-                <label className={label}><span className="text-primary-600">*</span>Nome completo</label>
-                <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome completo do condutor" className={inputCls} autoComplete="off" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+
+            {/* Stepper */}
+            <div className="mb-5 flex items-center gap-2">
+              {PASSOS_IDENT.map((p, i) => (
+                <div key={p} className="flex items-center gap-2">
+                  <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ${i < passo ? 'bg-emerald-500 text-white' : i === passo ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                    {i < passo ? <Check size={12} /> : i + 1}
+                  </span>
+                  <span className={`text-[12px] font-semibold ${i === passo ? 'text-slate-900' : 'text-slate-400'}`}>{p}</span>
+                  {i < PASSOS_IDENT.length - 1 && <span className="h-px w-6 bg-slate-200" />}
+                </div>
+              ))}
+            </div>
+
+            {/* Passo 1 — Condutor */}
+            {passo === 0 && (
+              <div className="space-y-3">
                 <div>
-                  <label className={label}><span className="text-primary-600">*</span>CPF</label>
-                  <input value={cpf} onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))} placeholder="Somente números" inputMode="numeric" className={`${inputCls} font-mono`} autoComplete="off" />
+                  <label className={label}><span className="text-primary-600">*</span>Nome completo</label>
+                  <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome completo do condutor" className={inputCls} autoComplete="off" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={label}><span className="text-primary-600">*</span>CPF</label>
+                    <input value={cpf} onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))} placeholder="Somente números" inputMode="numeric" className={`${inputCls} font-mono`} autoComplete="off" />
+                  </div>
+                  <div>
+                    <label className={label}><span className="text-primary-600">*</span>Categoria</label>
+                    <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className={inputCls}>
+                      <option value="">Selecione</option>
+                      {CATEGORIAS_CNH.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className={label}><span className="text-primary-600">*</span>Nº da CNH</label>
                   <input value={cnh} onChange={(e) => setCnh(e.target.value.replace(/\D/g, '').slice(0, 11))} placeholder="Registro da CNH" inputMode="numeric" className={`${inputCls} font-mono`} autoComplete="off" />
                 </div>
               </div>
-              <div>
-                <label className={label}><span className="text-primary-600">*</span>Foto da CNH</label>
-                <label className="group flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/60 px-4 py-5 text-center transition hover:border-primary-400 hover:bg-primary-50/40">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition group-hover:text-primary-600">
-                    {foto ? <IdCard size={17} /> : <Upload size={17} />}
-                  </span>
-                  <span className="text-[13px] font-semibold text-slate-600">{foto ? foto.name : 'Anexar foto da CNH'}</span>
-                  <span className="text-[11px] text-slate-400">Frente da CNH legível (JPG, PNG)</span>
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => setFoto(e.target.files?.[0] ?? null)} />
-                </label>
-              </div>
+            )}
 
-              <div className="flex items-start gap-2 rounded-lg bg-sky-50 px-3.5 py-2.5 text-[12px] text-sky-800">
-                <IdCard size={15} className="mt-0.5 shrink-0 text-sky-500" />
-                <p>Confirme os dados do condutor responsável pela infração. A identificação é enviada ao órgão autuador dentro do prazo legal.</p>
+            {/* Passo 2 — Documentos (procuração + CNH) */}
+            {passo === 1 && (
+              <div className="space-y-3">
+                <div className="rounded-lg bg-sky-50 px-3.5 py-3 text-[12px] text-sky-900">
+                  <p className="mb-1 font-bold">Como fazer a indicação:</p>
+                  <ol className="ml-4 list-decimal space-y-0.5">
+                    <li>Baixe o modelo de procuração já preenchido com os dados da multa.</li>
+                    <li>Preencha os dados e colha a assinatura do proprietário e do condutor.</li>
+                    <li>Anexe a procuração assinada e a foto da CNH do condutor.</li>
+                  </ol>
+                </div>
+                <button type="button" onClick={() => baixarProcuracao(multa)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary-200 bg-primary-50 py-2.5 text-[13px] font-semibold text-primary-700 hover:bg-primary-100">
+                  <FileDown size={16} /> Baixar modelo de procuração
+                </button>
+                <div>
+                  <label className={label}><span className="text-primary-600">*</span>Procuração assinada</label>
+                  <UploadDoc file={procuracao} onFile={setProcuracao} icon={<FileSignature size={17} />} titulo="Anexar procuração assinada" dica="PDF, imagem ou Word" />
+                </div>
+                <div>
+                  <label className={label}><span className="text-primary-600">*</span>Foto da CNH do condutor</label>
+                  <UploadDoc file={fotoCnh} onFile={setFotoCnh} icon={<IdCard size={17} />} titulo="Anexar foto da CNH" dica="Frente da CNH legível (JPG, PNG)" />
+                </div>
               </div>
+            )}
 
-              <button type="submit" disabled={!podeEnviar} className="btn-primary w-full gap-1.5 py-2.5 text-[13px]">
-                <UserCheck size={15} /> Enviar identificação
+            {/* Passo 3 — Revisão + pergunta final */}
+            {passo === 2 && (
+              <div className="space-y-4 text-[13px]">
+                <div className="rounded-lg border border-slate-200">
+                  <div className="border-b border-slate-100 px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-500">Condutor</div>
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-3">
+                    <div><dt className="text-[11px] text-slate-400">Nome</dt><dd className="font-semibold text-slate-800">{nome}</dd></div>
+                    <div><dt className="text-[11px] text-slate-400">CPF</dt><dd className="font-mono text-slate-700">{cpf}</dd></div>
+                    <div><dt className="text-[11px] text-slate-400">CNH</dt><dd className="font-mono text-slate-700">{cnh} · cat. {categoria}</dd></div>
+                    <div><dt className="text-[11px] text-slate-400">Documentos</dt><dd className="font-semibold text-emerald-700">Procuração + CNH anexadas</dd></div>
+                  </dl>
+                </div>
+                {blocoPergunta}
+              </div>
+            )}
+
+            {/* Rodapé */}
+            <div className="mt-5 flex justify-between gap-2 border-t border-slate-100 pt-4">
+              <button type="button" onClick={() => (passo === 0 ? onFechar() : setPasso((p) => p - 1))} className="btn-secondary gap-1.5 text-[13px]">
+                {passo === 0 ? 'Cancelar' : <><ArrowLeft size={14} /> Voltar</>}
               </button>
-            </form>
+              <button type="button" onClick={avancar} disabled={!podeAvancar} className="btn-primary gap-1.5 text-[13px]">
+                {passo === 2 ? (resultado === 'nao' ? <><Check size={15} /> Registrar</> : <><UserCheck size={15} /> Enviar identificação</>) : <>Continuar <ArrowRight size={14} /></>}
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -158,6 +330,8 @@ export default function MultasPage() {
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [identificar, setIdentificar] = useState<Multa | null>(null);
+  /** Histórico de desfecho por multa (identificado / não identificado). */
+  const [registros, setRegistros] = useState<Record<string, 'identificado' | 'nao'>>({});
 
   // Agrupamento acumulado por placa — a visão principal desta tela.
   const porPlacaBase = useMemo(() => {
@@ -230,6 +404,14 @@ export default function MultasPage() {
   const valorTotal = MULTAS.reduce((s, m) => s + valorNum(m.valor), 0);
   const placasComMulta = porPlacaBase.length;
   const aguardandoIdent = MULTAS.filter((m) => m.status === 'aguardando_identificacao').length;
+  const identSemaforo = useMemo(() => {
+    const cont = { vermelho: 0, amarelo: 0, verde: 0 };
+    MULTAS.filter((m) => m.status === 'aguardando_identificacao').forEach((m) => {
+      const b = bucketPrazo(m.prazoIdentificacao);
+      if (b) cont[b] += 1;
+    });
+    return cont;
+  }, []);
 
   const todasSelecionadas = linhasFiltradas.length > 0 && linhasFiltradas.every((m) => selecionados.has(m.auto));
   const toggleTodas = () => {
@@ -264,6 +446,34 @@ export default function MultasPage() {
         <KpiCard label="Valor total" valor={fmtBRL(valorTotal)} detalhe="todas as multas" cor="border-l-primary-600" detalheCor="text-primary-700" />
         <KpiCard label="Placas com multas" valor={String(placasComMulta)} detalhe={`de ${VEICULOS.length} veículos na frota`} cor="border-l-sky-600" />
       </KpiRow>
+
+      {/* KPI semáforo — prazos de identificação do condutor */}
+      {aguardandoIdent > 0 && (
+        <div className="card mb-6 overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-indigo-50/60 px-5 py-3">
+            <div className="flex items-center gap-2">
+              <UserCheck size={16} className="text-indigo-600" />
+              <span className="text-[13px] font-bold text-slate-800">Identificação de condutor — acompanhe os prazos</span>
+            </div>
+            <span className="flex items-center gap-1.5 text-[11px] text-slate-500">
+              <Bell size={13} className="text-amber-500" /> Enviamos lembretes automáticos conforme o prazo se aproxima
+            </span>
+          </div>
+          <div className="grid grid-cols-3 divide-x divide-slate-100">
+            {([
+              { k: 'vermelho', label: 'Urgente', sub: 'vencidas ou vence hoje', dot: 'bg-rose-500', txt: 'text-rose-600', n: identSemaforo.vermelho },
+              { k: 'amarelo', label: 'Prazo próximo', sub: 'até 7 dias', dot: 'bg-amber-500', txt: 'text-amber-600', n: identSemaforo.amarelo },
+              { k: 'verde', label: 'No prazo', sub: 'mais de 7 dias', dot: 'bg-emerald-500', txt: 'text-emerald-600', n: identSemaforo.verde },
+            ] as const).map((s) => (
+              <button key={s.k} onClick={() => setFiltro('aguardando_identificacao')} className="flex flex-col items-start gap-1 px-5 py-4 text-left transition hover:bg-slate-50">
+                <span className="flex items-center gap-2 text-[12px] font-semibold text-slate-500"><i className={`h-2.5 w-2.5 rounded-full ${s.dot}`} /> {s.label}</span>
+                <span className={`text-3xl font-extrabold ${s.txt}`}>{s.n}</span>
+                <span className="text-[11px] text-slate-400">{s.sub}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Ranking fixo (top 5) — não cresce com o tamanho da frota. Para achar qualquer outra placa, use a busca abaixo. */}
       <SectionCard
@@ -446,23 +656,31 @@ export default function MultasPage() {
                     <td className="px-4 py-3">
                       <StatusBadge status={m.status} label={STATUS_LABEL[m.status]} />
                       {m.status === 'aguardando_identificacao' && (() => {
+                        const reg = registros[m.auto];
+                        if (reg) {
+                          return (
+                            <p className={`mt-1 flex items-center gap-1 text-[11px] font-bold ${reg === 'identificado' ? 'text-emerald-600' : 'text-slate-500'}`}>
+                              {reg === 'identificado' ? <><Check size={11} /> Condutor identificado</> : <><X size={11} /> Não identificado (registrado)</>}
+                            </p>
+                          );
+                        }
                         const sla = slaIdentificacao(m.prazoIdentificacao);
                         return sla ? <p className={`mt-1 flex items-center gap-1 text-[11px] font-bold ${sla.cls}`}><Clock size={11} /> {sla.label}</p> : null;
                       })()}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1.5">
-                        {m.status === 'aguardando_identificacao' && (() => {
+                        {m.status === 'aguardando_identificacao' && !registros[m.auto] && (() => {
                           const sla = slaIdentificacao(m.prazoIdentificacao);
+                          const vencido = sla ? !sla.liberado : false;
                           return (
                             <button
                               type="button"
                               onClick={() => setIdentificar(m)}
-                              disabled={!sla?.liberado}
-                              title={sla?.liberado ? 'Identificar condutor' : 'Prazo de identificação encerrado'}
+                              title={vencido ? 'Prazo encerrado — registrar desfecho' : 'Identificar condutor'}
                               className="btn-primary gap-1.5 px-3 py-1.5 text-xs"
                             >
-                              <UserCheck size={13} /> Identificar condutor
+                              <UserCheck size={13} /> {vencido ? 'Registrar desfecho' : 'Identificar condutor'}
                             </button>
                           );
                         })()}
@@ -478,7 +696,13 @@ export default function MultasPage() {
         })}
       </DataTable>
 
-      {identificar && <ModalIdentificarCondutor multa={identificar} onFechar={() => setIdentificar(null)} />}
+      {identificar && (
+        <ModalIdentificarCondutor
+          multa={identificar}
+          onFechar={() => setIdentificar(null)}
+          onRegistrar={(auto, r) => setRegistros((prev) => ({ ...prev, [auto]: r }))}
+        />
+      )}
     </div>
   );
 }
