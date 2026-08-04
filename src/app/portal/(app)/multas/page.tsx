@@ -516,7 +516,12 @@ export default function MultasPage() {
 
       <Toolbar>
         {FILTROS.map((f) => (
-          <FilterChip key={f.key} label={f.label} active={filtro === f.key} onClick={() => setFiltro(f.key)} />
+          <FilterChip
+            key={f.key}
+            label={f.label}
+            active={filtro === f.key}
+            onClick={() => setFiltro((atual) => (atual === f.key ? 'todos' : f.key))}
+          />
         ))}
       </Toolbar>
 
