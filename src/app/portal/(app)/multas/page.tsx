@@ -2,7 +2,7 @@
 
 import { Fragment, useMemo, useState } from 'react';
 import {
-  ChevronRight, Download, UserCheck, Clock, X, Check, IdCard,
+  ChevronRight, Download, UserCheck, Clock, X, Check,
   FileSignature, FileDown, Bell, ArrowLeft, ArrowRight,
 } from 'lucide-react';
 import { MULTAS, VEICULOS, type Multa } from '@/lib/portalData';
@@ -77,8 +77,6 @@ function bucketPrazo(prazo?: string): 'vermelho' | 'amarelo' | 'verde' | null {
   return 'verde';
 }
 
-const CATEGORIAS_CNH = ['A', 'B', 'C', 'D', 'E', 'AB', 'AC', 'AD', 'AE'];
-
 /** Gera e baixa um modelo de procuração (.doc editável) pré-preenchido com os dados da multa. */
 function baixarProcuracao(m: Multa) {
   const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Procuração - ${m.auto}</title>
@@ -120,15 +118,14 @@ function UploadDoc({ file, onFile, icon, titulo, dica }: { file: File | null; on
 /* ------------------------------------------------------------------ *
  * Wizard de identificação do condutor: passo a passo + procuração + envio.
  * ------------------------------------------------------------------ */
-const PASSOS_IDENT = ['Condutor', 'Documentos', 'Revisão'];
+const PASSOS_IDENT = ['Procuração', 'Revisão'];
 
 function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Multa; onFechar: () => void; onRegistrar: (auto: string, resultado: 'identificado' | 'nao') => void }) {
   const [passo, setPasso] = useState(0);
-  const [nome, setNome] = useState('');
-  const [cpf, setCpf] = useState('');
-  const [cnh, setCnh] = useState('');
-  const [categoria, setCategoria] = useState('');
-  const [fotoCnh, setFotoCnh] = useState<File | null>(null);
+  // Dados da empresa/proprietário (o condutor é identificado na própria procuração).
+  const [razaoSocial, setRazaoSocial] = useState('Vamos Locação S.A.');
+  const [cnpj, setCnpj] = useState('12.345.678/0001-90');
+  const [responsavel, setResponsavel] = useState('');
   const [procuracao, setProcuracao] = useState<File | null>(null);
   const [resultado, setResultado] = useState<'' | 'identificado' | 'nao'>('');
   const [motivoNao, setMotivoNao] = useState('');
@@ -140,13 +137,12 @@ function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Mul
   const inputCls = 'input-field w-full py-2.5 text-[13px]';
   const label = 'mb-1 block text-[13px] font-semibold text-slate-600';
 
-  const validCondutor = nome.trim().length >= 5 && cpf.replace(/\D/g, '').length === 11 && cnh.replace(/\D/g, '').length >= 9 && !!categoria;
-  const validDocs = !!fotoCnh && !!procuracao;
-  const podeAvancar = (passo === 0 && validCondutor) || (passo === 1 && validDocs) || (passo === 2 && resultado !== '');
+  const validEmpresa = razaoSocial.trim().length >= 3 && cnpj.replace(/\D/g, '').length === 14 && responsavel.trim().length >= 3;
+  const podeAvancar = (passo === 0 && validEmpresa && !!procuracao) || (passo === 1 && resultado !== '');
 
   const registrar = (r: 'identificado' | 'nao') => { onRegistrar(multa.auto, r); setEnviado(true); };
   const avancar = () => {
-    if (passo === 2) { if (resultado) registrar(resultado); return; }
+    if (passo === 1) { if (resultado) registrar(resultado); return; }
     setPasso((p) => p + 1);
   };
 
@@ -200,7 +196,7 @@ function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Mul
                 <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check size={28} /></span>
                 <h4 className="mt-4 text-base font-extrabold text-slate-900">Condutor identificado!</h4>
                 <p className="mt-1 max-w-sm text-sm text-slate-500">
-                  A identificação {nome ? <>de <b>{nome}</b> </> : ''}para a multa <b className="font-mono">{multa.auto}</b> foi registrada. Registro adicionado ao histórico.
+                  A indicação de condutor (via procuração) para a multa <b className="font-mono">{multa.auto}</b> foi registrada. Registro adicionado ao histórico.
                 </p>
               </>
             )}
@@ -241,42 +237,15 @@ function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Mul
               ))}
             </div>
 
-            {/* Passo 1 — Condutor */}
+            {/* Passo 1 — Procuração + dados da empresa */}
             {passo === 0 && (
-              <div className="space-y-3">
-                <div>
-                  <label className={label}><span className="text-primary-600">*</span>Nome completo</label>
-                  <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome completo do condutor" className={inputCls} autoComplete="off" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={label}><span className="text-primary-600">*</span>CPF</label>
-                    <input value={cpf} onChange={(e) => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))} placeholder="Somente números" inputMode="numeric" className={`${inputCls} font-mono`} autoComplete="off" />
-                  </div>
-                  <div>
-                    <label className={label}><span className="text-primary-600">*</span>Categoria</label>
-                    <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className={inputCls}>
-                      <option value="">Selecione</option>
-                      {CATEGORIAS_CNH.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className={label}><span className="text-primary-600">*</span>Nº da CNH</label>
-                  <input value={cnh} onChange={(e) => setCnh(e.target.value.replace(/\D/g, '').slice(0, 11))} placeholder="Registro da CNH" inputMode="numeric" className={`${inputCls} font-mono`} autoComplete="off" />
-                </div>
-              </div>
-            )}
-
-            {/* Passo 2 — Documentos (procuração + CNH) */}
-            {passo === 1 && (
               <div className="space-y-3">
                 <div className="rounded-lg bg-sky-50 px-3.5 py-3 text-[12px] text-sky-900">
                   <p className="mb-1 font-bold">Como fazer a indicação:</p>
                   <ol className="ml-4 list-decimal space-y-0.5">
                     <li>Baixe o modelo de procuração já preenchido com os dados da multa.</li>
-                    <li>Preencha os dados e colha a assinatura do proprietário e do condutor.</li>
-                    <li>Anexe a procuração assinada e a foto da CNH do condutor.</li>
+                    <li>Preencha os dados do condutor no documento e colha as assinaturas.</li>
+                    <li>Anexe a procuração assinada.</li>
                   </ol>
                 </div>
                 <button type="button" onClick={() => baixarProcuracao(multa)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary-200 bg-primary-50 py-2.5 text-[13px] font-semibold text-primary-700 hover:bg-primary-100">
@@ -286,23 +255,38 @@ function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Mul
                   <label className={label}><span className="text-primary-600">*</span>Procuração assinada</label>
                   <UploadDoc file={procuracao} onFile={setProcuracao} icon={<FileSignature size={17} />} titulo="Anexar procuração assinada" dica="PDF, imagem ou Word" />
                 </div>
-                <div>
-                  <label className={label}><span className="text-primary-600">*</span>Foto da CNH do condutor</label>
-                  <UploadDoc file={fotoCnh} onFile={setFotoCnh} icon={<IdCard size={17} />} titulo="Anexar foto da CNH" dica="Frente da CNH legível (JPG, PNG)" />
+                <div className="border-t border-slate-100 pt-3">
+                  <p className="mb-2 text-[13px] font-bold text-slate-700">Dados da empresa / proprietário</p>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={label}><span className="text-primary-600">*</span>Razão social</label>
+                        <input value={razaoSocial} onChange={(e) => setRazaoSocial(e.target.value)} className={inputCls} autoComplete="off" />
+                      </div>
+                      <div>
+                        <label className={label}><span className="text-primary-600">*</span>CNPJ</label>
+                        <input value={cnpj} onChange={(e) => setCnpj(e.target.value)} className={`${inputCls} font-mono`} inputMode="numeric" autoComplete="off" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={label}><span className="text-primary-600">*</span>Responsável pela indicação</label>
+                      <input value={responsavel} onChange={(e) => setResponsavel(e.target.value)} placeholder="Nome do responsável" className={inputCls} autoComplete="off" />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Passo 3 — Revisão + pergunta final */}
-            {passo === 2 && (
+            {/* Passo 2 — Revisão + pergunta final */}
+            {passo === 1 && (
               <div className="space-y-4 text-[13px]">
                 <div className="rounded-lg border border-slate-200">
-                  <div className="border-b border-slate-100 px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-500">Condutor</div>
+                  <div className="border-b border-slate-100 px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-500">Empresa / proprietário</div>
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-3">
-                    <div><dt className="text-[11px] text-slate-400">Nome</dt><dd className="font-semibold text-slate-800">{nome}</dd></div>
-                    <div><dt className="text-[11px] text-slate-400">CPF</dt><dd className="font-mono text-slate-700">{cpf}</dd></div>
-                    <div><dt className="text-[11px] text-slate-400">CNH</dt><dd className="font-mono text-slate-700">{cnh} · cat. {categoria}</dd></div>
-                    <div><dt className="text-[11px] text-slate-400">Documentos</dt><dd className="font-semibold text-emerald-700">Procuração + CNH anexadas</dd></div>
+                    <div><dt className="text-[11px] text-slate-400">Razão social</dt><dd className="font-semibold text-slate-800">{razaoSocial}</dd></div>
+                    <div><dt className="text-[11px] text-slate-400">CNPJ</dt><dd className="font-mono text-slate-700">{cnpj}</dd></div>
+                    <div><dt className="text-[11px] text-slate-400">Responsável</dt><dd className="font-semibold text-slate-800">{responsavel}</dd></div>
+                    <div><dt className="text-[11px] text-slate-400">Procuração</dt><dd className="font-semibold text-emerald-700">Anexada</dd></div>
                   </dl>
                 </div>
                 {blocoPergunta}
@@ -315,7 +299,7 @@ function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Mul
                 {passo === 0 ? 'Cancelar' : <><ArrowLeft size={14} /> Voltar</>}
               </button>
               <button type="button" onClick={avancar} disabled={!podeAvancar} className="btn-primary gap-1.5 text-[13px]">
-                {passo === 2 ? (resultado === 'nao' ? <><Check size={15} /> Registrar</> : <><UserCheck size={15} /> Enviar identificação</>) : <>Continuar <ArrowRight size={14} /></>}
+                {passo === 1 ? (resultado === 'nao' ? <><Check size={15} /> Registrar</> : <><UserCheck size={15} /> Enviar identificação</>) : <>Continuar <ArrowRight size={14} /></>}
               </button>
             </div>
           </>
