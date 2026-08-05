@@ -232,6 +232,74 @@ export interface Multa {
   prazoIdentificacao?: string;
 }
 
+/** Gera multas fictícias de forma determinística (sem aleatoriedade real, para não
+ *  causar divergência de hidratação entre servidor e cliente). Popula a tela com volume. */
+function gerarMultasMock(qtd: number): Multa[] {
+  let seed = 20260720;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  const pick = <T>(arr: readonly T[]): T => arr[Math.floor(rnd() * arr.length)];
+  const HOJE = new Date(2026, 6, 20);
+  const fmt = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  const addDias = (base: Date, dias: number) => { const d = new Date(base); d.setDate(d.getDate() + dias); return d; };
+
+  const placas = ['JBL5B25', 'JBL5B26', 'JBL5B27', 'SHQ6B80', 'DSA9924', 'JBL5E88', 'RTX4C12', 'MNT7D45'] as const;
+  const infracoes = [
+    { t: 'Excesso de velocidade até 20%', p: 4, v: 'R$ 130,16' },
+    { t: 'Excesso de velocidade de 20% a 50%', p: 5, v: 'R$ 195,23' },
+    { t: 'Avanço de sinal vermelho', p: 7, v: 'R$ 293,47' },
+    { t: 'Estacionar em local proibido', p: 4, v: 'R$ 195,23' },
+    { t: 'Uso de celular ao dirigir', p: 7, v: 'R$ 293,47' },
+    { t: 'Trafegar em faixa exclusiva de ônibus', p: 5, v: 'R$ 293,47' },
+    { t: 'Dirigir sem cinto de segurança', p: 5, v: 'R$ 195,23' },
+    { t: 'Parar sobre a faixa de pedestres', p: 5, v: 'R$ 195,23' },
+    { t: 'Estacionar em vaga PCD sem credencial', p: 7, v: 'R$ 293,47' },
+    { t: 'Velocidade superior à máxima em mais de 50%', p: 7, v: 'R$ 880,41' },
+  ] as const;
+  const locais = [
+    'Rod. Anhanguera, km 32 · Campinas/SP', 'Marginal Tietê · São Paulo/SP', 'Av. Paulista · São Paulo/SP',
+    'BR-116, km 214 · Registro/SP', 'Av. do Estado · São Paulo/SP', 'Rod. Castello Branco, km 60 · Sorocaba/SP',
+    'Av. Ipanema · Sorocaba/SP', 'Centro · Campinas/SP', 'Rod. Anhanguera, km 88 · Jundiaí/SP',
+    'Rod. dos Bandeirantes, km 40 · Jundiaí/SP', 'Av. Brasil · Rio de Janeiro/RJ', 'BR-101, km 210 · Curitiba/PR',
+  ] as const;
+  const statusPool = ['paga', 'paga', 'paga', 'paga', 'notificada', 'notificada', 'vencida', 'em_recurso'] as const;
+
+  const out: Multa[] = [];
+  for (let i = 0; i < qtd; i++) {
+    const inf = pick(infracoes);
+    const placa = pick(placas);
+    const local = pick(locais);
+    const dataInfracao = addDias(HOJE, -Math.floor(rnd() * 540));
+    let status: Multa['status'] = pick(statusPool);
+    if (rnd() < 0.1) status = 'aguardando_identificacao';
+
+    let prazo = '—';
+    let prazoIdentificacao: string | undefined;
+    if (status === 'aguardando_identificacao') {
+      const offset = Math.floor(rnd() * 50) - 10; // -10..+39 dias → semáforo vermelho/amarelo/verde
+      prazoIdentificacao = fmt(addDias(HOJE, offset));
+      prazo = fmt(addDias(HOJE, offset + 15));
+    } else if (status === 'vencida') {
+      prazo = fmt(addDias(dataInfracao, 30));
+    } else if (status !== 'paga') {
+      prazo = fmt(addDias(HOJE, 10 + Math.floor(rnd() * 60)));
+    }
+
+    out.push({
+      auto: `AIT-${700000 + i}`,
+      placa,
+      infracao: inf.t,
+      local,
+      data: fmt(dataInfracao),
+      valor: inf.v,
+      pontos: inf.p,
+      status,
+      prazo,
+      ...(prazoIdentificacao && { prazoIdentificacao }),
+    });
+  }
+  return out;
+}
+
 export const MULTAS: Multa[] = [
   { auto: 'AIT-559102', placa: 'SHQ6B80', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Anhanguera, km 32 · SP', data: '28/06/2026', valor: 'R$ 195,23', pontos: 4, status: 'aguardando_identificacao', prazo: '28/07/2026', prazoIdentificacao: '30/07/2026' },
   { auto: 'AIT-556310', placa: 'SHQ6B80', infracao: 'Avanço de sinal vermelho', local: 'Marginal Tietê · São Paulo', data: '02/06/2026', valor: 'R$ 293,47', pontos: 7, status: 'paga', prazo: '—' },
@@ -243,6 +311,7 @@ export const MULTAS: Multa[] = [
   { auto: 'AIT-534210', placa: 'JBL5B26', infracao: 'Estacionar em local proibido', local: 'Centro · Campinas', data: '02/05/2026', valor: 'R$ 195,23', pontos: 4, status: 'paga', prazo: '—' },
   { auto: 'AIT-521045', placa: 'JBL5B25', infracao: 'Uso de celular ao dirigir', local: 'Rod. Anhanguera, km 88 · Campinas', data: '18/03/2026', valor: 'R$ 293,47', pontos: 7, status: 'paga', prazo: '—' },
   { auto: 'AIT-560877', placa: 'RTX4C12', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Anhanguera, km 55 · Jundiaí', data: '05/07/2026', valor: 'R$ 195,23', pontos: 4, status: 'aguardando_identificacao', prazo: '05/08/2026', prazoIdentificacao: '22/07/2026' },
+  ...gerarMultasMock(200),
 ];
 
 export interface TelemetriaVeiculo {
