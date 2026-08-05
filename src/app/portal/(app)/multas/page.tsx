@@ -5,7 +5,7 @@ import {
   ChevronRight, Download, UserCheck, Clock, X, Check,
   FileDown, Bell,
 } from 'lucide-react';
-import { MULTAS, VEICULOS, type Multa } from '@/lib/portalData';
+import { MULTAS, VEICULOS, MULTAS_FROTA, modeloDaPlaca, type Multa } from '@/lib/portalData';
 import {
   PageTitle, StatusBadge, KpiCard, KpiRow, FilterChip, Toolbar,
   DataTable, Th, TablePagination, SectionCard, usePaginacao,
@@ -254,10 +254,9 @@ export default function MultasPage() {
     });
     return Array.from(grupos.entries())
       .map(([placa, multas]) => {
-        const veiculo = VEICULOS.find((v) => v.placa === placa);
         return {
           placa,
-          modelo: veiculo?.modelo ?? '—',
+          modelo: modeloDaPlaca(placa),
           qtd: multas.length,
           valor: multas.reduce((s, m) => s + valorNum(m.valor), 0),
           pontos: multas.reduce((s, m) => s + m.pontos, 0),
@@ -294,10 +293,9 @@ export default function MultasPage() {
     linhasFiltradas.forEach((m) => map.set(m.placa, [...(map.get(m.placa) ?? []), m]));
     return Array.from(map.entries())
       .map(([placa, multas]) => {
-        const veiculo = VEICULOS.find((v) => v.placa === placa);
         return {
           placa,
-          modelo: veiculo?.modelo ?? '—',
+          modelo: modeloDaPlaca(placa),
           multas,
           valor: multas.reduce((s, m) => s + valorNum(m.valor), 0),
           pontos: multas.reduce((s, m) => s + m.pontos, 0),
@@ -364,7 +362,7 @@ export default function MultasPage() {
         <KpiCard label="Total de multas" valor={String(totalMultas)} detalhe={`${placasComMulta} veículos envolvidos`} cor="border-l-[#0e2233]" />
         <KpiCard label="Aguardando identificação" valor={String(aguardandoIdent)} detalhe="condutor a identificar" cor="border-l-indigo-500" detalheCor="text-indigo-700" />
         <KpiCard label="Valor total" valor={fmtBRL(valorTotal)} detalhe="todas as multas" cor="border-l-primary-600" detalheCor="text-primary-700" />
-        <KpiCard label="Placas com multas" valor={String(placasComMulta)} detalhe={`de ${VEICULOS.length} veículos na frota`} cor="border-l-sky-600" />
+        <KpiCard label="Placas com multas" valor={String(placasComMulta)} detalhe={`de ${VEICULOS.length + MULTAS_FROTA.length} veículos na frota`} cor="border-l-sky-600" />
       </KpiRow>
 
       {/* KPI semáforo — prazos de identificação do condutor */}
@@ -527,7 +525,7 @@ export default function MultasPage() {
               {/* Linha agrupadora */}
               <tr
                 onClick={() => toggleExpandido(g.placa)}
-                className="cursor-pointer border-b border-slate-100 bg-slate-50/60 hover:bg-slate-100"
+                className={`cursor-pointer border-b border-slate-200 transition-colors ${aberto ? 'bg-primary-50 hover:bg-primary-100/70' : 'bg-slate-100 hover:bg-slate-200/70'}`}
               >
                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <input
@@ -572,8 +570,8 @@ export default function MultasPage() {
               {/* Multas do veículo (expansível) */}
               {aberto &&
                 g.multas.map((m) => (
-                  <tr key={m.auto} className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 ${selecionados.has(m.auto) ? 'bg-primary-50/30' : ''}`}>
-                    <td className="px-4 py-3">
+                  <tr key={m.auto} className={`border-b border-slate-100 bg-white last:border-0 hover:bg-slate-50 ${selecionados.has(m.auto) ? 'bg-primary-50/40' : ''}`}>
+                    <td className="border-l-[3px] border-l-primary-200 px-4 py-3">
                       <input
                         type="checkbox"
                         checked={selecionados.has(m.auto)}

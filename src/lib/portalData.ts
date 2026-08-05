@@ -232,17 +232,52 @@ export interface Multa {
   prazoIdentificacao?: string;
 }
 
-/** Gera multas fictícias de forma determinística (sem aleatoriedade real, para não
- *  causar divergência de hidratação entre servidor e cliente). Popula a tela com volume. */
-function gerarMultasMock(qtd: number): Multa[] {
-  let seed = 20260720;
-  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+/* Gerador determinístico compartilhado (sem aleatoriedade real → sem divergência de hidratação). */
+function criarRnd(seedInicial: number) {
+  let seed = seedInicial;
+  return () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+}
+
+const MODELOS_FROTA = [
+  'VW 11-180 Delivery', 'Mercedes Accelo 815', 'Volvo FH 460', 'Scania R 450', 'VW Constellation 24.280',
+  'Iveco Tector 11-190', 'Ford Cargo 1719', 'Volvo FMX 500', 'Scania P 320', 'Mercedes Atego 2426',
+  'JCB 3CX', 'Manitou MRT 2550',
+] as const;
+
+/** Frota fictícia adicional — ~200 ativos (placa + modelo) que possuem multas. */
+function gerarFrotaMulta(qtd: number): { placa: string; modelo: string }[] {
+  const rnd = criarRnd(777001);
+  const L = 'ABCDEFGHIJKLMNPQRSTUVWXYZ';
+  const pL = () => L[Math.floor(rnd() * L.length)];
+  const pD = () => Math.floor(rnd() * 10);
+  const usadas = new Set<string>();
+  const out: { placa: string; modelo: string }[] = [];
+  while (out.length < qtd) {
+    const placa = `${pL()}${pL()}${pL()}${pD()}${pL()}${pD()}${pD()}`;
+    if (usadas.has(placa)) continue;
+    usadas.add(placa);
+    out.push({ placa, modelo: MODELOS_FROTA[Math.floor(rnd() * MODELOS_FROTA.length)] });
+  }
+  return out;
+}
+
+export const MULTAS_FROTA = gerarFrotaMulta(200);
+
+/** Modelo de um veículo pela placa (frota real + frota gerada de multas). */
+export function modeloDaPlaca(placa: string): string {
+  return VEICULOS.find((v) => v.placa === placa)?.modelo
+    ?? MULTAS_FROTA.find((v) => v.placa === placa)?.modelo
+    ?? '—';
+}
+
+/** Gera multas fictícias distribuídas entre os ativos da frota (1 a 5 por ativo). */
+function gerarMultasMock(): Multa[] {
+  const rnd = criarRnd(20260720);
   const pick = <T>(arr: readonly T[]): T => arr[Math.floor(rnd() * arr.length)];
   const HOJE = new Date(2026, 6, 20);
   const fmt = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
   const addDias = (base: Date, dias: number) => { const d = new Date(base); d.setDate(d.getDate() + dias); return d; };
 
-  const placas = ['JBL5B25', 'JBL5B26', 'JBL5B27', 'SHQ6B80', 'DSA9924', 'JBL5E88', 'RTX4C12', 'MNT7D45'] as const;
   const infracoes = [
     { t: 'Excesso de velocidade até 20%', p: 4, v: 'R$ 130,16' },
     { t: 'Excesso de velocidade de 20% a 50%', p: 5, v: 'R$ 195,23' },
@@ -264,39 +299,43 @@ function gerarMultasMock(qtd: number): Multa[] {
   const statusPool = ['paga', 'paga', 'paga', 'paga', 'notificada', 'notificada', 'vencida', 'em_recurso'] as const;
 
   const out: Multa[] = [];
-  for (let i = 0; i < qtd; i++) {
-    const inf = pick(infracoes);
-    const placa = pick(placas);
-    const local = pick(locais);
-    const dataInfracao = addDias(HOJE, -Math.floor(rnd() * 540));
-    let status: Multa['status'] = pick(statusPool);
-    if (rnd() < 0.1) status = 'aguardando_identificacao';
+  let contador = 700000;
+  MULTAS_FROTA.forEach((ativo, idx) => {
+    // Apenas um ativo fica acima de 10; o restante abaixo, com viés para poucos (algumas com 1).
+    const qtdMultas = idx === 0 ? 13 : 1 + Math.floor(rnd() * rnd() * 9); // 1 a 9, concentrado no baixo
+    for (let k = 0; k < qtdMultas; k++) {
+      const inf = pick(infracoes);
+      const local = pick(locais);
+      const dataInfracao = addDias(HOJE, -Math.floor(rnd() * 540));
+      let status: Multa['status'] = pick(statusPool);
+      if (rnd() < 0.1) status = 'aguardando_identificacao';
 
-    let prazo = '—';
-    let prazoIdentificacao: string | undefined;
-    if (status === 'aguardando_identificacao') {
-      const offset = Math.floor(rnd() * 50) - 10; // -10..+39 dias → semáforo vermelho/amarelo/verde
-      prazoIdentificacao = fmt(addDias(HOJE, offset));
-      prazo = fmt(addDias(HOJE, offset + 15));
-    } else if (status === 'vencida') {
-      prazo = fmt(addDias(dataInfracao, 30));
-    } else if (status !== 'paga') {
-      prazo = fmt(addDias(HOJE, 10 + Math.floor(rnd() * 60)));
+      let prazo = '—';
+      let prazoIdentificacao: string | undefined;
+      if (status === 'aguardando_identificacao') {
+        const offset = Math.floor(rnd() * 50) - 10; // -10..+39 dias → semáforo vermelho/amarelo/verde
+        prazoIdentificacao = fmt(addDias(HOJE, offset));
+        prazo = fmt(addDias(HOJE, offset + 15));
+      } else if (status === 'vencida') {
+        prazo = fmt(addDias(dataInfracao, 30));
+      } else if (status !== 'paga') {
+        prazo = fmt(addDias(HOJE, 10 + Math.floor(rnd() * 60)));
+      }
+
+      out.push({
+        auto: `AIT-${contador++}`,
+        placa: ativo.placa,
+        infracao: inf.t,
+        local,
+        data: fmt(dataInfracao),
+        valor: inf.v,
+        pontos: inf.p,
+        status,
+        prazo,
+        ...(prazoIdentificacao && { prazoIdentificacao }),
+      });
     }
-
-    out.push({
-      auto: `AIT-${700000 + i}`,
-      placa,
-      infracao: inf.t,
-      local,
-      data: fmt(dataInfracao),
-      valor: inf.v,
-      pontos: inf.p,
-      status,
-      prazo,
-      ...(prazoIdentificacao && { prazoIdentificacao }),
-    });
-  }
+  });
   return out;
 }
 
@@ -311,7 +350,7 @@ export const MULTAS: Multa[] = [
   { auto: 'AIT-534210', placa: 'JBL5B26', infracao: 'Estacionar em local proibido', local: 'Centro · Campinas', data: '02/05/2026', valor: 'R$ 195,23', pontos: 4, status: 'paga', prazo: '—' },
   { auto: 'AIT-521045', placa: 'JBL5B25', infracao: 'Uso de celular ao dirigir', local: 'Rod. Anhanguera, km 88 · Campinas', data: '18/03/2026', valor: 'R$ 293,47', pontos: 7, status: 'paga', prazo: '—' },
   { auto: 'AIT-560877', placa: 'RTX4C12', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Anhanguera, km 55 · Jundiaí', data: '05/07/2026', valor: 'R$ 195,23', pontos: 4, status: 'aguardando_identificacao', prazo: '05/08/2026', prazoIdentificacao: '22/07/2026' },
-  ...gerarMultasMock(200),
+  ...gerarMultasMock(),
 ];
 
 export interface TelemetriaVeiculo {
