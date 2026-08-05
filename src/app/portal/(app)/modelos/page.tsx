@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
-import { VEICULOS } from '@/lib/portalData';
+import { VEICULOS, FROTA_TOTAL } from '@/lib/portalData';
 import {
   PageTitle, KpiCard, KpiRow, BarraProgresso, FilterChip, Toolbar,
   DataTable, Th, TablePagination, SectionCard, usePaginacao,
@@ -10,7 +10,6 @@ import {
 } from '@/components/portal/ui';
 import type { VeiculoFrota } from '@/lib/portalData';
 
-const FROTA_TOTAL = 42;
 
 const MODELOS = [
   { nome: 'VW 11-180 Delivery', categoria: 'Caminhão leve', qtd: 14, anoMedio: '2022' },

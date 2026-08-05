@@ -176,7 +176,7 @@ export interface VeiculoFrota {
   crlvStatus: CrlvStatus;
 }
 
-export const VEICULOS: VeiculoFrota[] = [
+const VEICULOS_BASE: VeiculoFrota[] = [
   { frota: 'BEBIDAS FRUKI', placa: 'JBL5B25', chassi: '9535V6TB0PR009032', renavam: '01317228496', anoModelo: '2022', modelo: 'VW 11-180 Delivery', categoria: 'Caminhão leve', km: '96.200 km', kmMes: '3.640 km', contrato: 'CTR-2023-0087', situacao: 'ativo', regiao: 'Sul', crlvAno: '2026', crlvStatus: 'vigente' },
   { frota: 'BEBIDAS FRUKI', placa: 'JBL5B26', chassi: '9535V6TB1PR009041', renavam: '01317229891', anoModelo: '2022', modelo: 'VW 11-180 Delivery', categoria: 'Caminhão leve', km: '92.410 km', kmMes: '3.510 km', contrato: 'CTR-2023-0087', situacao: 'ativo', regiao: 'Sul', crlvAno: '2026', crlvStatus: 'vigente' },
   { frota: 'BEBIDAS FRUKI', placa: 'JBL5B27', chassi: '9535V6TB0PR009127', renavam: '01317231390', anoModelo: '2022', modelo: 'VW 11-180 Delivery', categoria: 'Caminhão leve', km: '88.930 km', kmMes: '3.280 km', contrato: 'CTR-2023-0087', situacao: 'ativo', regiao: 'Sul', crlvAno: '2025', crlvStatus: 'a_vencer' },
@@ -186,6 +186,80 @@ export const VEICULOS: VeiculoFrota[] = [
   { frota: 'OBRA JUNDIAÍ', placa: 'RTX4C12', chassi: 'JCB3CX4TC02233445', renavam: '01317236774', anoModelo: '2024', modelo: 'JCB 3CX', categoria: 'Retroescavadeira', km: '8.940 h', kmMes: '—', contrato: 'CTR-2025-0031', situacao: 'parado', regiao: 'Sudeste', crlvAno: '—', crlvStatus: 'sem' },
   { frota: 'OBRA JUNDIAÍ', placa: 'MNT7D45', chassi: 'MANMRT2550C099887', renavam: '01317238001', anoModelo: '2024', modelo: 'Manitou MRT 2550', categoria: 'Manipulador telescópico', km: '3.210 h', kmMes: '—', contrato: 'CTR-2025-0044', situacao: 'ativo', regiao: 'Sudeste', crlvAno: '—', crlvStatus: 'sem' },
 ];
+
+/* Gerador determinístico compartilhado (sem aleatoriedade real → sem divergência de hidratação). */
+function criarRnd(seedInicial: number) {
+  let seed = seedInicial;
+  return () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+}
+
+const MODELOS_FROTA_GEN = [
+  { modelo: 'VW 11-180 Delivery', categoria: 'Caminhão leve' },
+  { modelo: 'Mercedes Accelo 815', categoria: 'Caminhão médio' },
+  { modelo: 'Volvo FH 460', categoria: 'Caminhão pesado' },
+  { modelo: 'Scania R 450', categoria: 'Caminhão pesado' },
+  { modelo: 'VW Constellation 24.280', categoria: 'Caminhão pesado' },
+  { modelo: 'Iveco Tector 11-190', categoria: 'Caminhão médio' },
+  { modelo: 'Ford Cargo 1719', categoria: 'Caminhão médio' },
+  { modelo: 'Mercedes Atego 2426', categoria: 'Caminhão médio' },
+  { modelo: 'Volvo FMX 500', categoria: 'Caminhão pesado' },
+  { modelo: 'JCB 3CX', categoria: 'Retroescavadeira' },
+  { modelo: 'Manitou MRT 2550', categoria: 'Manipulador telescópico' },
+] as const;
+
+/** Gera veículos completos para compor a frota canônica (usada por todas as abas). */
+function gerarFrotaCompleta(qtd: number, placasBase: string[]): VeiculoFrota[] {
+  const rnd = criarRnd(551133);
+  const L = 'ABCDEFGHIJKLMNPQRSTUVWXYZ';
+  const pick = <T>(arr: readonly T[]): T => arr[Math.floor(rnd() * arr.length)];
+  const pL = () => L[Math.floor(rnd() * L.length)];
+  const pD = () => Math.floor(rnd() * 10);
+  const dig = (n: number) => Array.from({ length: n }, pD).join('');
+  const usadas = new Set<string>(placasBase);
+  const frotas = ['MATRIZ SP', 'BEBIDAS FRUKI', 'OBRA JUNDIAÍ', 'FILIAL RJ', 'FILIAL PR', 'OPERAÇÃO MG'] as const;
+  const regioes = ['Sudeste', 'Sudeste', 'Sudeste', 'Sul', 'Nordeste', 'Centro-Oeste', 'Norte'] as const;
+  const situacoes: VeiculoSituacao[] = ['ativo', 'ativo', 'ativo', 'ativo', 'ativo', 'ativo', 'manutencao', 'parado'];
+  const crlvs: CrlvStatus[] = ['vigente', 'vigente', 'vigente', 'a_vencer', 'vencido'];
+
+  const out: VeiculoFrota[] = [];
+  while (out.length < qtd) {
+    const placa = `${pL()}${pL()}${pL()}${pD()}${pL()}${pD()}${pD()}`;
+    if (usadas.has(placa)) continue;
+    usadas.add(placa);
+    const mod = pick(MODELOS_FROTA_GEN);
+    const maquina = mod.categoria === 'Retroescavadeira' || mod.categoria === 'Manipulador telescópico';
+    const situacao = maquina ? pick(['ativo', 'ativo', 'parado'] as VeiculoSituacao[]) : pick(situacoes);
+    const crlvStatus: CrlvStatus = maquina ? 'sem' : pick(crlvs);
+    const crlvAno = crlvStatus === 'sem' ? '—' : crlvStatus === 'vencido' ? '2025' : '2026';
+    const km = maquina
+      ? `${1 + Math.floor(rnd() * 12)}.${dig(3)} h`
+      : `${20 + Math.floor(rnd() * 380)}.${dig(3)} km`;
+    const kmMes = maquina ? '—' : `${1 + Math.floor(rnd() * 7)}.${dig(3)} km`;
+    out.push({
+      frota: pick(frotas),
+      placa,
+      chassi: `${pL()}${pL()}${dig(3)}${pL()}${dig(2)}${pL()}${dig(6)}`.slice(0, 17),
+      renavam: `0${dig(10)}`,
+      anoModelo: String(2018 + Math.floor(rnd() * 8)),
+      modelo: mod.modelo,
+      categoria: mod.categoria,
+      km,
+      kmMes,
+      contrato: `CTR-202${1 + Math.floor(rnd() * 5)}-0${dig(3)}`,
+      situacao,
+      regiao: pick(regioes),
+      crlvAno,
+      crlvStatus,
+    });
+  }
+  return out;
+}
+
+/** Frota canônica do portal (base real + gerada). Fonte única para todas as abas. */
+export const VEICULOS: VeiculoFrota[] = [...VEICULOS_BASE, ...gerarFrotaCompleta(200, VEICULOS_BASE.map((v) => v.placa))];
+
+/** Total de ativos da frota — use em qualquer KPI de "frota total". */
+export const FROTA_TOTAL = VEICULOS.length;
 
 export type AvariaStatus = 'analise' | 'aprovada' | 'contestada' | 'paga';
 export type AvariaMotivo = 'Corretiva' | 'Preventiva' | 'Sinistro';
@@ -232,42 +306,9 @@ export interface Multa {
   prazoIdentificacao?: string;
 }
 
-/* Gerador determinístico compartilhado (sem aleatoriedade real → sem divergência de hidratação). */
-function criarRnd(seedInicial: number) {
-  let seed = seedInicial;
-  return () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
-}
-
-const MODELOS_FROTA = [
-  'VW 11-180 Delivery', 'Mercedes Accelo 815', 'Volvo FH 460', 'Scania R 450', 'VW Constellation 24.280',
-  'Iveco Tector 11-190', 'Ford Cargo 1719', 'Volvo FMX 500', 'Scania P 320', 'Mercedes Atego 2426',
-  'JCB 3CX', 'Manitou MRT 2550',
-] as const;
-
-/** Frota fictícia adicional — ~200 ativos (placa + modelo) que possuem multas. */
-function gerarFrotaMulta(qtd: number): { placa: string; modelo: string }[] {
-  const rnd = criarRnd(777001);
-  const L = 'ABCDEFGHIJKLMNPQRSTUVWXYZ';
-  const pL = () => L[Math.floor(rnd() * L.length)];
-  const pD = () => Math.floor(rnd() * 10);
-  const usadas = new Set<string>();
-  const out: { placa: string; modelo: string }[] = [];
-  while (out.length < qtd) {
-    const placa = `${pL()}${pL()}${pL()}${pD()}${pL()}${pD()}${pD()}`;
-    if (usadas.has(placa)) continue;
-    usadas.add(placa);
-    out.push({ placa, modelo: MODELOS_FROTA[Math.floor(rnd() * MODELOS_FROTA.length)] });
-  }
-  return out;
-}
-
-export const MULTAS_FROTA = gerarFrotaMulta(200);
-
-/** Modelo de um veículo pela placa (frota real + frota gerada de multas). */
+/** Modelo de um veículo pela placa (a partir da frota canônica). */
 export function modeloDaPlaca(placa: string): string {
-  return VEICULOS.find((v) => v.placa === placa)?.modelo
-    ?? MULTAS_FROTA.find((v) => v.placa === placa)?.modelo
-    ?? '—';
+  return VEICULOS.find((v) => v.placa === placa)?.modelo ?? '—';
 }
 
 /** Gera multas fictícias distribuídas entre os ativos da frota (1 a 5 por ativo). */
@@ -300,9 +341,13 @@ function gerarMultasMock(): Multa[] {
 
   const out: Multa[] = [];
   let contador = 700000;
-  MULTAS_FROTA.forEach((ativo, idx) => {
-    // Apenas um ativo fica acima de 10; o restante abaixo, com viés para poucos (algumas com 1).
-    const qtdMultas = idx === 0 ? 13 : 1 + Math.floor(rnd() * rnd() * 9); // 1 a 9, concentrado no baixo
+  const baseLen = VEICULOS_BASE.length;
+  VEICULOS.forEach((ativo, idx) => {
+    if (idx < baseLen) return; // placas base já têm multas escritas à mão
+    const ehLider = idx === baseLen;
+    if (!ehLider && rnd() < 0.05) return; // ~5% da frota sem multas
+    // Apenas o líder fica acima de 10; o restante abaixo, com viés para poucos (algumas com 1).
+    const qtdMultas = ehLider ? 13 : 1 + Math.floor(rnd() * rnd() * 9); // 1 a 9, concentrado no baixo
     for (let k = 0; k < qtdMultas; k++) {
       const inf = pick(infracoes);
       const local = pick(locais);

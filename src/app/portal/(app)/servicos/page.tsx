@@ -20,6 +20,7 @@ import {
   HOJE, parseBR, diasEntre, ATENDIMENTOS_SERVICO, getDetalhe, etapaAtendimento,
   type TipoServico, type OrdemServico, type AtendimentoServico, type ItemServico, type DetalheAtendimento,
 } from '@/lib/servicosData';
+import { FROTA_TOTAL } from '@/lib/portalData';
 
 /* Paleta categórica fria (azul/navy/índigo/cinza) — cores neutras, sem verde/vermelho,
    já que "tipo de serviço" é categoria e não status (não representa bom/ruim). */
@@ -31,8 +32,6 @@ const TIPO_INFO: Record<TipoServico, { label: string; dot: string; bar: string }
 };
 const TIPOS_ORDEM: TipoServico[] = ['preventiva', 'corretiva', 'sinistro', 'outros'];
 
-/** Frota total da operação (mesmo valor usado na aba Modelos). */
-const FROTA_TOTAL = 42;
 
 /** Cor do badge por status de OS. */
 const COR_STATUS_OS: Record<OrdemServico['status'], string> = {

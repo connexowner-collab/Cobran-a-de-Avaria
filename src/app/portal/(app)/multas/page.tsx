@@ -5,7 +5,7 @@ import {
   ChevronRight, Download, UserCheck, Clock, X, Check,
   FileDown, Bell,
 } from 'lucide-react';
-import { MULTAS, VEICULOS, MULTAS_FROTA, modeloDaPlaca, type Multa } from '@/lib/portalData';
+import { MULTAS, VEICULOS, modeloDaPlaca, type Multa } from '@/lib/portalData';
 import {
   PageTitle, StatusBadge, KpiCard, KpiRow, FilterChip, Toolbar,
   DataTable, Th, TablePagination, SectionCard, usePaginacao,
@@ -362,7 +362,7 @@ export default function MultasPage() {
         <KpiCard label="Total de multas" valor={String(totalMultas)} detalhe={`${placasComMulta} veículos envolvidos`} cor="border-l-[#0e2233]" />
         <KpiCard label="Aguardando identificação" valor={String(aguardandoIdent)} detalhe="condutor a identificar" cor="border-l-indigo-500" detalheCor="text-indigo-700" />
         <KpiCard label="Valor total" valor={fmtBRL(valorTotal)} detalhe="todas as multas" cor="border-l-primary-600" detalheCor="text-primary-700" />
-        <KpiCard label="Placas com multas" valor={String(placasComMulta)} detalhe={`de ${VEICULOS.length + MULTAS_FROTA.length} veículos na frota`} cor="border-l-sky-600" />
+        <KpiCard label="Placas com multas" valor={String(placasComMulta)} detalhe={`de ${VEICULOS.length} veículos na frota`} cor="border-l-sky-600" />
       </KpiRow>
 
       {/* KPI semáforo — prazos de identificação do condutor */}
@@ -476,19 +476,17 @@ export default function MultasPage() {
 
       {/* Lista agrupada por veículo, com linhas expansíveis */}
       <DataTable
-        colSpan={9}
+        colSpan={7}
         vazio={grupos.length === 0}
         vazioLabel="Nenhuma multa encontrada com os filtros atuais."
         filterRow={
           <>
             <ThFiltro />
             <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa" multi ariaLabel="Filtrar placa" /></ThFiltro>
-            <ThFiltro><ColunaFiltro value={val('infracao')} onChange={set('infracao')} placeholder="Infração" /></ThFiltro>
-            <ThFiltro><ColunaFiltro value={val('data')} onChange={set('data')} placeholder="Data" /></ThFiltro>
-            <ThFiltro><ColunaFiltro value={val('valor')} onChange={set('valor')} placeholder="Valor" /></ThFiltro>
             <ThFiltro />
-            <ThFiltro><ColunaFiltro value={val('prazo')} onChange={set('prazo')} placeholder="Prazo" /></ThFiltro>
-            <ThFiltro><ColunaFiltro value={val('status')} onChange={set('status')} placeholder="Status" /></ThFiltro>
+            <ThFiltro />
+            <ThFiltro />
+            <ThFiltro />
             <ThFiltro />
           </>
         }
@@ -496,12 +494,10 @@ export default function MultasPage() {
           <>
             <Th className="w-10" />
             <Th>Veículo</Th>
-            <Th>Infração</Th>
-            <Th>Data</Th>
-            <Th>Valor</Th>
+            <Th>Qtd multas</Th>
+            <Th>Valor total</Th>
             <Th>Pontos</Th>
-            <Th>Prazo</Th>
-            <Th>Status</Th>
+            <Th>Pendentes</Th>
             <Th />
           </>
         }
@@ -536,7 +532,7 @@ export default function MultasPage() {
                     className="h-4 w-4 rounded border-slate-300"
                   />
                 </td>
-                <td className="px-4 py-3" colSpan={2}>
+                <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <ChevronRight size={15} className={`flex-none text-slate-400 transition-transform ${aberto ? 'rotate-90' : ''}`} />
                     <div>
@@ -557,7 +553,6 @@ export default function MultasPage() {
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3" />
                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex justify-end">
                     <button className="btn-secondary gap-1.5 px-3 py-1.5 text-xs">
@@ -567,66 +562,81 @@ export default function MultasPage() {
                 </td>
               </tr>
 
-              {/* Multas do veículo (expansível) */}
-              {aberto &&
-                g.multas.map((m) => (
-                  <tr key={m.auto} className={`border-b border-slate-100 bg-white last:border-0 hover:bg-slate-50 ${selecionados.has(m.auto) ? 'bg-primary-50/40' : ''}`}>
-                    <td className="border-l-[3px] border-l-primary-200 px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selecionados.has(m.auto)}
-                        onChange={() => toggleUma(m.auto)}
-                        aria-label={`Selecionar ${m.auto}`}
-                        className="ml-1 h-4 w-4 rounded border-slate-300"
-                      />
-                    </td>
-                    <td className="px-4 py-3 pl-9 font-mono text-xs text-slate-500">{m.auto}</td>
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-slate-800">{m.infracao}</p>
-                      <p className="text-xs text-slate-500">{m.local}</p>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs">{m.data}</td>
-                    <td className="px-4 py-3 font-mono font-semibold">{m.valor}</td>
-                    <td className="px-4 py-3 text-center font-mono text-xs">{m.pontos}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{m.prazo}</td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={m.status} label={STATUS_LABEL[m.status]} />
-                      {m.status === 'aguardando_identificacao' && (() => {
-                        const reg = registros[m.auto];
-                        if (reg) {
-                          return (
-                            <p className={`mt-1 flex items-center gap-1 text-[11px] font-bold ${reg === 'identificado' ? 'text-emerald-600' : 'text-slate-500'}`}>
-                              {reg === 'identificado' ? <><Check size={11} /> Condutor identificado</> : <><X size={11} /> Não identificado (registrado)</>}
-                            </p>
-                          );
-                        }
-                        const sla = slaIdentificacao(m.prazoIdentificacao);
-                        return sla ? <p className={`mt-1 flex items-center gap-1 text-[11px] font-bold ${sla.cls}`}><Clock size={11} /> {sla.label}</p> : null;
-                      })()}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-1.5">
-                        {m.status === 'aguardando_identificacao' && !registros[m.auto] && (() => {
-                          const sla = slaIdentificacao(m.prazoIdentificacao);
-                          const vencido = sla ? !sla.liberado : false;
-                          return (
-                            <button
-                              type="button"
-                              onClick={() => setIdentificar(m)}
-                              title={vencido ? 'Prazo encerrado — registrar desfecho' : 'Identificar condutor'}
-                              className="btn-primary gap-1.5 px-3 py-1.5 text-xs"
-                            >
-                              <UserCheck size={13} /> {vencido ? 'Registrar desfecho' : 'Identificar condutor'}
-                            </button>
-                          );
-                        })()}
-                        <button className="btn-secondary gap-1.5 px-3 py-1.5 text-xs">
-                          <Download size={13} /> Notificação
-                        </button>
+              {/* Multas do veículo (expansível) — sub-tabela com cabeçalho próprio */}
+              {aberto && (
+                <tr>
+                  <td colSpan={7} className="bg-slate-50/70 p-0">
+                    <div className="px-5 py-3">
+                      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                        <table className="w-full text-left text-[13px]">
+                          <thead className="bg-slate-50">
+                            <tr className="text-[10px] uppercase tracking-wide text-slate-500">
+                              <th className="w-10 px-3 py-2" />
+                              <th className="px-3 py-2 font-bold">Auto</th>
+                              <th className="px-3 py-2 font-bold">Infração</th>
+                              <th className="px-3 py-2 font-bold">Data</th>
+                              <th className="px-3 py-2 font-bold">Valor</th>
+                              <th className="px-3 py-2 text-center font-bold">Pontos</th>
+                              <th className="px-3 py-2 font-bold">Prazo</th>
+                              <th className="px-3 py-2 font-bold">Status</th>
+                              <th className="px-3 py-2 text-right font-bold">Ações</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {g.multas.map((m) => (
+                              <tr key={m.auto} className={`border-t border-slate-100 hover:bg-slate-50 ${selecionados.has(m.auto) ? 'bg-primary-50/40' : ''}`}>
+                                <td className="px-3 py-2">
+                                  <input type="checkbox" checked={selecionados.has(m.auto)} onChange={() => toggleUma(m.auto)} aria-label={`Selecionar ${m.auto}`} className="h-4 w-4 rounded border-slate-300" />
+                                </td>
+                                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-slate-500">{m.auto}</td>
+                                <td className="px-3 py-2">
+                                  <p className="font-semibold text-slate-800">{m.infracao}</p>
+                                  <p className="text-xs text-slate-500">{m.local}</p>
+                                </td>
+                                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{m.data}</td>
+                                <td className="whitespace-nowrap px-3 py-2 font-mono font-semibold">{m.valor}</td>
+                                <td className="px-3 py-2 text-center font-mono text-xs">{m.pontos}</td>
+                                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{m.prazo}</td>
+                                <td className="px-3 py-2">
+                                  <StatusBadge status={m.status} label={STATUS_LABEL[m.status]} />
+                                  {m.status === 'aguardando_identificacao' && (() => {
+                                    const reg = registros[m.auto];
+                                    if (reg) {
+                                      return (
+                                        <p className={`mt-1 flex items-center gap-1 text-[11px] font-bold ${reg === 'identificado' ? 'text-emerald-600' : 'text-slate-500'}`}>
+                                          {reg === 'identificado' ? <><Check size={11} /> Condutor identificado</> : <><X size={11} /> Não identificado (registrado)</>}
+                                        </p>
+                                      );
+                                    }
+                                    const sla = slaIdentificacao(m.prazoIdentificacao);
+                                    return sla ? <p className={`mt-1 flex items-center gap-1 text-[11px] font-bold ${sla.cls}`}><Clock size={11} /> {sla.label}</p> : null;
+                                  })()}
+                                </td>
+                                <td className="px-3 py-2">
+                                  <div className="flex justify-end gap-1.5">
+                                    {m.status === 'aguardando_identificacao' && !registros[m.auto] && (() => {
+                                      const sla = slaIdentificacao(m.prazoIdentificacao);
+                                      const vencido = sla ? !sla.liberado : false;
+                                      return (
+                                        <button type="button" onClick={() => setIdentificar(m)} title={vencido ? 'Prazo encerrado — registrar desfecho' : 'Identificar condutor'} className="btn-primary gap-1.5 px-3 py-1.5 text-xs">
+                                          <UserCheck size={13} /> {vencido ? 'Registrar desfecho' : 'Identificar condutor'}
+                                        </button>
+                                      );
+                                    })()}
+                                    <button className="btn-secondary gap-1.5 px-3 py-1.5 text-xs">
+                                      <Download size={13} /> Notificação
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
-                    </td>
-                  </tr>
-                ))}
+                    </div>
+                  </td>
+                </tr>
+              )}
             </Fragment>
           );
         })}

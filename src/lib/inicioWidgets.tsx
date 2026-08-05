@@ -3,7 +3,18 @@
 import Link from 'next/link';
 import { AlertCircle, ArrowRight } from 'lucide-react';
 import { KpiCard, BarraProgresso } from '@/components/portal/ui';
-import { CHAMADOS, VEICULOS, FATURAS, AVARIAS, MULTAS, TELEMETRIA } from '@/lib/portalData';
+import { CHAMADOS, VEICULOS, FATURAS, AVARIAS, MULTAS, TELEMETRIA, FROTA_TOTAL } from '@/lib/portalData';
+
+/** Distribuição da frota por região (derivada da frota canônica). */
+const REGIOES_FROTA = (() => {
+  const cont = new Map<string, number>();
+  VEICULOS.forEach((v) => cont.set(v.regiao, (cont.get(v.regiao) ?? 0) + 1));
+  const total = VEICULOS.length || 1;
+  return Array.from(cont.entries())
+    .map(([nome, qtd]) => ({ nome, qtd, pct: Math.round((qtd / total) * 100) }))
+    .sort((a, b) => b.qtd - a.qtd);
+})();
+const ATIVOS_ATIVOS = VEICULOS.filter((v) => v.situacao === 'ativo').length;
 
 /** Um item do catálogo que o usuário pode adicionar à sua visão personalizada da tela de Início. */
 export interface WidgetInicio {
@@ -29,13 +40,6 @@ const ATENCAO = [
   { texto: 'Multa AIT-559102 aguardando identificação', detalhe: 'SHQ6B80 · prazo 30/07/2026 para identificar o condutor', href: '/portal/multas', acao: 'Identificar condutor' },
 ];
 
-const REGIOES = [
-  { nome: 'Sudeste', qtd: 22, pct: 52 },
-  { nome: 'Sul', qtd: 9, pct: 22 },
-  { nome: 'Nordeste', qtd: 6, pct: 14 },
-  { nome: 'Centro-Oeste', qtd: 3, pct: 8 },
-  { nome: 'Norte', qtd: 2, pct: 4 },
-];
 
 const SERVICOS_MES = [
   { mes: 'Fev', h: 35 }, { mes: 'Mar', h: 55 }, { mes: 'Abr', h: 80 },
@@ -135,7 +139,7 @@ export const CATALOGO_WIDGETS: WidgetInicio[] = [
     descricao: 'Frota total, chamados, manutenções e multas',
     render: () => (
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <KpiCard label="Frota total" valor="42" detalhe="100% ativa" cor="border-l-[#0e2233]" detalheCor="text-emerald-600" />
+        <KpiCard label="Frota total" valor={String(FROTA_TOTAL)} detalhe={`${Math.round((ATIVOS_ATIVOS / (FROTA_TOTAL || 1)) * 100)}% ativa`} cor="border-l-[#0e2233]" detalheCor="text-emerald-600" />
         <KpiCard label="Chamados abertos" valor="4" detalhe="em andamento" cor="border-l-primary-600" detalheCor="text-primary-700" />
         <KpiCard label="Manutenções no mês" valor="11" detalhe="+3 vs mês anterior" cor="border-l-sky-600" />
         <KpiCard label="Multas em aberto" valor="2" detalhe="1 com prazo próximo" cor="border-l-amber-500" detalheCor="text-amber-600" />
@@ -147,7 +151,7 @@ export const CATALOGO_WIDGETS: WidgetInicio[] = [
     descricao: 'Distribuição da frota total pelo Brasil',
     render: () => (
       <div className="space-y-3">
-        {REGIOES.map((r) => (
+        {REGIOES_FROTA.map((r) => (
           <div key={r.nome}>
             <div className="mb-1.5 flex justify-between text-[13px] font-semibold text-slate-700">
               <span>{r.nome}</span><span className="font-mono">{r.qtd}</span>

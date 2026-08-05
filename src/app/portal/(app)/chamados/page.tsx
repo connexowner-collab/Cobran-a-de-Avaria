@@ -11,6 +11,7 @@ import {
   DataTable, Th, TablePagination, usePaginacao,
   ColunaFiltro, ThFiltro, useFiltrosColuna, FunilEtapas, type ColDef,
 } from '@/components/portal/ui';
+import { FROTA_TOTAL } from '@/lib/portalData';
 import {
   EsteiraManutencao, BlocoConversa, ETAPAS_MANUTENCAO,
   type EtapaManutencao, type EtapaManutencaoKey, type Interacao,
@@ -20,8 +21,6 @@ import {
   type AtendimentoServico,
 } from '@/lib/servicosData';
 
-/** Frota total da operação (mesmo valor usado em Serviços e na aba Modelos). */
-const FROTA_TOTAL = 42;
 
 /** Rótulo + cor do badge por etapa da manutenção. */
 const ETAPA_INFO: Record<EtapaManutencaoKey, { label: string; cls: string }> = {
