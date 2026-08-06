@@ -15,7 +15,7 @@ export const ETAPAS_MANUTENCAO: { key: EtapaManutencaoKey; label: string; icon: 
   { key: 'aguardando_agendamento', label: 'Aguardando Agendamento', icon: Clock },
   { key: 'agendado', label: 'Agendado', icon: CalendarClock },
   { key: 'manutencao', label: 'Em Manutenção', icon: Wrench },
-  { key: 'saida', label: 'Disponível retirada da manutenção', icon: LogOut },
+  { key: 'saida', label: 'Disponível para retirada', icon: LogOut },
   { key: 'finalizado', label: 'Manutenção Finalizada', icon: Flag },
 ];
 

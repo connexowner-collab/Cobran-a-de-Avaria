@@ -13,8 +13,8 @@ import {
 } from '@/components/portal/ui';
 import { FROTA_TOTAL } from '@/lib/portalData';
 import {
-  EsteiraManutencao, BlocoConversa, ETAPAS_MANUTENCAO,
-  type EtapaManutencao, type EtapaManutencaoKey, type Interacao,
+  EsteiraManutencao, ETAPAS_MANUTENCAO,
+  type EtapaManutencao, type EtapaManutencaoKey,
 } from '@/lib/acompanhamento';
 import {
   ATENDIMENTOS_SERVICO, getDetalhe, etapaAtendimento,
@@ -27,7 +27,7 @@ const ETAPA_INFO: Record<EtapaManutencaoKey, { label: string; cls: string }> = {
   aguardando_agendamento: { label: 'Aguardando Agendamento', cls: 'bg-slate-100 text-slate-600' },
   agendado: { label: 'Agendado', cls: 'bg-slate-100 text-slate-700' },
   manutencao: { label: 'Em Manutenção', cls: 'bg-sky-100 text-sky-700' },
-  saida: { label: 'Disponível retirada da manutenção', cls: 'bg-amber-100 text-amber-800' },
+  saida: { label: 'Disponível para retirada', cls: 'bg-amber-100 text-amber-800' },
   finalizado: { label: 'Manutenção Finalizada', cls: 'bg-emerald-100 text-emerald-700' },
 };
 
@@ -51,27 +51,16 @@ function etapasDaManutencao(a: AtendimentoServico): EtapaManutencao[] {
     { label: 'Aguardando Agendamento', icon: Clock, data: '—' },
     { label: 'Agendado', icon: CalendarClock, data: a.agendamento },
     { label: 'Em Manutenção', icon: Wrench, data: a.dataEntrada },
-    { label: 'Disponível retirada da manutenção', icon: LogOut, data: a.saida },
+    { label: 'Disponível para retirada', icon: LogOut, data: a.saida },
     { label: 'Manutenção Finalizada', icon: Flag, data: a.dataConclusao },
   ];
   return base.map((b, i) => ({
     ...b,
     estado: finalizado ? 'concluido' : i < idx ? 'concluido' : i === idx ? 'atual' : 'pendente',
-    detalhe: i === idx && !finalizado ? DETALHE_ETAPA[etapa] : undefined,
+    detalhe: i === idx && !finalizado
+      ? DETALHE_ETAPA[etapa]
+      : i === 3 && a.saida === '—' ? `Previsão de saída: ${a.previsao}` : undefined,
   }));
-}
-
-/** Linha do tempo de interações da manutenção (para o modal). */
-function interacoesManutencao(a: AtendimentoServico): Interacao[] {
-  const det = getDetalhe(a.numero);
-  const msgs: Interacao[] = [
-    { autor: det.condutor !== '—' ? det.condutor : 'Condutor', origem: 'cliente', horario: a.agendamento, texto: det.descricaoProblema },
-    { autor: 'Central Vamos', origem: 'suporte', horario: a.agendamento, texto: `Agendamento do atendimento ${a.numero} recebido para ${a.motivo}.` },
-  ];
-  if (a.dataEntrada !== '—') msgs.push({ autor: 'Oficina', origem: 'oficina', horario: a.dataEntrada, texto: 'Veículo deu entrada na oficina. Início da avaliação.' });
-  if (a.saida !== '—') msgs.push({ autor: 'Oficina', origem: 'oficina', horario: a.saida, texto: 'Veículo liberado — saída da oficina.' });
-  else msgs.push({ autor: 'Central Vamos', origem: 'suporte', horario: '—', texto: 'Manutenção em andamento na oficina.' });
-  return msgs;
 }
 
 const identificador = (a: AtendimentoServico) => (a.placa !== '—' ? a.placa : a.numeroSerie);
@@ -101,20 +90,20 @@ function ModalManutencao({ atendimento: a, onFechar }: { atendimento: Atendiment
         </div>
 
         <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Andamento da manutenção</p>
-        <div className="mb-5">
+        <div className="mb-2">
           <EsteiraManutencao etapas={etapasDaManutencao(a)} />
         </div>
 
-        <BlocoConversa interacoes={interacoesManutencao(a)} />
-
-        <div className="mt-5 flex gap-2.5 border-t border-slate-100 pt-4">
-          <input
-            placeholder="Responder ao atendimento..."
-            className="input-field flex-1 bg-slate-50 py-2.5 text-[13px]"
-          />
-          <button className="btn-primary gap-1.5 text-[13px]">
-            <Send size={14} /> Enviar
-          </button>
+        <div className="mt-5 border-t border-slate-100 pt-4">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Falar com o controlador sobre o status</p>
+          <div className="mb-2 flex items-center gap-2 text-[12px] text-slate-500">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold text-white">LP</span>
+            Enviando como <b className="text-slate-700">Lucas Pessoa</b> · Cliente
+          </div>
+          <div className="flex gap-2.5">
+            <input placeholder="Escreva sua mensagem ao controlador…" className="input-field flex-1 bg-slate-50 py-2.5 text-[13px]" />
+            <button className="btn-primary gap-1.5 text-[13px]"><Send size={14} /> Enviar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -169,7 +158,7 @@ export default function ChamadosPage() {
 
       <KpiRow>
         <KpiCard label="Frota total" valor={String(FROTA_TOTAL)} detalhe="veículos e equipamentos" cor="border-l-[#0e2233]" />
-        <KpiCard label="Em oficina agora" valor={String(abertas.length)} detalhe="veículos imobilizados" cor="border-l-sky-600" detalheCor="text-sky-700" />
+        <KpiCard label="Em manutenção" valor={String(abertas.length)} detalhe="veículos imobilizados" cor="border-l-sky-600" detalheCor="text-sky-700" />
       </KpiRow>
 
       <FunilEtapas

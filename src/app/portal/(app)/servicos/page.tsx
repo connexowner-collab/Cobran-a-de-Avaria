@@ -13,8 +13,8 @@ import {
   ColunaFiltro, ColunaDropdown, ThFiltro, useFiltrosColuna, FunilEtapas, type ColDef,
 } from '@/components/portal/ui';
 import {
-  EsteiraManutencao, BlocoConversa, ETAPAS_MANUTENCAO,
-  type EtapaManutencao, type EtapaManutencaoKey, type Interacao,
+  EsteiraManutencao, ETAPAS_MANUTENCAO,
+  type EtapaManutencao, type EtapaManutencaoKey,
 } from '@/lib/acompanhamento';
 import {
   HOJE, parseBR, diasEntre, ATENDIMENTOS_SERVICO, getDetalhe, etapaAtendimento,
@@ -132,6 +132,29 @@ function abrirResumoImpressao(a: AtendimentoServico, det: DetalheAtendimento, ti
   setTimeout(() => w.print(), 350);
 }
 
+/** Baixa uma matriz de dados como CSV (separador ; com BOM para o Excel PT-BR). */
+function baixarCSV(nome: string, linhas: (string | number)[][]) {
+  const csv = linhas.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${nome}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Botão padrão de download (CSV). */
+function BotaoBaixar({ onClick, texto = 'Baixar' }: { onClick: () => void; texto?: string }) {
+  return (
+    <button type="button" onClick={onClick} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+      <Download size={13} /> {texto}
+    </button>
+  );
+}
+
 /** Monta as etapas da esteira de manutenção de um atendimento. */
 function etapasManutencao(a: AtendimentoServico): EtapaManutencao[] {
   const agendou = a.agendamento !== '—';
@@ -153,31 +176,15 @@ function etapasManutencao(a: AtendimentoServico): EtapaManutencao[] {
     { label: 'Aguardando Agendamento', data: agendou ? a.agendamento : 'Em andamento', icon: Clock, estado: agendou ? 'concluido' : 'atual' },
     { label: 'Agendado', data: a.agendamento, icon: CalendarClock, estado: agendou ? 'concluido' : 'pendente' },
     { label: 'Em Manutenção', data: manutEstado === 'atual' ? 'Em andamento' : entrou ? a.dataEntrada : '—', icon: Wrench, estado: manutEstado, detalhe: manutEstado === 'pendente' ? undefined : detManut },
-    { label: 'Disponível retirada da manutenção', data: a.saida, icon: LogOut, estado: saiu ? 'concluido' : 'pendente' },
+    { label: 'Disponível para retirada', data: a.saida, icon: LogOut, estado: saiu ? 'concluido' : 'pendente', detalhe: saiu ? undefined : `Previsão de saída: ${a.previsao}` },
     { label: 'Manutenção Finalizada', data: a.dataConclusao, icon: Flag, estado: finalizado ? 'concluido' : 'pendente' },
   ];
 }
 
-/** Gera a linha do tempo de interações do atendimento (mesmo formato dos chamados). */
-function interacoesDoAtendimento(a: AtendimentoServico): Interacao[] {
-  const msgs: Interacao[] = [
-    { autor: 'Portal', origem: 'suporte', horario: a.agendamento, texto: `Agendamento do atendimento ${a.numero} recebido para ${a.motivo}.` },
-  ];
-  if (a.dataEntrada !== '—') {
-    msgs.push({ autor: 'Oficina', origem: 'oficina', horario: a.dataEntrada, texto: 'Veículo deu entrada na oficina. Início da avaliação.' });
-  }
-  a.ordens.forEach((os) => {
-    if (os.status === 'Aguardando peça') msgs.push({ autor: 'Oficina', origem: 'oficina', horario: os.dataEntrada, texto: `OS ${os.numero} (${os.motivo}) aguardando peça.` });
-    else if (os.status === 'Em execução') msgs.push({ autor: 'Oficina', origem: 'oficina', horario: os.dataEntrada, texto: `OS ${os.numero} (${os.motivo}) em execução.` });
-    else if (os.status === 'Finalizada') msgs.push({ autor: 'Oficina', origem: 'oficina', horario: os.dataSaida, texto: `OS ${os.numero} (${os.motivo}) finalizada.` });
-  });
-  if (a.saida !== '—') msgs.push({ autor: 'Oficina', origem: 'oficina', horario: a.saida, texto: 'Veículo liberado — saída da oficina.' });
-  else msgs.push({ autor: 'Portal', origem: 'suporte', horario: '—', texto: 'Manutenção em andamento na oficina.' });
-  return msgs;
-}
-
 function ModalAcompanhamento({ atendimento: a, onFechar }: { atendimento: AtendimentoServico; onFechar: () => void }) {
   const identificador = a.placa !== '—' ? a.placa : a.numeroSerie;
+  const identLabel = 'Chassi / Número de série';
+  const identValor = a.chassi !== '—' ? a.chassi : a.numeroSerie;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -192,16 +199,28 @@ function ModalAcompanhamento({ atendimento: a, onFechar }: { atendimento: Atendi
           </button>
         </div>
 
+        <dl className="mb-5 grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-slate-200 bg-slate-50/40 p-4 text-[13px]">
+          <div><dt className="text-xs font-bold uppercase text-slate-400">Placa</dt><dd className="font-mono font-semibold">{a.placa}</dd></div>
+          <div><dt className="text-xs font-bold uppercase text-slate-400">{identLabel}</dt><dd className="font-mono font-semibold">{identValor}</dd></div>
+          <div><dt className="text-xs font-bold uppercase text-slate-400">Marca/Modelo</dt><dd className="font-semibold">{a.marcaModelo}</dd></div>
+          <div><dt className="text-xs font-bold uppercase text-slate-400">Motivo do atendimento</dt><dd className="font-semibold">{a.motivo}</dd></div>
+        </dl>
+
         <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Andamento da manutenção</p>
-        <div className="mb-5">
+        <div className="mb-2">
           <EsteiraManutencao etapas={etapasManutencao(a)} />
         </div>
 
-        <BlocoConversa interacoes={interacoesDoAtendimento(a)} />
-
-        <div className="mt-5 flex gap-2.5 border-t border-slate-100 pt-4">
-          <input placeholder="Responder ao atendimento..." className="input-field flex-1 bg-slate-50 py-2.5 text-[13px]" />
-          <button className="btn-primary gap-1.5 text-[13px]"><Send size={14} /> Enviar</button>
+        <div className="mt-5 border-t border-slate-100 pt-4">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Falar com o controlador sobre o status</p>
+          <div className="mb-2 flex items-center gap-2 text-[12px] text-slate-500">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold text-white">LP</span>
+            Enviando como <b className="text-slate-700">Lucas Pessoa</b> · Cliente
+          </div>
+          <div className="flex gap-2.5">
+            <input placeholder="Escreva sua mensagem ao controlador…" className="input-field flex-1 bg-slate-50 py-2.5 text-[13px]" />
+            <button className="btn-primary gap-1.5 text-[13px]"><Send size={14} /> Enviar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -221,8 +240,8 @@ function ModalDetalheAtendimento({
   const det = os ? { ...detCompleto, itens: detCompleto.itens.filter((i) => i.os === os.numero) } : detCompleto;
   const ordensExibidas = os ? [os] : atendimento.ordens;
   const tituloResumo = os ? 'Resumo da OS' : 'Resumo do atendimento';
-  const identificacaoLabel = atendimento.numeroSerie !== '—' ? 'Nº de Série' : 'Chassi';
-  const identificacaoValor = atendimento.numeroSerie !== '—' ? atendimento.numeroSerie : atendimento.chassi;
+  const identificacaoLabel = 'Chassi / Número de série';
+  const identificacaoValor = atendimento.chassi !== '—' ? atendimento.chassi : atendimento.numeroSerie;
   const largura = tipo === 'resumo' || tipo === 'servico' ? 'max-w-2xl' : 'max-w-lg';
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
@@ -242,16 +261,18 @@ function ModalDetalheAtendimento({
         {/* INFORMAÇÃO: o que o usuário/condutor relatou no chamado */}
         {tipo === 'info' && (
           <div className="space-y-4 text-[13px]">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-slate-200 bg-slate-50/40 p-4">
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Placa</dt><dd className="font-mono font-semibold">{atendimento.placa}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">{identificacaoLabel}</dt><dd className="font-mono font-semibold">{identificacaoValor}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Marca/Modelo</dt><dd className="font-semibold">{atendimento.marcaModelo}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Motivo do atendimento</dt><dd className="font-semibold">{atendimento.motivo}</dd></div>
+            </dl>
             <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-3">
               <p className="text-xs font-bold uppercase tracking-wide text-sky-700">Problema relatado no chamado</p>
               <p className="mt-1 text-slate-800">{det.descricaoProblema}</p>
             </div>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
               <div><dt className="text-xs font-bold uppercase text-slate-400">Condutor</dt><dd className="font-semibold">{det.condutor}</dd></div>
-              <div><dt className="text-xs font-bold uppercase text-slate-400">Motivo do atendimento</dt><dd className="font-semibold">{atendimento.motivo}</dd></div>
-              <div><dt className="text-xs font-bold uppercase text-slate-400">Placa</dt><dd className="font-mono font-semibold">{atendimento.placa}</dd></div>
-              <div><dt className="text-xs font-bold uppercase text-slate-400">{identificacaoLabel}</dt><dd className="font-mono font-semibold">{identificacaoValor}</dd></div>
-              <div><dt className="text-xs font-bold uppercase text-slate-400">Marca/Modelo</dt><dd className="font-semibold">{atendimento.marcaModelo}</dd></div>
               <div><dt className="text-xs font-bold uppercase text-slate-400">Situação do veículo</dt><dd>{situacaoVeiculo(atendimento)}</dd></div>
             </dl>
           </div>
@@ -260,6 +281,12 @@ function ModalDetalheAtendimento({
         {/* DETALHE DE SERVIÇO: itens (mão de obra / peças) por OS, sem valores */}
         {tipo === 'servico' && (
           <div className="space-y-3 text-[13px]">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-slate-200 bg-slate-50/40 p-4">
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Placa</dt><dd className="font-mono font-semibold">{atendimento.placa}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">{identificacaoLabel}</dt><dd className="font-mono font-semibold">{identificacaoValor}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Marca/Modelo</dt><dd className="font-semibold">{atendimento.marcaModelo}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Motivo do atendimento</dt><dd className="font-semibold">{atendimento.motivo}</dd></div>
+            </dl>
             <p className="text-xs text-slate-500">Itens de mão de obra e peças registrados pela oficina, separados por ordem de serviço.</p>
             {atendimento.ordens.map((os) => {
               const itensOS = det.itens.filter((i) => i.os === os.numero);
@@ -392,6 +419,10 @@ function GraficoEmpilhado() {
       subtitulo="Comparativo dos serviços realizados por tipo no período"
       acao={
         <div className="flex items-center gap-2">
+          <BotaoBaixar onClick={() => baixarCSV('grafico-servicos', [
+            ['Mês', ...TIPOS_ORDEM.map((t) => TIPO_INFO[t].label)],
+            ...EVOLUCAO_MENSAL.map((m) => [m.mes, ...TIPOS_ORDEM.map((t) => m.valores[t])]),
+          ])} />
           <span className="rounded-lg border border-slate-200 px-3 py-1.5 font-mono text-xs text-slate-600">
             20/07/2025 ~ 20/07/2026
           </span>
@@ -525,21 +556,30 @@ export default function ServicosPage() {
   return (
     <div>
       <PageTitle
-        titulo="Serviços"
+        titulo="Serviços de manutenção"
         subtitulo="Serviços realizados, veículos em atendimento e disponibilidade da frota"
+        acao={<BotaoBaixar texto="Baixar indicadores" onClick={() => baixarCSV('indicadores-servicos', [
+          ['Indicador', 'Valor'],
+          ['Frota total', FROTA_TOTAL],
+          ['Em manutenção', kpis.emOficina],
+        ])} />}
       />
 
       {/* KPIs operacionais */}
       <KpiRow>
         <KpiCard label="Frota total" valor={String(FROTA_TOTAL)} detalhe="veículos e equipamentos" cor="border-l-[#0e2233]" />
-        <KpiCard label="Em oficina agora" valor={String(kpis.emOficina)} detalhe="veículos imobilizados" cor="border-l-sky-600" detalheCor="text-sky-700" />
+        <KpiCard label="Em manutenção" valor={String(kpis.emOficina)} detalhe="veículos imobilizados" cor="border-l-sky-600" detalheCor="text-sky-700" />
       </KpiRow>
 
       {/* Gráfico + composição */}
       <div className="mb-6 grid gap-4 xl:grid-cols-[1.6fr_1fr]">
         <GraficoEmpilhado />
 
-        <SectionCard titulo="Top motivos de serviço" subtitulo="Motivos mais recorrentes no período">
+        <SectionCard
+          titulo="Top motivos de serviço"
+          subtitulo="Motivos mais recorrentes no período"
+          acao={<BotaoBaixar onClick={() => baixarCSV('top-motivos', [['Motivo', 'Qtd', '%'], ...topMotivos.map((m) => [m.motivo, m.qtd, `${m.pct}%`])])} />}
+        >
           <div className="space-y-3">
             {topMotivos.map((m) => (
               <div key={m.motivo}>
