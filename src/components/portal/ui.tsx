@@ -70,7 +70,6 @@ const BADGE_STYLES: Record<string, string> = {
   aberto: 'bg-primary-50 text-primary-700',
   atendimento: 'bg-amber-50 text-amber-700',
   aguardando: 'bg-sky-50 text-sky-700',
-  escalonado: 'bg-rose-50 text-rose-700',
   resolvido: 'bg-emerald-50 text-emerald-700',
   // Documentos / CRLV
   valido: 'bg-emerald-50 text-emerald-700',

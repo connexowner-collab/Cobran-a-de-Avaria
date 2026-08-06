@@ -235,7 +235,7 @@ export default function AgendamentosPage() {
               <h2 className="mt-4 text-lg font-extrabold text-slate-900">Agendamento solicitado!</h2>
               <p className="mt-1 max-w-sm text-sm text-slate-500">
                 Veículo <b className="font-mono">{placa.toUpperCase()}</b> · {servicosSelecionados.join(', ')}
-                {data && <> · {dataFmt}{horario && ` às ${horario}`}</>}. Você receberá a confirmação da oficina em até 2h úteis.
+                {data && <> · {dataFmt}{horario && ` às ${horario}`}</>}. Você receberá o contato do controlador de frota com o agendamento do serviço em 48hrs.
               </p>
 
               {/* Número do atendimento gerado — para acompanhar em Serviços / Central de Chamados */}
@@ -311,7 +311,7 @@ export default function AgendamentosPage() {
               {/* Passo 1 — Veículo */}
               {passo === 0 && (
                 <div>
-                  <CabecalhoPasso icon={Truck} titulo="Dados do veículo" subtitulo="Identifique o veículo que precisa de manutenção" />
+                  <CabecalhoPasso icon={Truck} titulo="Dados do equipamento" subtitulo="Identifique o equipamento que precisa de manutenção" />
 
                   <Campo label="Como deseja identificar o veículo?" obrigatorio>
                     <div className="grid grid-cols-3 gap-2">
@@ -351,8 +351,8 @@ export default function AgendamentosPage() {
                     )}
                   </Campo>
 
-                  <Campo label="Km do Veículo" obrigatorio>
-                    <InputIcone icon={Gauge} value={km} onChange={(e) => setKm(e.target.value.replace(/\D/g, ''))} placeholder="Km atual do veículo" inputMode="numeric" className="font-mono" />
+                  <Campo label="Horímetro/KM" obrigatorio>
+                    <InputIcone icon={Gauge} value={km} onChange={(e) => setKm(e.target.value.replace(/\D/g, ''))} placeholder="Horímetro ou Km atual" inputMode="numeric" className="font-mono" />
                   </Campo>
 
                   <div className="flex items-start gap-2 rounded-lg bg-sky-50 px-3.5 py-2.5 text-[12px] text-sky-800">

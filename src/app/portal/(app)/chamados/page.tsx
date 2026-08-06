@@ -2,106 +2,171 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { Plus, Send, X, MessageSquare } from 'lucide-react';
 import {
-  Plus, Send, X, Eye, Clock, CalendarClock, LogOut, Wrench, Flag,
-} from 'lucide-react';
-import {
-  PageTitle, KpiCard, KpiRow,
+  PageTitle, KpiCard, KpiRow, SectionCard, StatusBadge, BarraProgresso,
   DataTable, Th, TablePagination, usePaginacao,
-  ColunaFiltro, ThFiltro, useFiltrosColuna, FunilEtapas, type ColDef,
+  ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
-import { FROTA_TOTAL } from '@/lib/portalData';
-import {
-  EsteiraManutencao, ETAPAS_MANUTENCAO,
-  type EtapaManutencao, type EtapaManutencaoKey,
-} from '@/lib/acompanhamento';
-import {
-  ATENDIMENTOS_SERVICO, getDetalhe, etapaAtendimento,
-  type AtendimentoServico,
-} from '@/lib/servicosData';
+import { CHAMADOS, type Chamado, type ChamadoStatus } from '@/lib/portalData';
 
-
-/** Rótulo + cor do badge por etapa da manutenção. */
-const ETAPA_INFO: Record<EtapaManutencaoKey, { label: string; cls: string }> = {
-  aguardando_agendamento: { label: 'Aguardando Agendamento', cls: 'bg-slate-100 text-slate-600' },
-  agendado: { label: 'Agendado', cls: 'bg-slate-100 text-slate-700' },
-  manutencao: { label: 'Em Manutenção', cls: 'bg-sky-100 text-sky-700' },
-  saida: { label: 'Disponível para retirada', cls: 'bg-amber-100 text-amber-800' },
-  finalizado: { label: 'Manutenção Finalizada', cls: 'bg-emerald-100 text-emerald-700' },
+/** Rótulo de cada status de chamado (a cor vem de StatusBadge). */
+const STATUS_LABEL: Record<ChamadoStatus, string> = {
+  aberto: 'Aberto',
+  atendimento: 'Em atendimento',
+  aguardando: 'Aguardando',
+  resolvido: 'Resolvido',
 };
 
-const ETAPA_IDX: Record<EtapaManutencaoKey, number> = {
-  aguardando_agendamento: 0, agendado: 1, manutencao: 2, saida: 3, finalizado: 4,
-};
-const DETALHE_ETAPA: Record<EtapaManutencaoKey, string | undefined> = {
-  aguardando_agendamento: 'Aguardando agendamento',
-  agendado: 'Agendamento confirmado',
-  manutencao: 'Serviços em execução',
-  saida: 'Disponível para retirada',
-  finalizado: undefined,
-};
+/** Um chamado é considerado "em aberto" enquanto não estiver resolvido. */
+const emAberto = (c: Chamado) => c.status !== 'resolvido';
 
-/** Esteira de status da manutenção (mesma linha do tempo do modal de Serviços). */
-function etapasDaManutencao(a: AtendimentoServico): EtapaManutencao[] {
-  const etapa = etapaAtendimento(a);
-  const idx = ETAPA_IDX[etapa];
-  const finalizado = etapa === 'finalizado';
-  const base = [
-    { label: 'Aguardando Agendamento', icon: Clock, data: '—' },
-    { label: 'Agendado', icon: CalendarClock, data: a.agendamento },
-    { label: 'Em Manutenção', icon: Wrench, data: a.dataEntrada },
-    { label: 'Disponível para retirada', icon: LogOut, data: a.saida },
-    { label: 'Manutenção Finalizada', icon: Flag, data: a.dataConclusao },
-  ];
-  return base.map((b, i) => ({
-    ...b,
-    estado: finalizado ? 'concluido' : i < idx ? 'concluido' : i === idx ? 'atual' : 'pendente',
-    detalhe: i === idx && !finalizado
-      ? DETALHE_ETAPA[etapa]
-      : i === 3 && a.saida === '—' ? `Previsão de saída: ${a.previsao}` : undefined,
-  }));
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+/** Referência "hoje" do protótipo: julho/2026. Codificada como ano*12+mês. */
+const HOJE_YM = 2026 * 12 + 6;
+/** Ano-mês (ano*12+mês) de uma data dd/mm/aaaa. */
+function ymOf(d: string): number {
+  const [, mm, yy] = d.split('/').map(Number);
+  return yy * 12 + (mm - 1);
 }
 
-const identificador = (a: AtendimentoServico) => (a.placa !== '—' ? a.placa : a.numeroSerie);
+/** Opções do filtro de período (em meses; 0 = todo o histórico). */
+const PERIODOS = [
+  { key: '3', label: '3 meses', meses: 3 },
+  { key: '6', label: '6 meses', meses: 6 },
+  { key: '12', label: '12 meses', meses: 12 },
+  { key: 'tudo', label: 'Tudo', meses: 0 },
+] as const;
+type PeriodoKey = (typeof PERIODOS)[number]['key'];
 
-function ModalManutencao({ atendimento: a, onFechar }: { atendimento: AtendimentoServico; onFechar: () => void }) {
-  const det = getDetalhe(a.numero);
-  const etapa = etapaAtendimento(a);
+/** Cor do "ponto" de cada status, para o chip de filtro/contador. */
+const STATUS_DOT: Record<ChamadoStatus, string> = {
+  aberto: 'bg-primary-500',
+  atendimento: 'bg-amber-500',
+  aguardando: 'bg-sky-500',
+  resolvido: 'bg-emerald-500',
+};
+
+/** Chip de filtro por status com contador. Sem `status` = opção "Todos". */
+function ContadorChip({
+  label, valor, status, ativo, onClick,
+}: {
+  label: string;
+  valor: number;
+  status?: ChamadoStatus;
+  ativo: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={ativo}
+      className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-bold transition ${
+        ativo
+          ? 'border-primary-600 bg-primary-600 text-white'
+          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-800'
+      }`}
+    >
+      {status && <i className={`h-2 w-2 rounded-full ${ativo ? 'bg-white' : STATUS_DOT[status]}`} />}
+      {label}
+      <span className={`rounded-full px-1.5 py-0.5 text-[11px] font-extrabold ${ativo ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
+        {valor}
+      </span>
+    </button>
+  );
+}
+
+/** Tom da barra conforme a magnitude (claro → forte). O último mês (atual)
+ *  ganha um azul-petróleo da marca para se destacar do restante da série. */
+function corBarra(count: number, max: number, atual: boolean): string {
+  if (atual) return 'bg-[#0e2233]';
+  const r = count / max;
+  if (r >= 0.8) return 'bg-primary-600';
+  if (r >= 0.6) return 'bg-primary-500';
+  if (r >= 0.4) return 'bg-primary-400';
+  if (r >= 0.2) return 'bg-primary-300';
+  return 'bg-primary-200';
+}
+
+/** Gráfico de barras de chamados por mês (magnitude por tom; mês atual em destaque). */
+function GraficoPorMes({ dados }: { dados: { label: string; count: number }[] }) {
+  const max = Math.max(1, ...dados.map((d) => d.count));
+  return (
+    <div className="flex h-44 items-end gap-1.5 sm:gap-2.5">
+      {dados.map((d, i) => {
+        const atual = i === dados.length - 1;
+        return (
+          <div key={d.label} className="group flex h-full min-w-0 flex-1 flex-col items-center justify-end" title={`${d.label}: ${d.count} chamados`}>
+            <span className="mb-1 text-[10px] font-bold text-slate-500">{d.count}</span>
+            <div
+              className={`w-full rounded-t-md transition-opacity hover:opacity-80 ${corBarra(d.count, max, atual)}`}
+              style={{ height: `${Math.max(3, (d.count / max) * 100)}%` }}
+            />
+            <span className={`mt-2 text-[10px] font-semibold uppercase tracking-wide ${atual ? 'text-slate-700' : 'text-slate-400'}`}>{d.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Modal de detalhes do chamado: histórico de mensagens + envio de nova mensagem. */
+function ModalChamado({ chamado: c, onFechar }: { chamado: Chamado; onFechar: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-start justify-between gap-4">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+        {/* Cabeçalho */}
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6 pb-4">
           <div>
-            <p className="font-mono text-[13px] font-semibold text-slate-500">Atendimento {a.numero}</p>
-            <h2 className="mt-0.5 text-xl font-extrabold text-slate-900">{a.motivo}</h2>
-            <div className="mt-2 flex flex-wrap gap-4 text-xs text-slate-500">
-              <span>Veículo <b className="font-mono text-slate-800">{identificador(a)}</b></span>
-              <span>Condutor <b className="text-slate-800">{det.condutor}</b></span>
-              <span>Cliente <b className="text-slate-800">{det.cliente}</b></span>
+            <p className="font-mono text-[13px] font-semibold text-slate-500">Chamado {c.id}</p>
+            <h2 className="mt-0.5 text-xl font-extrabold text-slate-900">{c.categoria}</h2>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+              {c.placa !== '—' && <span>Ativo <b className="font-mono text-slate-800">{c.placa}</b></span>}
+              <span>Solicitante <b className="text-slate-800">{c.solicitante}</b></span>
+              <span>Responsável <b className="text-slate-800">{c.responsavel}</b></span>
+              <span>Aberto em <b className="font-mono text-slate-800">{c.dataAbertura}</b></span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${ETAPA_INFO[etapa].cls}`}>{ETAPA_INFO[etapa].label}</span>
+            <StatusBadge status={c.status} label={STATUS_LABEL[c.status]} />
             <button onClick={onFechar} aria-label="Fechar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
               <X size={18} />
             </button>
           </div>
         </div>
 
-        <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Andamento da manutenção</p>
-        <div className="mb-2">
-          <EsteiraManutencao etapas={etapasDaManutencao(a)} />
+        {/* Descrição registrada na abertura do chamado */}
+        <div className="border-b border-slate-100 px-6 py-4">
+          <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">Descrição do chamado</p>
+          <p className="text-[13px] leading-relaxed text-slate-700">{c.descricao}</p>
         </div>
 
-        <div className="mt-5 border-t border-slate-100 pt-4">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Falar com o controlador sobre o status</p>
+        {/* Histórico de mensagens / solicitações */}
+        <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50/60 p-6">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Conversa com os analistas</p>
+          {c.respostas.map((r, i) => {
+            const doCliente = r.origem === 'cliente';
+            return (
+              <div key={i} className={`flex ${doCliente ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-[13px] shadow-sm ${doCliente ? 'bg-primary-600 text-white' : 'bg-white text-slate-700'}`}>
+                  <p className={`mb-0.5 text-[11px] font-semibold ${doCliente ? 'text-white/80' : 'text-slate-500'}`}>
+                    {r.autor} · {r.horario}
+                  </p>
+                  <p>{r.texto}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Envio de nova mensagem */}
+        <div className="border-t border-slate-100 p-4">
           <div className="mb-2 flex items-center gap-2 text-[12px] text-slate-500">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold text-white">LP</span>
             Enviando como <b className="text-slate-700">Lucas Pessoa</b> · Cliente
           </div>
           <div className="flex gap-2.5">
-            <input placeholder="Escreva sua mensagem ao controlador…" className="input-field flex-1 bg-slate-50 py-2.5 text-[13px]" />
+            <input placeholder="Escreva uma mensagem aos analistas…" className="input-field flex-1 bg-slate-50 py-2.5 text-[13px]" />
             <button className="btn-primary gap-1.5 text-[13px]"><Send size={14} /> Enviar</button>
           </div>
         </div>
@@ -111,92 +176,176 @@ function ModalManutencao({ atendimento: a, onFechar }: { atendimento: Atendiment
 }
 
 export default function ChamadosPage() {
-  const router = useRouter();
-  const [etapaFiltro, setEtapaFiltro] = useState<EtapaManutencaoKey | null>(null);
-  const [aberto, setAberto] = useState<AtendimentoServico | null>(null);
+  const [aberto, setAberto] = useState<Chamado | null>(null);
+  const [statusFiltro, setStatusFiltro] = useState<ChamadoStatus | 'todos'>('todos');
+  const [periodo, setPeriodo] = useState<PeriodoKey>('12');
+  const mesesSel = PERIODOS.find((p) => p.key === periodo)!.meses;
 
-  /** Base da Central de Atendimento: as manutenções em aberto (mesmas de Serviços). */
-  const abertas = useMemo(() => ATENDIMENTOS_SERVICO.filter((a) => a.status === 'aberta'), []);
+  /* KPIs gerais de chamados (todo o histórico). */
+  const totais = useMemo(() => {
+    const abertos = CHAMADOS.filter(emAberto).length;
+    return { abertos, finalizados: CHAMADOS.length - abertos, total: CHAMADOS.length };
+  }, []);
 
-  const listaBase = useMemo(
-    () => abertas.filter((a) => !etapaFiltro || etapaAtendimento(a) === etapaFiltro),
-    [abertas, etapaFiltro],
+  /* Top 5 placas com mais chamados (sem SLA, priorizamos por volume por ativo). */
+  const topPlacas = useMemo(() => {
+    const map = new Map<string, { total: number; abertos: number }>();
+    for (const c of CHAMADOS) {
+      if (c.placa === '—') continue;
+      const e = map.get(c.placa) ?? { total: 0, abertos: 0 };
+      e.total++;
+      if (emAberto(c)) e.abertos++;
+      map.set(c.placa, e);
+    }
+    return Array.from(map.entries())
+      .map(([placa, v]) => ({ placa, ...v }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+  }, []);
+  const maxPlaca = Math.max(1, ...topPlacas.map((p) => p.total));
+
+  /* Base filtrada pelo período (compartilhada por contadores e tabela). */
+  const dentroPeriodo = (c: Chamado) => mesesSel === 0 || ymOf(c.dataAbertura) >= HOJE_YM - (mesesSel - 1);
+  const basePeriodo = useMemo(
+    () => (mesesSel === 0 ? CHAMADOS : CHAMADOS.filter(dentroPeriodo)),
+    [mesesSel],
   );
-  const cols = useMemo<ColDef<AtendimentoServico>[]>(() => [
-    { key: 'numero', get: (a) => a.numero, multi: true },
-    { key: 'motivo', get: (a) => a.motivo },
-    { key: 'placa', get: (a) => identificador(a), multi: true },
-    { key: 'solicitante', get: (a) => getDetalhe(a.numero).condutor },
-    { key: 'modelo', get: (a) => a.marcaModelo },
+
+  /* Contagem por status dentro do período (para os chips). */
+  const contagem = useMemo(() => {
+    const base: Record<ChamadoStatus, number> = { aberto: 0, atendimento: 0, aguardando: 0, resolvido: 0 };
+    for (const c of basePeriodo) base[c.status]++;
+    return base;
+  }, [basePeriodo]);
+
+  /* Chamados por mês na janela do período (série do gráfico). */
+  const dadosGrafico = useMemo(() => {
+    const janela = mesesSel === 0 ? 12 : mesesSel;
+    const arr: { label: string; count: number }[] = [];
+    for (let k = janela - 1; k >= 0; k--) {
+      const ym = HOJE_YM - k;
+      const count = CHAMADOS.filter((c) => ymOf(c.dataAbertura) === ym).length;
+      arr.push({ label: `${MESES[ym % 12]}/${String(Math.floor(ym / 12)).slice(2)}`, count });
+    }
+    return arr;
+  }, [mesesSel]);
+
+  const baseTabela = useMemo(
+    () => (statusFiltro === 'todos' ? basePeriodo : basePeriodo.filter((c) => c.status === statusFiltro)),
+    [basePeriodo, statusFiltro],
+  );
+
+  const cols = useMemo<ColDef<Chamado>[]>(() => [
+    { key: 'id', get: (c) => c.id, multi: true },
+    { key: 'categoria', get: (c) => c.categoria },
+    { key: 'placa', get: (c) => c.placa, multi: true },
+    { key: 'solicitante', get: (c) => c.solicitante },
   ], []);
-  const { val, set, filtradas: lista } = useFiltrosColuna(listaBase, cols);
-
+  const { val, set, filtradas: lista } = useFiltrosColuna(baseTabela, cols);
   const pag = usePaginacao(lista, 10);
-
-  /* Timeline com todas as etapas. "Finalizado" não tem contagem (os finalizados
-     ficam em Serviços) e, ao clicar, leva o usuário para a tela de Serviços. */
-  const funil = useMemo(
-    () => ETAPAS_MANUTENCAO.map((e) => ({
-      ...e,
-      count: e.key === 'finalizado' ? null : abertas.filter((a) => etapaAtendimento(a) === e.key).length,
-    })),
-    [abertas],
-  );
 
   return (
     <div>
       <PageTitle
         titulo="Central de Chamados"
-        subtitulo="Manutenções em aberto da frota · o histórico de finalizados fica em Serviços"
+        subtitulo="Todos os chamados abertos com a Vamos — manutenção, documentação, financeiro e suporte"
         novo
         acao={
           <Link href="/portal/agendamentos" className="btn-primary gap-1.5 text-[13px]">
-            <Plus size={15} /> Nova Manutenção
+            <Plus size={15} /> Abrir chamado
           </Link>
         }
       />
 
-      <KpiRow>
-        <KpiCard label="Frota total" valor={String(FROTA_TOTAL)} detalhe="veículos e equipamentos" cor="border-l-[#0e2233]" />
-        <KpiCard label="Em manutenção" valor={String(abertas.length)} detalhe="veículos imobilizados" cor="border-l-sky-600" detalheCor="text-sky-700" />
+      <KpiRow cols={3}>
+        <KpiCard label="Chamados em aberto" valor={String(totais.abertos)} detalhe="aguardando resolução" cor="border-l-primary-600" detalheCor="text-primary-700" />
+        <KpiCard label="Total de chamados" valor={String(totais.total)} detalhe="abertos + finalizados" cor="border-l-[#0e2233]" />
+        <KpiCard label="Chamados finalizados" valor={String(totais.finalizados)} detalhe="já resolvidos" cor="border-l-emerald-600" detalheCor="text-emerald-700" />
       </KpiRow>
 
-      <FunilEtapas
-        titulo="Manutenções por etapa"
-        subtitulo="Clique numa etapa para filtrar a lista · 'Manutenção Finalizada' abre em Serviços"
-        etapas={funil}
-        ativo={etapaFiltro}
-        onSelecionar={(k) => {
-          if (k === 'finalizado') { router.push('/portal/servicos'); return; }
-          setEtapaFiltro(k as EtapaManutencaoKey | null);
-        }}
-        className="mb-6"
-      />
+      {/* Gráfico chamados por mês — largura total para caber os 12 meses. */}
+      <SectionCard
+        titulo="Chamados por mês"
+        subtitulo="Volume de aberturas no período selecionado"
+        className="mb-4"
+        acao={
+          <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
+            {PERIODOS.map((p) => (
+              <button
+                key={p.key}
+                onClick={() => setPeriodo(p.key)}
+                className={`rounded-md px-2.5 py-1.5 text-xs font-bold transition ${
+                  periodo === p.key ? 'bg-primary-600 text-white' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        }
+      >
+        <GraficoPorMes dados={dadosGrafico} />
+      </SectionCard>
+
+      {/* Top 5 placas com mais chamados */}
+      <SectionCard titulo="Top 5 placas com mais chamados" subtitulo="Ativos que mais acionaram a central" className="mb-6">
+        <ul className="space-y-3.5">
+          {topPlacas.map((p, i) => (
+            <li key={p.placa} className="flex items-center gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[12px] font-extrabold text-slate-600">
+                {i + 1}
+              </span>
+              <span className="w-24 shrink-0 font-mono text-[13px] font-semibold text-slate-800">{p.placa}</span>
+              <div className="min-w-0 flex-1">
+                <BarraProgresso pct={(p.total / maxPlaca) * 100} cor="bg-primary-500" />
+              </div>
+              <span className="w-36 shrink-0 text-right text-[11px] text-slate-500">
+                <b className="text-slate-800">{p.total}</b> chamados · {p.abertos} em aberto
+              </span>
+            </li>
+          ))}
+        </ul>
+      </SectionCard>
+
+      {/* Filtro por status com contador — clique para filtrar a tabela. */}
+      <div className="mb-4 flex flex-wrap gap-2">
+        <ContadorChip label="Todos" valor={basePeriodo.length} ativo={statusFiltro === 'todos'} onClick={() => setStatusFiltro('todos')} />
+        {(Object.keys(STATUS_LABEL) as ChamadoStatus[]).map((s) => (
+          <ContadorChip
+            key={s}
+            label={STATUS_LABEL[s]}
+            valor={contagem[s]}
+            status={s}
+            ativo={statusFiltro === s}
+            onClick={() => setStatusFiltro((prev) => (prev === s ? 'todos' : s))}
+          />
+        ))}
+      </div>
 
       <DataTable
         colSpan={7}
         vazio={lista.length === 0}
-        vazioLabel="Nenhuma manutenção encontrada com os filtros atuais."
+        vazioLabel="Nenhum chamado encontrado com os filtros atuais."
         filterRow={
           <>
-            <ThFiltro><ColunaFiltro value={val('numero')} onChange={set('numero')} placeholder="Atendimento" multi ariaLabel="Filtrar atendimento" /></ThFiltro>
-            <ThFiltro><ColunaFiltro value={val('motivo')} onChange={set('motivo')} placeholder="Motivo" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('id')} onChange={set('id')} placeholder="Chamado" multi ariaLabel="Filtrar chamado" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('categoria')} onChange={set('categoria')} placeholder="Assunto" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa / Ativo" multi ariaLabel="Filtrar placa ou ativo" /></ThFiltro>
-            <ThFiltro><ColunaFiltro value={val('solicitante')} onChange={set('solicitante')} placeholder="Condutor" /></ThFiltro>
-            <ThFiltro><ColunaFiltro value={val('modelo')} onChange={set('modelo')} placeholder="Marca/Modelo" /></ThFiltro>
+            <ThFiltro><ColunaFiltro value={val('solicitante')} onChange={set('solicitante')} placeholder="Solicitante" /></ThFiltro>
+            <ThFiltro />
             <ThFiltro />
             <ThFiltro />
           </>
         }
         head={
           <>
-            <Th>Atendimento</Th>
-            <Th>Motivo</Th>
+            <Th>Chamado</Th>
+            <Th>Assunto</Th>
             <Th>Placa / Ativo</Th>
-            <Th>Condutor</Th>
-            <Th>Marca/Modelo</Th>
-            <Th>Previsão de saída</Th>
-            <Th>Etapa</Th>
+            <Th>Solicitante</Th>
+            <Th>Data de Abertura</Th>
+            <Th>Status</Th>
+            <Th className="text-right">Detalhes</Th>
           </>
         }
         footer={
@@ -207,37 +356,33 @@ export default function ChamadosPage() {
             itensPorPagina={pag.itensPorPagina}
             onPaginaChange={pag.setPagina}
             onItensPorPaginaChange={pag.setItensPorPagina}
-            rotulo="manutenções em aberto"
+            rotulo="chamados"
           />
         }
       >
-        {pag.pageItens.map((a) => {
-          const det = getDetalhe(a.numero);
-          const etapa = etapaAtendimento(a);
-          return (
-            <tr
-              key={a.numero}
-              onClick={() => setAberto(a)}
-              className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
-            >
-              <td className="px-4 py-3.5 font-mono text-xs font-semibold text-slate-800">{a.numero}</td>
-              <td className="px-4 py-3.5 text-[13px] font-semibold text-slate-800">{a.motivo}</td>
-              <td className="px-4 py-3.5 font-mono text-xs">{identificador(a)}</td>
-              <td className="px-4 py-3.5 text-xs text-slate-600">{det.condutor}</td>
-              <td className="px-4 py-3.5 text-xs text-slate-500">{a.marcaModelo}</td>
-              <td className="px-4 py-3.5 font-mono text-xs">{a.previsao}</td>
-              <td className="px-4 py-3.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${ETAPA_INFO[etapa].cls}`}>{ETAPA_INFO[etapa].label}</span>
-                  <Eye size={15} className="text-slate-300" />
-                </div>
-              </td>
-            </tr>
-          );
-        })}
+        {pag.pageItens.map((c) => (
+          <tr key={c.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+            <td className="px-4 py-3.5 font-mono text-xs font-semibold text-slate-800">{c.id}</td>
+            <td className="px-4 py-3.5 text-[13px] font-semibold text-slate-800">{c.categoria}</td>
+            <td className="px-4 py-3.5 font-mono text-xs text-slate-600">{c.placa}</td>
+            <td className="px-4 py-3.5 text-xs text-slate-600">{c.solicitante}</td>
+            <td className="px-4 py-3.5 font-mono text-xs text-slate-600">{c.dataAbertura}</td>
+            <td className="px-4 py-3.5">
+              <StatusBadge status={c.status} label={STATUS_LABEL[c.status]} />
+            </td>
+            <td className="px-4 py-3.5 text-right">
+              <button
+                onClick={() => setAberto(c)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary-300 hover:text-primary-700"
+              >
+                <MessageSquare size={13} /> Detalhes
+              </button>
+            </td>
+          </tr>
+        ))}
       </DataTable>
 
-      {aberto && <ModalManutencao atendimento={aberto} onFechar={() => setAberto(null)} />}
+      {aberto && <ModalChamado chamado={aberto} onFechar={() => setAberto(null)} />}
     </div>
   );
 }

@@ -29,7 +29,7 @@ export const GRUPOS_DISTRIBUICAO: GrupoDistribuicao[] = [
   { id: 'g-go', nome: 'Frota Centro-Oeste', distribuicao: 'Distribuição GO', ativos: 24, regiao: 'Centro-Oeste' },
 ];
 
-export type ChamadoStatus = 'aberto' | 'atendimento' | 'aguardando' | 'escalonado' | 'resolvido';
+export type ChamadoStatus = 'aberto' | 'atendimento' | 'aguardando' | 'resolvido';
 
 export interface ChamadoResposta {
   autor: string;
@@ -43,18 +43,20 @@ export interface Chamado {
   categoria: string;
   placa: string;
   status: ChamadoStatus;
+  /** Data de abertura do chamado (dd/mm/aaaa). */
+  dataAbertura: string;
   abertoHa: string;
-  /** Minutos restantes de SLA (negativo = estourado). */
-  slaMin: number;
+  /** Descrição registrada na abertura do chamado. */
+  descricao: string;
   solicitante: string;
   responsavel: string;
   respostas: ChamadoResposta[];
 }
 
-export const CHAMADOS: Chamado[] = [
+const CHAMADOS_BASE: Chamado[] = [
   {
     id: 'CH-3391', categoria: 'Falha no sistema de freios', placa: 'SHQ6B80', status: 'atendimento',
-    abertoHa: 'Aberto há 2h', slaMin: -30, solicitante: 'Marcos Lima', responsavel: 'Ana Torres',
+    dataAbertura: '20/07/2026', abertoHa: 'Aberto há 2h', descricao: 'Veículo apresentando ruído forte ao frear; já reduzimos a velocidade de operação. Solicito verificação urgente do sistema de freios.', solicitante: 'Marcos Lima', responsavel: 'Ana Torres',
     respostas: [
       { autor: 'Marcos Lima', origem: 'cliente', horario: '09:12', texto: 'Veículo apresentando ruído forte ao frear, já reduzimos a velocidade de operação.' },
       { autor: 'Ana Torres', origem: 'suporte', horario: '09:40', texto: 'Chamado recebido, acionando equipe de campo mais próxima da unidade.' },
@@ -63,23 +65,23 @@ export const CHAMADOS: Chamado[] = [
   },
   {
     id: 'CH-3388', categoria: 'Pneu furado - eixo traseiro', placa: 'JBL5B25', status: 'aguardando',
-    abertoHa: 'Aberto há 1d', slaMin: 120, solicitante: 'Fernanda Reis', responsavel: 'Diego Souza',
+    dataAbertura: '19/07/2026', abertoHa: 'Aberto há 1d', descricao: 'Pneu traseiro direito furou durante o trajeto; veículo parado no acostamento aguardando socorro.', solicitante: 'Fernanda Reis', responsavel: 'Diego Souza',
     respostas: [
       { autor: 'Fernanda Reis', origem: 'cliente', horario: 'Ontem 14:02', texto: 'Pneu traseiro direito furou durante o trajeto.' },
       { autor: 'Diego Souza', origem: 'suporte', horario: 'Ontem 14:30', texto: 'Guincho acionado, aguardando confirmação de disponibilidade do estepe.' },
     ],
   },
   {
-    id: 'CH-3379', categoria: 'Painel indicando falha no motor', placa: 'DSA9924', status: 'escalonado',
-    abertoHa: 'Aberto há 3d', slaMin: -260, solicitante: 'Carlos Mota', responsavel: 'Equipe Técnica SP',
+    id: 'CH-3379', categoria: 'Painel indicando falha no motor', placa: 'DSA9924', status: 'atendimento',
+    dataAbertura: '17/07/2026', abertoHa: 'Aberto há 3d', descricao: 'Luz de injeção acesa constantemente no painel, com perda de potência do motor.', solicitante: 'Carlos Mota', responsavel: 'Equipe Técnica SP',
     respostas: [
       { autor: 'Carlos Mota', origem: 'cliente', horario: 'Seg 08:10', texto: 'Luz de injeção acesa constantemente no painel.' },
-      { autor: 'Equipe Técnica SP', origem: 'suporte', horario: 'Seg 11:20', texto: 'Escalonado para diagnóstico presencial, agenda em análise.' },
+      { autor: 'Equipe Técnica SP', origem: 'suporte', horario: 'Seg 11:20', texto: 'Encaminhado para diagnóstico presencial, agenda em análise.' },
     ],
   },
   {
     id: 'CH-3365', categoria: 'Solicitação de veículo reserva', placa: 'JBL5E88', status: 'resolvido',
-    abertoHa: 'Aberto há 5d', slaMin: 900, solicitante: 'Patrícia Nunes', responsavel: 'Ana Torres',
+    dataAbertura: '15/07/2026', abertoHa: 'Aberto há 5d', descricao: 'Precisamos de veículo reserva enquanto o titular está em manutenção.', solicitante: 'Patrícia Nunes', responsavel: 'Ana Torres',
     respostas: [
       { autor: 'Patrícia Nunes', origem: 'cliente', horario: 'Qui 07:45', texto: 'Precisamos de veículo reserva enquanto o titular está em manutenção.' },
       { autor: 'Ana Torres', origem: 'suporte', horario: 'Qui 09:00', texto: 'Veículo reserva disponibilizado no pátio de São Paulo.' },
@@ -87,7 +89,7 @@ export const CHAMADOS: Chamado[] = [
   },
   {
     id: 'CH-3360', categoria: 'Vidro trincado', placa: 'SHQ6B80', status: 'resolvido',
-    abertoHa: 'Aberto há 6d', slaMin: 1200, solicitante: 'Marcos Lima', responsavel: 'Diego Souza',
+    dataAbertura: '14/07/2026', abertoHa: 'Aberto há 6d', descricao: 'Vidro dianteiro trincou com impacto de pedra na rodovia.', solicitante: 'Marcos Lima', responsavel: 'Diego Souza',
     respostas: [
       { autor: 'Marcos Lima', origem: 'cliente', horario: 'Qua 10:00', texto: 'Vidro dianteiro trincou com impacto de pedra na rodovia.' },
       { autor: 'Diego Souza', origem: 'suporte', horario: 'Qua 15:00', texto: 'Troca de vidro realizada, veículo liberado.' },
@@ -95,14 +97,14 @@ export const CHAMADOS: Chamado[] = [
   },
   {
     id: 'CH-3352', categoria: 'Ar-condicionado sem gelar', placa: 'DSA9924', status: 'aberto',
-    abertoHa: 'Aberto há 8d', slaMin: 40, solicitante: 'Carlos Mota', responsavel: '—',
+    dataAbertura: '12/07/2026', abertoHa: 'Aberto há 8d', descricao: 'Ar-condicionado parou de gelar; motorista relatando calor excessivo na cabine.', solicitante: 'Carlos Mota', responsavel: '—',
     respostas: [
       { autor: 'Carlos Mota', origem: 'cliente', horario: 'Seg 09:00', texto: 'Ar-condicionado parou de gelar, motorista relatando calor excessivo em cabine.' },
     ],
   },
   {
     id: 'CH-3406', categoria: 'Ruído na suspensão dianteira', placa: 'JBL5B26', status: 'atendimento',
-    abertoHa: 'Aberto há 5h', slaMin: 55, solicitante: 'Fernanda Reis', responsavel: 'Diego Souza',
+    dataAbertura: '20/07/2026', abertoHa: 'Aberto há 5h', descricao: 'Barulho de batida na suspensão dianteira ao passar em lombadas.', solicitante: 'Fernanda Reis', responsavel: 'Diego Souza',
     respostas: [
       { autor: 'Fernanda Reis', origem: 'cliente', horario: 'Hoje 07:20', texto: 'Barulho de batida na suspensão dianteira ao passar em lombadas.' },
       { autor: 'Diego Souza', origem: 'suporte', horario: 'Hoje 08:05', texto: 'Agendado diagnóstico na oficina de Campinas para hoje à tarde.' },
@@ -110,7 +112,7 @@ export const CHAMADOS: Chamado[] = [
   },
   {
     id: 'CH-3399', categoria: 'Solicitação de segunda via de crachá', placa: '—', status: 'resolvido',
-    abertoHa: 'Aberto há 4d', slaMin: 600, solicitante: 'Patrícia Nunes', responsavel: 'Ana Torres',
+    dataAbertura: '16/07/2026', abertoHa: 'Aberto há 4d', descricao: 'Motorista perdeu o crachá de acesso ao pátio de Campinas; solicito segunda via.', solicitante: 'Patrícia Nunes', responsavel: 'Ana Torres',
     respostas: [
       { autor: 'Patrícia Nunes', origem: 'cliente', horario: 'Ter 10:00', texto: 'Motorista perdeu o crachão de acesso ao pátio de Campinas.' },
       { autor: 'Ana Torres', origem: 'suporte', horario: 'Ter 11:30', texto: 'Segunda via emitida e enviada por e-mail.' },
@@ -118,20 +120,95 @@ export const CHAMADOS: Chamado[] = [
   },
   {
     id: 'CH-3410', categoria: 'Vazamento de óleo no motor', placa: 'RTX4C12', status: 'aberto',
-    abertoHa: 'Aberto há 1h', slaMin: 170, solicitante: 'Carlos Mota', responsavel: '—',
+    dataAbertura: '20/07/2026', abertoHa: 'Aberto há 1h', descricao: 'Identificado vazamento de óleo embaixo do motor na retroescavadeira.', solicitante: 'Carlos Mota', responsavel: '—',
     respostas: [
       { autor: 'Carlos Mota', origem: 'cliente', horario: 'Hoje 11:40', texto: 'Identificado vazamento de óleo embaixo do motor na retroescavadeira.' },
     ],
   },
   {
     id: 'CH-3345', categoria: 'Erro no painel de telemetria', placa: 'MNT7D45', status: 'aguardando',
-    abertoHa: 'Aberto há 9d', slaMin: 30, solicitante: 'Marcos Lima', responsavel: 'Equipe Técnica SP',
+    dataAbertura: '11/07/2026', abertoHa: 'Aberto há 9d', descricao: 'Painel de telemetria não atualiza a localização do equipamento há 2 dias.', solicitante: 'Marcos Lima', responsavel: 'Equipe Técnica SP',
     respostas: [
       { autor: 'Marcos Lima', origem: 'cliente', horario: 'Qui 08:00', texto: 'Painel de telemetria não atualiza a localização do equipamento há 2 dias.' },
       { autor: 'Equipe Técnica SP', origem: 'suporte', horario: 'Qui 09:15', texto: 'Reinicialização remota enviada, aguardando confirmação do cliente.' },
     ],
   },
 ];
+
+/* ------------------------------------------------------------------ *
+ * Gerador de chamados fictícios — popula a Central de Chamados com um
+ * volume realista, cobrindo assuntos além de manutenção (documentação,
+ * financeiro, cadastro, telemetria etc.). Determinístico (sem random),
+ * para o build/SSR ficar estável.
+ * ------------------------------------------------------------------ */
+function gerarChamados(): Chamado[] {
+  /** Assuntos gerais de chamado — manutenção é só uma parte do conjunto. */
+  const CATEGORIAS = [
+    'Falha no sistema de freios', 'Pneu furado - eixo traseiro', 'Painel indicando falha no motor',
+    'Ar-condicionado sem gelar', 'Ruído na suspensão dianteira', 'Vazamento de óleo no motor',
+    'Vidro trincado', 'Solicitação de veículo reserva', 'Solicitação de guincho',
+    'Dúvida sobre fatura', 'Solicitação de 2ª via de boleto', 'Contestação de multa lançada',
+    'Atualização de cadastro do condutor', 'Solicitação de 2ª via de CRLV', 'Troca de titularidade',
+    'Erro no painel de telemetria', 'Rastreador sem sinal', 'Agendamento de revisão preventiva',
+    'Solicitação de segunda via de crachá', 'Dúvida sobre contrato',
+  ];
+  const STATUSES: ChamadoStatus[] = [
+    'aberto', 'atendimento', 'aguardando', 'atendimento', 'resolvido',
+    'resolvido', 'atendimento', 'aberto', 'aguardando', 'resolvido',
+  ];
+  const PLACAS = ['SHQ6B80', 'JBL5B25', 'DSA9924', 'JBL5E88', 'JBL5B26', 'RTX4C12', 'MNT7D45', 'JBL5B27', '—'];
+  const SOLICITANTES = ['Marcos Lima', 'Fernanda Reis', 'Carlos Mota', 'Patrícia Nunes', 'Rafael Dias', 'Juliana Alves', 'Bruno Costa', 'Sandra Melo'];
+  const RESPONSAVEIS = ['Ana Torres', 'Diego Souza', 'Equipe Técnica SP', 'Central de Atendimento', 'Financeiro Vamos'];
+
+  /** Referência "hoje" do protótipo, para derivar a data de abertura. */
+  const HOJE_PORTAL = new Date(2026, 6, 20); // 20/07/2026
+  const fmt = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+
+  /* Volume de chamados por mês (índice 0 = 11 meses atrás … 11 = mês atual).
+     Valores variados de propósito, com leve tendência de alta nos meses recentes,
+     para o gráfico "chamados por mês" não ficar uniforme. */
+  const PADRAO_MES = [5, 9, 6, 11, 7, 13, 8, 14, 10, 12, 9, 16];
+
+  const chamados: Chamado[] = [];
+  let seq = 0;
+  for (let m = 0; m < 12; m++) {
+    const mesOffset = 11 - m; // 11 (mais antigo) … 0 (mês atual)
+    const qtd = PADRAO_MES[m];
+    for (let j = 0; j < qtd; j++) {
+      const i = seq++;
+      const id = `CH-${3200 + i * 3}`;
+      const categoria = CATEGORIAS[i % CATEGORIAS.length];
+      const placa = PLACAS[i % PLACAS.length];
+      const solicitante = SOLICITANTES[i % SOLICITANTES.length];
+
+      const diaMax = mesOffset === 0 ? 19 : 27; // mês atual não pode passar do dia de hoje
+      const dia = 1 + ((i * 7 + j * 3) % diaMax);
+      const dRef = new Date(HOJE_PORTAL.getFullYear(), HOJE_PORTAL.getMonth() - mesOffset, dia);
+      const dataAbertura = fmt(dRef);
+      const diffDias = Math.max(0, Math.round((HOJE_PORTAL.getTime() - dRef.getTime()) / 86_400_000));
+
+      // Meses recentes concentram os chamados em aberto; anteriores já resolvidos.
+      const status: ChamadoStatus = mesOffset <= 1 ? STATUSES[i % STATUSES.length] : 'resolvido';
+      const resolvido = status === 'resolvido';
+      const responsavel = status === 'aberto' ? '—' : RESPONSAVEIS[i % RESPONSAVEIS.length];
+      const abertoHa = diffDias < 1 ? 'Aberto hoje' : `Aberto há ${diffDias}d`;
+      const descricao = `${categoria}${placa !== '—' ? ` no ativo ${placa}` : ''}. Registrado por ${solicitante} para análise da equipe Vamos.`;
+
+      chamados.push({
+        id, categoria, placa, status, dataAbertura, abertoHa, descricao, solicitante, responsavel,
+        respostas: [
+          { autor: solicitante, origem: 'cliente', horario: `${String(7 + (i % 10)).padStart(2, '0')}:${String((i * 7) % 60).padStart(2, '0')}`, texto: `${categoria} relatada${placa !== '—' ? ` no ativo ${placa}` : ''}.` },
+          ...(status !== 'aberto'
+            ? [{ autor: responsavel, origem: 'suporte' as const, horario: `${String(9 + (i % 8)).padStart(2, '0')}:${String((i * 11) % 60).padStart(2, '0')}`, texto: resolvido ? 'Chamado atendido e concluído.' : 'Chamado em tratativa pela equipe responsável.' }]
+            : []),
+        ],
+      });
+    }
+  }
+  return chamados;
+}
+
+export const CHAMADOS: Chamado[] = [...CHAMADOS_BASE, ...gerarChamados()];
 
 export type FaturaStatus = 'pago' | 'aberto' | 'vencido';
 

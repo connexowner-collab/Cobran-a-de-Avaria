@@ -176,7 +176,7 @@ function etapasManutencao(a: AtendimentoServico): EtapaManutencao[] {
     { label: 'Aguardando Agendamento', data: agendou ? a.agendamento : 'Em andamento', icon: Clock, estado: agendou ? 'concluido' : 'atual' },
     { label: 'Agendado', data: a.agendamento, icon: CalendarClock, estado: agendou ? 'concluido' : 'pendente' },
     { label: 'Em Manutenção', data: manutEstado === 'atual' ? 'Em andamento' : entrou ? a.dataEntrada : '—', icon: Wrench, estado: manutEstado, detalhe: manutEstado === 'pendente' ? undefined : detManut },
-    { label: 'Disponível para retirada', data: a.saida, icon: LogOut, estado: saiu ? 'concluido' : 'pendente', detalhe: saiu ? undefined : `Previsão de saída: ${a.previsao}` },
+    { label: 'Disponível para retirada', data: a.saida, icon: LogOut, estado: saiu ? 'concluido' : 'pendente' },
     { label: 'Manutenção Finalizada', data: a.dataConclusao, icon: Flag, estado: finalizado ? 'concluido' : 'pendente' },
   ];
 }

@@ -94,7 +94,7 @@ function MiniTabela({ colunas, linhas }: { colunas: string[]; linhas: React.Reac
 
 const COR_CHAMADO: Record<string, string> = {
   aberto: 'bg-sky-100 text-sky-700', atendimento: 'bg-amber-100 text-amber-800',
-  aguardando: 'bg-slate-100 text-slate-600', escalonado: 'bg-rose-100 text-rose-700',
+  aguardando: 'bg-slate-100 text-slate-600',
   resolvido: 'bg-emerald-100 text-emerald-700',
 };
 const COR_FATURA: Record<string, string> = {
