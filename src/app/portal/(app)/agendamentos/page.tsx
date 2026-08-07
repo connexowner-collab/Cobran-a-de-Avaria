@@ -222,7 +222,7 @@ export default function AgendamentosPage() {
       >
         <ArrowLeft size={14} /> Voltar para a Central de Chamados
       </Link>
-      <PageTitle titulo="Nova Manutenção" subtitulo="Agende manutenções preventivas ou corretivas em poucos passos" />
+      <PageTitle titulo="Novo Chamado" subtitulo="Abra um chamado de manutenção preventiva ou corretiva em poucos passos" />
 
       <div className="grid items-start gap-5 xl:grid-cols-[1.3fr_1fr]">
         {/* Wizard */}

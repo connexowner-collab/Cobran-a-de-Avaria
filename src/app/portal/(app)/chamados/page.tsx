@@ -252,7 +252,7 @@ export default function ChamadosPage() {
         novo
         acao={
           <Link href="/portal/agendamentos" className="btn-primary gap-1.5 text-[13px]">
-            <Plus size={15} /> Abrir chamado
+            <Plus size={15} /> Novo Chamado
           </Link>
         }
       />
