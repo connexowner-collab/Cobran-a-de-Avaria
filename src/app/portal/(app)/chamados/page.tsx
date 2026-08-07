@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Send, X, MessageSquare } from 'lucide-react';
+import { Plus, X, MessageSquare, Download, Wrench } from 'lucide-react';
 import {
   PageTitle, KpiCard, KpiRow, SectionCard, StatusBadge, BarraProgresso,
   DataTable, Th, TablePagination, usePaginacao,
@@ -20,6 +20,20 @@ const STATUS_LABEL: Record<ChamadoStatus, string> = {
 
 /** Um chamado é considerado "em aberto" enquanto não estiver resolvido. */
 const emAberto = (c: Chamado) => c.status !== 'resolvido';
+
+/** Gera e baixa um CSV (mesmo padrão das demais telas do portal). */
+function baixarCSV(nome: string, linhas: (string | number)[][]) {
+  const csv = linhas.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${nome}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 /** Referência "hoje" do protótipo: julho/2026. Codificada como ano*12+mês. */
@@ -115,7 +129,7 @@ function ModalChamado({ chamado: c, onFechar }: { chamado: Chamado; onFechar: ()
   const ativo = c.placa !== '—' ? VEICULOS.find((v) => v.placa === c.placa) : undefined;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-y-auto rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
         {/* Cabeçalho */}
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6 pb-4">
           <div>
@@ -153,40 +167,22 @@ function ModalChamado({ chamado: c, onFechar }: { chamado: Chamado; onFechar: ()
         </div>
 
         {/* Descrição registrada na abertura do chamado */}
-        <div className="border-b border-slate-100 px-6 py-4">
+        <div className="px-6 py-4">
           <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">Descrição do chamado</p>
           <p className="text-[13px] leading-relaxed text-slate-700">{c.descricao}</p>
         </div>
 
-        {/* Histórico de mensagens / solicitações */}
-        <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50/60 p-6">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Conversa com os analistas</p>
-          {c.respostas.map((r, i) => {
-            const doCliente = r.origem === 'cliente';
-            return (
-              <div key={i} className={`flex ${doCliente ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-[13px] shadow-sm ${doCliente ? 'bg-primary-600 text-white' : 'bg-white text-slate-700'}`}>
-                  <p className={`mb-0.5 text-[11px] font-semibold ${doCliente ? 'text-white/80' : 'text-slate-500'}`}>
-                    {r.autor} · {r.horario}
-                  </p>
-                  <p>{r.texto}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Envio de nova mensagem */}
-        <div className="border-t border-slate-100 p-4">
-          <div className="mb-2 flex items-center gap-2 text-[12px] text-slate-500">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold text-white">LP</span>
-            Enviando como <b className="text-slate-700">Lucas Pessoa</b> · Cliente
+        {/* Atalho para os serviços de manutenção do ativo */}
+        {c.placa !== '—' && (
+          <div className="border-t border-slate-100 px-6 py-4">
+            <Link
+              href={`/portal/servicos?placa=${encodeURIComponent(c.placa)}`}
+              className="btn-secondary inline-flex items-center gap-1.5 text-[13px]"
+            >
+              <Wrench size={14} /> Ver serviços de manutenção deste ativo
+            </Link>
           </div>
-          <div className="flex gap-2.5">
-            <input placeholder="Escreva uma mensagem aos analistas…" className="input-field flex-1 bg-slate-50 py-2.5 text-[13px]" />
-            <button className="btn-primary gap-1.5 text-[13px]"><Send size={14} /> Enviar</button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -286,8 +282,8 @@ export default function ChamadosPage() {
       />
 
       <KpiRow cols={3}>
-        <KpiCard label="Chamados em aberto" valor={String(totais.abertos)} detalhe="aguardando resolução" cor="border-l-primary-600" detalheCor="text-primary-700" />
         <KpiCard label="Total de chamados" valor={String(totais.total)} detalhe="abertos + finalizados" cor="border-l-[#0e2233]" />
+        <KpiCard label="Chamados em aberto" valor={String(totais.abertos)} detalhe="aguardando resolução" cor="border-l-primary-600" detalheCor="text-primary-700" />
         <KpiCard label="Chamados finalizados" valor={String(totais.finalizados)} detalhe="já resolvidos" cor="border-l-emerald-600" detalheCor="text-emerald-700" />
       </KpiRow>
 
@@ -354,8 +350,8 @@ export default function ChamadosPage() {
         </SectionCard>
       </div>
 
-      {/* Filtro por status com contador — clique para filtrar a tabela. */}
-      <div className="mb-4 flex flex-wrap gap-2">
+      {/* Filtro por status com contador + download da tabela. */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <ContadorChip label="Todos" valor={basePeriodo.length} ativo={statusFiltro === 'todos'} onClick={() => setStatusFiltro('todos')} />
         {(Object.keys(STATUS_LABEL) as ChamadoStatus[]).map((s) => (
           <ContadorChip
@@ -367,10 +363,20 @@ export default function ChamadosPage() {
             onClick={() => setStatusFiltro((prev) => (prev === s ? 'todos' : s))}
           />
         ))}
+        <button
+          type="button"
+          onClick={() => baixarCSV('chamados', [
+            ['Chamado', 'Assunto', 'Placa / Ativo', 'Solicitante', 'Data de Abertura'],
+            ...lista.map((c) => [c.id, c.categoria, c.placa, c.solicitante, c.dataAbertura]),
+          ])}
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary-300 hover:text-primary-700"
+        >
+          <Download size={14} /> Baixar tabela
+        </button>
       </div>
 
       <DataTable
-        colSpan={7}
+        colSpan={6}
         vazio={lista.length === 0}
         vazioLabel="Nenhum chamado encontrado com os filtros atuais."
         filterRow={
@@ -379,7 +385,6 @@ export default function ChamadosPage() {
             <ThFiltro><ColunaFiltro value={val('categoria')} onChange={set('categoria')} placeholder="Assunto" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa / Ativo" multi ariaLabel="Filtrar placa ou ativo" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('solicitante')} onChange={set('solicitante')} placeholder="Solicitante" /></ThFiltro>
-            <ThFiltro />
             <ThFiltro />
             <ThFiltro />
           </>
@@ -391,7 +396,6 @@ export default function ChamadosPage() {
             <Th>Placa / Ativo</Th>
             <Th>Solicitante</Th>
             <Th>Data de Abertura</Th>
-            <Th>Status</Th>
             <Th className="text-right">Detalhes</Th>
           </>
         }
@@ -414,9 +418,6 @@ export default function ChamadosPage() {
             <td className="px-4 py-3.5 font-mono text-xs text-slate-600">{c.placa}</td>
             <td className="px-4 py-3.5 text-xs text-slate-600">{c.solicitante}</td>
             <td className="px-4 py-3.5 font-mono text-xs text-slate-600">{c.dataAbertura}</td>
-            <td className="px-4 py-3.5">
-              <StatusBadge status={c.status} label={STATUS_LABEL[c.status]} />
-            </td>
             <td className="px-4 py-3.5 text-right">
               <button
                 onClick={() => setAberto(c)}

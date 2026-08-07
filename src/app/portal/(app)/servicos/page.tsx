@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Download, Info, Wrench, FileText, X, Clock,
@@ -541,6 +541,13 @@ export default function ServicosPage() {
   ], []);
   const { val, set, filtradas: linhas } = useFiltrosColuna(linhasBase, cols);
   const pag = usePaginacao(linhas, 10);
+
+  /* Pré-filtro por placa vindo da URL (ex.: atalho da Central de Chamados). */
+  useEffect(() => {
+    const placa = new URLSearchParams(window.location.search).get('placa');
+    if (placa) set('placa')(placa);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div>
