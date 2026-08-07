@@ -5,9 +5,22 @@ import Link from 'next/link';
 import {
   Check, CalendarClock, CalendarCheck, Clock, ArrowLeft, ArrowRight, Upload, X, Gauge,
   ImagePlus, Truck, Wrench, Camera, MapPin, User, Mail, Phone, Info, Barcode, Hash, Lock,
-  Copy, ClipboardCheck, Search, type LucideIcon,
+  Copy, ClipboardCheck, Search, Loader2, MessageCircle, Headset, type LucideIcon,
 } from 'lucide-react';
-import { AGENDAMENTOS } from '@/lib/portalData';
+import { AGENDAMENTOS, VEICULOS } from '@/lib/portalData';
+import { ATENDIMENTOS_SERVICO } from '@/lib/servicosData';
+
+/* Canais de atendimento para abertura assistida (ajuste com os números oficiais). */
+const CANAL_0800 = '0800 000 0000';
+const CANAL_WHATS = '5500000000000'; // formato wa.me (DDI+DDD+numero)
+
+/* Ativos "não liberados" para abertura pelo portal (demonstração): digitando qualquer
+   um destes, cai no popup da central. Qualquer outro valor é aceito. */
+const ATIVOS_BLOQUEADOS = [
+  'SHQ6B80',            // placa
+  '9535V6TB0PR009032',  // chassi
+  'SN-JCB-099887',      // nº de série
+];
 import { PageTitle, StatusBadge } from '@/components/portal/ui';
 
 /* Passos do wizard, cada um com o seu ícone. */
@@ -85,6 +98,39 @@ function InputIcone({ icon: Icon, className = '', ...props }: { icon: LucideIcon
   );
 }
 
+/** Popup acolhedor: quando o ativo não está na base liberada do cliente,
+ *  direciona a abertura para a central (0800 / WhatsApp), sem cara de erro. */
+function ModalAjudaAtivo({ onFechar }: { onFechar: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
+      <div className="relative w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onFechar} aria-label="Fechar" className="absolute right-3 top-3 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+          <X size={18} />
+        </button>
+        <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary-50 text-primary-600">
+          <Headset size={26} />
+        </span>
+        <h3 className="text-lg font-extrabold text-slate-900">Abertura com a nossa central</h3>
+        <p className="mt-2 text-[13px] leading-relaxed text-slate-600">
+          Para este ativo, a abertura do chamado é feita diretamente com o nosso time de atendimento.
+          Fale com a gente por um dos canais abaixo que registramos o seu chamado na hora — é rapidinho.
+        </p>
+        <div className="mt-5 flex flex-col gap-2.5">
+          <a href={`tel:${CANAL_0800.replace(/\D/g, '')}`} className="btn-primary justify-center gap-2 py-2.5 text-[13px]">
+            <Phone size={15} /> Ligar {CANAL_0800}
+          </a>
+          <a href={`https://wa.me/${CANAL_WHATS}`} target="_blank" rel="noopener noreferrer" className="btn-secondary justify-center gap-2 py-2.5 text-[13px]">
+            <MessageCircle size={15} /> WhatsApp da central
+          </a>
+        </div>
+        <button onClick={onFechar} className="mt-4 text-[12px] font-semibold text-slate-400 hover:text-slate-600">
+          Voltar e revisar a identificação
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* Área de upload com pré-visualização das imagens anexadas. */
 function UploadZona({
   files, onFiles, multiple, placeholder,
@@ -142,6 +188,9 @@ export default function AgendamentosPage() {
   const [tipoIdent, setTipoIdent] = useState<TipoIdent | ''>('');
   const [placa, setPlaca] = useState('');
   const [km, setKm] = useState('');
+  const [statusAtivo, setStatusAtivo] = useState<'idle' | 'verificando' | 'ok' | 'nao_encontrado'>('idle');
+  const [ativoInfo, setAtivoInfo] = useState<{ modelo: string; detalhe: string } | null>(null);
+  const [ajudaOpen, setAjudaOpen] = useState(false);
   // Passo 2 — serviços
   const [servicos, setServicos] = useState<ServicoItem[]>([]);
   const [buscaTipo, setBuscaTipo] = useState('');
@@ -188,8 +237,37 @@ export default function AgendamentosPage() {
 
   const identAtual = TIPOS_IDENT.find((t) => t.key === tipoIdent);
 
+  /** Ao sair do campo, consulta o ativo na base do cliente (frota liberada).
+   *  (Simula uma API — no protótipo a fonte é VEICULOS.) */
+  const verificarAtivo = () => {
+    const valor = placa.trim().toUpperCase();
+    if (!tipoIdent || valor.length < 5) return;
+    setStatusAtivo('verificando');
+    window.setTimeout(() => {
+      // Bloqueados caem no popup da central; qualquer outro ativo é aceito.
+      if (ATIVOS_BLOQUEADOS.map((b) => b.toUpperCase()).includes(valor)) {
+        setAtivoInfo(null);
+        setStatusAtivo('nao_encontrado');
+        setAjudaOpen(true);
+        return;
+      }
+      // Aceito: se conhecermos o ativo, mostramos modelo/frota; senão, confirmação genérica.
+      const v = VEICULOS.find((x) => x.placa.toUpperCase() === valor || x.chassi.toUpperCase() === valor);
+      const eq = ATENDIMENTOS_SERVICO.find((a) => a.numeroSerie !== '—' && a.numeroSerie.toUpperCase() === valor);
+      const info = v
+        ? { modelo: v.modelo, detalhe: v.frota }
+        : eq
+          ? { modelo: eq.marcaModelo, detalhe: `Série ${eq.numeroSerie}` }
+          : { modelo: 'Ativo da sua frota', detalhe: valor };
+      setAtivoInfo(info);
+      setStatusAtivo('ok');
+    }, 650);
+  };
+  /** Reinicia a verificação sempre que o valor/tipo muda. */
+  const resetarVerificacao = () => { setStatusAtivo('idle'); setAtivoInfo(null); };
+
   const podeAvancar =
-    (passo === 0 && !!tipoIdent && placa.trim().length >= 5 && km.trim() !== '') ||
+    (passo === 0 && !!tipoIdent && placa.trim().length >= 5 && km.trim() !== '' && statusAtivo === 'ok') ||
     (passo === 1 && servicosSelecionados.length > 0 && observacoes.trim() !== '') ||
     (passo === 2) ||
     (passo === 3 && !!endereco && !!data && !!horario && !!condutor && !!email && !!celular);
@@ -206,7 +284,7 @@ export default function AgendamentosPage() {
 
   const resetar = () => {
     setConcluido(false); setPasso(0); setProtocolo(''); setCopiado(false);
-    setTipoIdent(''); setPlaca(''); setKm('');
+    setTipoIdent(''); setPlaca(''); setKm(''); setStatusAtivo('idle'); setAtivoInfo(null); setAjudaOpen(false);
     setServicos([]); setBuscaTipo(''); setObservacoes(''); setAnexos([]);
     setFotoHodometro([]); setFotoPlaca([]); setMaisFotos([]);
     setEndereco(''); setData(''); setHorario(''); setCondutor(''); setEmail(''); setCelular('');
@@ -323,7 +401,7 @@ export default function AgendamentosPage() {
                           <button
                             key={key}
                             type="button"
-                            onClick={() => { setTipoIdent(key); setPlaca(''); }}
+                            onClick={() => { setTipoIdent(key); setPlaca(''); resetarVerificacao(); }}
                             aria-pressed={sel}
                             className={`flex flex-col items-center gap-1.5 rounded-xl border-2 px-2 py-3 text-center transition ${
                               sel
@@ -343,13 +421,33 @@ export default function AgendamentosPage() {
                     <InputIcone
                       icon={identAtual?.icon ?? Lock}
                       value={placa}
-                      onChange={(e) => setPlaca(e.target.value)}
+                      onChange={(e) => { setPlaca(e.target.value); resetarVerificacao(); }}
+                      onBlur={verificarAtivo}
                       disabled={!tipoIdent}
                       placeholder={identAtual ? identAtual.placeholder : 'Selecione o tipo acima para liberar'}
                       className="font-mono uppercase"
                     />
                     {!tipoIdent && (
                       <p className="mt-1 text-[11px] text-slate-400">Escolha primeiro Placa, Chassi ou Nº de Série para habilitar o campo.</p>
+                    )}
+                    {statusAtivo === 'verificando' && (
+                      <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-slate-500">
+                        <Loader2 size={13} className="animate-spin" /> Consultando o ativo na sua base…
+                      </p>
+                    )}
+                    {statusAtivo === 'ok' && ativoInfo && (
+                      <p className="mt-1.5 flex items-center gap-1.5 text-[12px] font-semibold text-emerald-600">
+                        <Check size={13} /> Ativo localizado: {ativoInfo.modelo} · {ativoInfo.detalhe}
+                      </p>
+                    )}
+                    {statusAtivo === 'nao_encontrado' && (
+                      <button
+                        type="button"
+                        onClick={() => setAjudaOpen(true)}
+                        className="mt-1.5 inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary-700 underline decoration-primary-300 underline-offset-2 hover:text-primary-800"
+                      >
+                        <Headset size={13} /> Abrir este chamado com a nossa central
+                      </button>
                     )}
                   </Campo>
 
@@ -590,6 +688,8 @@ export default function AgendamentosPage() {
           </div>
         </div>
       </div>
+
+      {ajudaOpen && <ModalAjudaAtivo onFechar={() => setAjudaOpen(false)} />}
     </div>
   );
 }
