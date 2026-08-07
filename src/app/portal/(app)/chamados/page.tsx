@@ -320,7 +320,7 @@ export default function ChamadosPage() {
         </SectionCard>
 
         {/* Top chamados por tipo de chamados */}
-        <SectionCard titulo="Top chamados por tipo de chamados" subtitulo="Tipos de chamado mais recorrentes">
+        <SectionCard titulo="Top 5 tipos de chamado" subtitulo="Tipos de chamado mais recorrentes">
           <div className="space-y-3">
             {topTipos.map((t) => (
               <div key={t.tipo}>
