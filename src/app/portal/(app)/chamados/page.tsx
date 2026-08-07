@@ -204,6 +204,17 @@ export default function ChamadosPage() {
   }, []);
   const maxPlaca = Math.max(1, ...topPlacas.map((p) => p.total));
 
+  /* Top chamados por tipo (categoria) mais recorrente. */
+  const topTipos = useMemo(() => {
+    const cont = new Map<string, number>();
+    CHAMADOS.forEach((c) => cont.set(c.categoria, (cont.get(c.categoria) ?? 0) + 1));
+    const total = CHAMADOS.length;
+    return Array.from(cont.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([tipo, qtd]) => ({ tipo, qtd, pct: Math.round((qtd / total) * 100) }));
+  }, []);
+
   /* Base filtrada pelo período (compartilhada por contadores e tabela). */
   const dentroPeriodo = (c: Chamado) => mesesSel === 0 || ymOf(c.dataAbertura) >= HOJE_YM - (mesesSel - 1);
   const basePeriodo = useMemo(
@@ -287,25 +298,44 @@ export default function ChamadosPage() {
         <GraficoPorMes dados={dadosGrafico} />
       </SectionCard>
 
-      {/* Top 5 placas com mais chamados */}
-      <SectionCard titulo="Top 5 placas com mais chamados" subtitulo="Ativos que mais acionaram a central" className="mb-6">
-        <ul className="space-y-3.5">
-          {topPlacas.map((p, i) => (
-            <li key={p.placa} className="flex items-center gap-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[12px] font-extrabold text-slate-600">
-                {i + 1}
-              </span>
-              <span className="w-24 shrink-0 font-mono text-[13px] font-semibold text-slate-800">{p.placa}</span>
-              <div className="min-w-0 flex-1">
-                <BarraProgresso pct={(p.total / maxPlaca) * 100} cor="bg-primary-500" />
+      <div className="mb-6 grid gap-4 lg:grid-cols-2">
+        {/* Top 5 placas com mais chamados */}
+        <SectionCard titulo="Top 5 placas com mais chamados" subtitulo="Ativos que mais acionaram a central">
+          <ul className="space-y-3.5">
+            {topPlacas.map((p, i) => (
+              <li key={p.placa} className="flex items-center gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[12px] font-extrabold text-slate-600">
+                  {i + 1}
+                </span>
+                <span className="w-20 shrink-0 font-mono text-[13px] font-semibold text-slate-800">{p.placa}</span>
+                <div className="min-w-0 flex-1">
+                  <BarraProgresso pct={(p.total / maxPlaca) * 100} cor="bg-primary-500" />
+                </div>
+                <span className="w-32 shrink-0 text-right text-[11px] text-slate-500">
+                  <b className="text-slate-800">{p.total}</b> · {p.abertos} aberto
+                </span>
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
+
+        {/* Top chamados por tipo de chamados */}
+        <SectionCard titulo="Top chamados por tipo de chamados" subtitulo="Tipos de chamado mais recorrentes">
+          <div className="space-y-3">
+            {topTipos.map((t) => (
+              <div key={t.tipo}>
+                <div className="mb-1 flex justify-between gap-3 text-[13px]">
+                  <span className="truncate font-semibold text-slate-700">{t.tipo}</span>
+                  <span className="shrink-0 font-mono text-slate-500">{t.qtd} · {t.pct}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-full rounded-full bg-[#0e2233]" style={{ width: `${t.pct}%` }} />
+                </div>
               </div>
-              <span className="w-36 shrink-0 text-right text-[11px] text-slate-500">
-                <b className="text-slate-800">{p.total}</b> chamados · {p.abertos} em aberto
-              </span>
-            </li>
-          ))}
-        </ul>
-      </SectionCard>
+            ))}
+          </div>
+        </SectionCard>
+      </div>
 
       {/* Filtro por status com contador — clique para filtrar a tabela. */}
       <div className="mb-4 flex flex-wrap gap-2">

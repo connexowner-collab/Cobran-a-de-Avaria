@@ -519,17 +519,6 @@ export default function ServicosPage() {
   /* KPIs operacionais calculados a partir dos dados. */
   const kpis = useMemo(() => ({ emOficina: abertos.length }), [abertos]);
 
-  /* Top motivos recorrentes. */
-  const topMotivos = useMemo(() => {
-    const cont = new Map<string, number>();
-    ATENDIMENTOS_SERVICO.forEach((a) => cont.set(a.motivo, (cont.get(a.motivo) ?? 0) + 1));
-    const total = ATENDIMENTOS_SERVICO.length;
-    return Array.from(cont.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([motivo, qtd]) => ({ motivo, qtd, pct: Math.round((qtd / total) * 100) }));
-  }, []);
-
   const linhasBase = useMemo(
     () => (etapaFiltro ? ATENDIMENTOS_SERVICO.filter((a) => etapaAtendimento(a) === etapaFiltro) : ATENDIMENTOS_SERVICO),
     [etapaFiltro],
@@ -571,29 +560,9 @@ export default function ServicosPage() {
         <KpiCard label="Em manutenção" valor={String(kpis.emOficina)} detalhe="veículos imobilizados" cor="border-l-sky-600" detalheCor="text-sky-700" />
       </KpiRow>
 
-      {/* Gráfico + composição */}
-      <div className="mb-6 grid gap-4 xl:grid-cols-[1.6fr_1fr]">
+      {/* Gráfico de serviços */}
+      <div className="mb-6">
         <GraficoEmpilhado />
-
-        <SectionCard
-          titulo="Top serviço de Manutenção"
-          subtitulo="Motivos mais recorrentes no período"
-          acao={<BotaoBaixar onClick={() => baixarCSV('top-motivos', [['Motivo', 'Qtd', '%'], ...topMotivos.map((m) => [m.motivo, m.qtd, `${m.pct}%`])])} />}
-        >
-          <div className="space-y-3">
-            {topMotivos.map((m) => (
-              <div key={m.motivo}>
-                <div className="mb-1 flex justify-between text-[13px]">
-                  <span className="font-semibold text-slate-700">{m.motivo}</span>
-                  <span className="font-mono text-slate-500">{m.qtd} · {m.pct}%</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full rounded-full bg-[#0e2233]" style={{ width: `${m.pct}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </SectionCard>
       </div>
 
       {/* Atendimentos realizados por tipo */}
