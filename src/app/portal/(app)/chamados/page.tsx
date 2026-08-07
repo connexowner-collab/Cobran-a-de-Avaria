@@ -8,7 +8,7 @@ import {
   DataTable, Th, TablePagination, usePaginacao,
   ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
-import { CHAMADOS, type Chamado, type ChamadoStatus } from '@/lib/portalData';
+import { CHAMADOS, VEICULOS, type Chamado, type ChamadoStatus } from '@/lib/portalData';
 
 /** Rótulo de cada status de chamado (a cor vem de StatusBadge). */
 const STATUS_LABEL: Record<ChamadoStatus, string> = {
@@ -112,6 +112,7 @@ function GraficoPorMes({ dados }: { dados: { label: string; count: number }[] })
 
 /** Modal de detalhes do chamado: histórico de mensagens + envio de nova mensagem. */
 function ModalChamado({ chamado: c, onFechar }: { chamado: Chamado; onFechar: () => void }) {
+  const ativo = c.placa !== '—' ? VEICULOS.find((v) => v.placa === c.placa) : undefined;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -121,7 +122,6 @@ function ModalChamado({ chamado: c, onFechar }: { chamado: Chamado; onFechar: ()
             <p className="font-mono text-[13px] font-semibold text-slate-500">Chamado {c.id}</p>
             <h2 className="mt-0.5 text-xl font-extrabold text-slate-900">{c.categoria}</h2>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-              {c.placa !== '—' && <span>Ativo <b className="font-mono text-slate-800">{c.placa}</b></span>}
               <span>Solicitante <b className="text-slate-800">{c.solicitante}</b></span>
               <span>Responsável <b className="text-slate-800">{c.responsavel}</b></span>
               <span>Aberto em <b className="font-mono text-slate-800">{c.dataAbertura}</b></span>
@@ -133,6 +133,23 @@ function ModalChamado({ chamado: c, onFechar }: { chamado: Chamado; onFechar: ()
               <X size={18} />
             </button>
           </div>
+        </div>
+
+        {/* Dados do ativo vinculado ao chamado */}
+        <div className="border-b border-slate-100 px-6 py-4">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Dados do ativo</p>
+          {c.placa === '—' ? (
+            <p className="text-[13px] text-slate-400">Chamado sem ativo vinculado.</p>
+          ) : (
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-slate-200 bg-slate-50/40 p-4 text-[13px] sm:grid-cols-3">
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Placa</dt><dd className="font-mono font-semibold text-slate-800">{c.placa}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Chassi</dt><dd className="font-mono font-semibold text-slate-800">{ativo?.chassi ?? '—'}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Marca/Modelo</dt><dd className="font-semibold text-slate-800">{ativo?.modelo ?? '—'}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Categoria</dt><dd className="font-semibold text-slate-800">{ativo?.categoria ?? '—'}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Frota</dt><dd className="font-semibold text-slate-800">{ativo?.frota ?? '—'}</dd></div>
+              <div><dt className="text-xs font-bold uppercase text-slate-400">Contrato</dt><dd className="font-mono font-semibold text-slate-800">{ativo?.contrato ?? '—'}</dd></div>
+            </dl>
+          )}
         </div>
 
         {/* Descrição registrada na abertura do chamado */}
