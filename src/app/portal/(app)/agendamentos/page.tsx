@@ -5,9 +5,7 @@ import Link from 'next/link';
 import {
   Check, CalendarClock, CalendarCheck, Clock, ArrowLeft, ArrowRight, Upload, X, Gauge,
   ImagePlus, Truck, Wrench, Camera, MapPin, User, Mail, Phone, Info, Barcode, Hash, Lock,
-  Copy, ClipboardCheck,
-  AlertTriangle, Disc3, Cog, Snowflake, CircleDot, Zap, Waves, Paintbrush2, Square,
-  ShieldAlert, Ellipsis, type LucideIcon,
+  Copy, ClipboardCheck, Search, type LucideIcon,
 } from 'lucide-react';
 import { AGENDAMENTOS } from '@/lib/portalData';
 import { PageTitle, StatusBadge } from '@/components/portal/ui';
@@ -15,29 +13,27 @@ import { PageTitle, StatusBadge } from '@/components/portal/ui';
 /* Passos do wizard, cada um com o seu ícone. */
 const PASSOS: { label: string; icon: LucideIcon }[] = [
   { label: 'Veículo', icon: Truck },
-  { label: 'Serviços', icon: Wrench },
+  { label: 'Atendimento', icon: Wrench },
   { label: 'Fotos', icon: Camera },
   { label: 'Agenda', icon: CalendarClock },
 ];
 
-/* Catálogo de serviços — cada um com um ícone para a grade de seleção. */
-const SERVICOS_OPCOES: { nome: string; icon: LucideIcon }[] = [
-  { nome: 'Revisão preventiva', icon: CalendarCheck },
-  { nome: 'Corretiva', icon: AlertTriangle },
-  { nome: 'Freios', icon: Disc3 },
-  { nome: 'Motor', icon: Cog },
-  { nome: 'Ar-condicionado', icon: Snowflake },
-  { nome: 'Pneus', icon: CircleDot },
-  { nome: 'Elétrica', icon: Zap },
-  { nome: 'Suspensão', icon: Waves },
-  { nome: 'Funilaria e pintura', icon: Paintbrush2 },
-  { nome: 'Vidros', icon: Square },
-  { nome: 'Aferição de tacógrafo', icon: Gauge },
-  { nome: 'Sinistro', icon: ShieldAlert },
-  { nome: 'Outro', icon: Ellipsis },
+/* Catálogo de tipos de atendimento (lista completa da operação). */
+const TIPOS_ATENDIMENTO: string[] = [
+  '1º TACÓGRAFO', 'ABASTECIMENTO', 'AET', 'AFERIÇÃO TACÓGRAFO', 'ALMOXARIFADO',
+  'ANTECIPAÇÃO DE FROTA', 'ANTT', 'APREENSÃO', 'AVARIA DE TRANSPORTE', 'CALIBRAÇÃO',
+  'COMPRA EXTERNA', 'COMPRA GARAGEM', 'CORRETIVA', 'CORRETIVA INTERNA', 'CORRETIVA PARA VENDA',
+  'CORRETIVA RETORNO', 'DESMOBILIZAÇÃO', 'DOCUMENTAÇÃO', 'EMPENHO DE RESERVA', 'ENTREGA TÉCNICA',
+  'FORNECIMENTO DE PEÇA', 'FURTO/ROUBO ACESSÓRIO', 'FURTO/ROUBO VEÍCULO', 'GARANTIA', 'GARANTIA NOVO',
+  'GARANTIA SEMPRE NOVO', 'GUINCHO', 'GUINCHO EM FRETE', 'IMPLANTAÇÃO', 'IMPLANTAÇÃO NOVO',
+  'IMPLANTAÇÃO SEMPRE NOVO', 'IMPLEMENTO CORRETIVA', 'IMPLEMENTO PREVENTIVA', 'IMPLEMENTO SINISTRO', 'LAUDO FRIO',
+  'LOCAÇÃO CURTO PRAZO', 'LUBRIFICAÇÃO SEMANAL', 'MONITORAMENTO', 'PNEU', 'PÓS IMPLANTAÇÃO',
+  'PRÉ-APROVADO', 'PREDITIVA', 'PREPARAÇÃO PARA LOCAÇÃO', 'PREPARAÇÃO PARA VENDA', 'PREPARAÇÃO SEMINOVOS',
+  'PREPARAÇÃO SEMPRE NOVO', 'PREVENTIVA', 'PREVENTIVA INTERNA', 'PT', 'RECUPERAÇÃO',
+  'RECUPERADO ROUBO', 'REPOSIÇÃO DE ESTOQUE', 'RETROFIT', 'REVISÃO ANUAL', 'REVISÃO DE ASSENTAMENTO',
+  'REVISÃO INTERMEDIÁRIA', 'REVITALIZAÇÃO', 'SINISTRO', 'SINISTRO C/ TERCEIRO', 'TAXA ADMINISTRATIVA',
+  'TESTE ACÚSTICO', 'TESTE ELÉTRICO', 'TESTE OPACIDADE', 'VISTORIA DE DESMOBILIZAÇÃO',
 ];
-const ICONE_SERVICO = (nome: string): LucideIcon =>
-  SERVICOS_OPCOES.find((s) => s.nome === nome)?.icon ?? Wrench;
 
 /* Tipos de identificação do veículo — o usuário escolhe antes de liberar o campo. */
 type TipoIdent = 'placa' | 'chassi' | 'serie';
@@ -148,6 +144,7 @@ export default function AgendamentosPage() {
   const [km, setKm] = useState('');
   // Passo 2 — serviços
   const [servicos, setServicos] = useState<ServicoItem[]>([]);
+  const [buscaTipo, setBuscaTipo] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [anexos, setAnexos] = useState<File[]>([]);
   // Passo 3 — fotos
@@ -184,6 +181,11 @@ export default function AgendamentosPage() {
 
   const servicosSelecionados = servicos.map((s) => s.servico);
 
+  const tiposFiltrados = useMemo(() => {
+    const q = buscaTipo.trim().toLowerCase();
+    return q ? TIPOS_ATENDIMENTO.filter((t) => t.toLowerCase().includes(q)) : TIPOS_ATENDIMENTO;
+  }, [buscaTipo]);
+
   const identAtual = TIPOS_IDENT.find((t) => t.key === tipoIdent);
 
   const podeAvancar =
@@ -205,7 +207,7 @@ export default function AgendamentosPage() {
   const resetar = () => {
     setConcluido(false); setPasso(0); setProtocolo(''); setCopiado(false);
     setTipoIdent(''); setPlaca(''); setKm('');
-    setServicos([]); setObservacoes(''); setAnexos([]);
+    setServicos([]); setBuscaTipo(''); setObservacoes(''); setAnexos([]);
     setFotoHodometro([]); setFotoPlaca([]); setMaisFotos([]);
     setEndereco(''); setData(''); setHorario(''); setCondutor(''); setEmail(''); setCelular('');
   };
@@ -365,55 +367,78 @@ export default function AgendamentosPage() {
               {/* Passo 2 — Serviços */}
               {passo === 1 && (
                 <div>
-                  <CabecalhoPasso icon={Wrench} titulo="Serviços necessários" subtitulo="Selecione um ou mais serviços para o chamado" />
+                  <CabecalhoPasso icon={Wrench} titulo="Tipo de Atendimento" subtitulo="Busque e selecione um ou mais tipos de atendimento" />
 
-                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-                    {SERVICOS_OPCOES.map(({ nome, icon: Icon }) => {
-                      const sel = servicosSelecionados.includes(nome);
-                      return (
-                        <button
-                          key={nome}
-                          type="button"
-                          onClick={() => toggleServico(nome)}
-                          aria-pressed={sel}
-                          className={`relative flex flex-col items-center gap-2 rounded-xl border-2 px-2 py-3.5 text-center transition ${
-                            sel
-                              ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-sm'
-                              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                          }`}
-                        >
-                          {sel && (
-                            <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary-600 text-white">
-                              <Check size={11} />
-                            </span>
-                          )}
-                          <Icon size={20} className={sel ? 'text-primary-600' : 'text-slate-400'} />
-                          <span className="text-[12px] font-semibold leading-tight">{nome}</span>
-                        </button>
-                      );
-                    })}
+                  {/* Tipos já selecionados (chips removíveis) */}
+                  {servicosSelecionados.length > 0 && (
+                    <div className="mb-3 flex flex-wrap gap-1.5">
+                      {servicosSelecionados.map((s) => (
+                        <span key={s} className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-1 text-[12px] font-semibold text-primary-700">
+                          {s}
+                          <button type="button" onClick={() => toggleServico(s)} aria-label={`Remover ${s}`} className="text-primary-500 hover:text-primary-800">
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Busca */}
+                  <div className="relative mb-2">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+                    <input
+                      value={buscaTipo}
+                      onChange={(e) => setBuscaTipo(e.target.value)}
+                      placeholder="Buscar tipo de atendimento…"
+                      aria-label="Buscar tipo de atendimento"
+                      className="input-field w-full py-2.5 pl-9 text-[13px]"
+                    />
                   </div>
 
-                  {/* Detalhes por serviço selecionado */}
+                  {/* Lista rolável de tipos */}
+                  <div className="max-h-72 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200">
+                    {tiposFiltrados.length === 0 ? (
+                      <p className="px-3 py-6 text-center text-[13px] text-slate-400">Nenhum tipo encontrado para “{buscaTipo}”.</p>
+                    ) : (
+                      tiposFiltrados.map((nome) => {
+                        const sel = servicosSelecionados.includes(nome);
+                        return (
+                          <button
+                            key={nome}
+                            type="button"
+                            onClick={() => toggleServico(nome)}
+                            aria-pressed={sel}
+                            className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-[13px] transition ${
+                              sel ? 'bg-primary-50 font-semibold text-primary-700' : 'text-slate-600 hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${sel ? 'border-primary-600 bg-primary-600 text-white' : 'border-slate-300'}`}>
+                              {sel && <Check size={11} />}
+                            </span>
+                            {nome}
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Detalhes por tipo selecionado */}
                   {servicos.length > 0 && (
                     <div className="mt-5 space-y-2.5">
-                      <p className="text-[13px] font-bold text-slate-700">Detalhe cada serviço selecionado</p>
-                      {servicos.map((s) => {
-                        const Icon = ICONE_SERVICO(s.servico);
-                        return (
-                          <div key={s.servico} className="rounded-xl border border-slate-200 p-3.5">
-                            <div className="mb-2 flex items-center justify-between">
-                              <span className="flex items-center gap-2 text-[13px] font-bold text-slate-700">
-                                <Icon size={15} className="text-primary-600" /> {s.servico}
-                              </span>
-                              <button type="button" onClick={() => toggleServico(s.servico)} aria-label={`Remover ${s.servico}`} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-rose-600">
-                                <X size={15} />
-                              </button>
-                            </div>
-                            <textarea value={s.detalhes} onChange={(e) => setDetalhe(s.servico, e.target.value)} className={textareaCls} placeholder={`Descreva o que precisa em "${s.servico}"`} />
+                      <p className="text-[13px] font-bold text-slate-700">Detalhe cada tipo selecionado</p>
+                      {servicos.map((s) => (
+                        <div key={s.servico} className="rounded-xl border border-slate-200 p-3.5">
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="flex items-center gap-2 text-[13px] font-bold text-slate-700">
+                              <Wrench size={15} className="text-primary-600" /> {s.servico}
+                            </span>
+                            <button type="button" onClick={() => toggleServico(s.servico)} aria-label={`Remover ${s.servico}`} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-rose-600">
+                              <X size={15} />
+                            </button>
                           </div>
-                        );
-                      })}
+                          <textarea value={s.detalhes} onChange={(e) => setDetalhe(s.servico, e.target.value)} className={textareaCls} placeholder={`Descreva o que precisa em "${s.servico}"`} />
+                        </div>
+                      ))}
                     </div>
                   )}
 
@@ -519,17 +544,14 @@ export default function AgendamentosPage() {
                 <div className="flex items-start gap-2.5">
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500"><Wrench size={15} /></span>
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Serviços</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Tipo de Atendimento</p>
                     {servicosSelecionados.length ? (
                       <div className="mt-1 flex flex-wrap gap-1">
-                        {servicosSelecionados.map((s) => {
-                          const Icon = ICONE_SERVICO(s);
-                          return (
-                            <span key={s} className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-[11px] font-semibold text-primary-700">
-                              <Icon size={11} /> {s}
-                            </span>
-                          );
-                        })}
+                        {servicosSelecionados.map((s) => (
+                          <span key={s} className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-[11px] font-semibold text-primary-700">
+                            {s}
+                          </span>
+                        ))}
                       </div>
                     ) : (
                       <p className="text-[13px] text-slate-400">Nenhum selecionado</p>
