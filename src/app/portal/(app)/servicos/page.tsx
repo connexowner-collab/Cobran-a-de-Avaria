@@ -576,7 +576,7 @@ export default function ServicosPage() {
         <GraficoEmpilhado />
 
         <SectionCard
-          titulo="Top motivos de serviço"
+          titulo="Top serviço de Manutenção"
           subtitulo="Motivos mais recorrentes no período"
           acao={<BotaoBaixar onClick={() => baixarCSV('top-motivos', [['Motivo', 'Qtd', '%'], ...topMotivos.map((m) => [m.motivo, m.qtd, `${m.pct}%`])])} />}
         >
