@@ -310,7 +310,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               <ChevronDown size={13} className={`transition-transform ${grupoOpen ? 'rotate-180' : ''}`} />
             </button>
             {grupoOpen && (
-              <div className="absolute right-0 top-11 z-30 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+              <div className="fixed inset-x-3 top-16 z-40 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:z-30 sm:w-80">
                 <div className="border-b border-slate-100 px-4 py-2.5">
                   <p className="text-[13px] font-bold text-slate-800">Grupos de cliente</p>
                   <p className="text-xs text-slate-500">Selecione a frota que deseja visualizar</p>
@@ -353,7 +353,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               </span>
             </button>
             {notifOpen && (
-              <div className="absolute right-0 top-11 z-30 w-96 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+              <div className="fixed inset-x-3 top-16 z-40 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-11 sm:z-30 sm:w-96">
                 <div className="border-b border-slate-100 px-4 py-3 text-sm font-bold text-slate-800">
                   Notificações
                 </div>

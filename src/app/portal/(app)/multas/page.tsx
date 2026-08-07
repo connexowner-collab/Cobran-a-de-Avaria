@@ -389,11 +389,11 @@ export default function MultasPage() {
                 key={s.k}
                 onClick={() => setFiltroPrazo((prev) => (prev === s.k ? null : s.k))}
                 aria-pressed={ativo}
-                className={`relative flex flex-col items-start gap-1 px-5 py-4 text-left transition ${ativo ? s.ativoBg : 'hover:bg-slate-50'}`}
+                className={`relative flex flex-col items-start gap-1 px-3 py-3 text-left transition sm:px-5 sm:py-4 ${ativo ? s.ativoBg : 'hover:bg-slate-50'}`}
               >
-                {ativo && <Check size={14} className={`absolute right-3 top-3 ${s.txt}`} />}
-                <span className="flex items-center gap-2 text-[12px] font-semibold text-slate-500"><i className={`h-2.5 w-2.5 rounded-full ${s.dot}`} /> {s.label}</span>
-                <span className={`text-3xl font-extrabold ${s.txt}`}>{s.n}</span>
+                {ativo && <Check size={14} className={`absolute right-2 top-2 sm:right-3 sm:top-3 ${s.txt}`} />}
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 sm:gap-2 sm:text-[12px]"><i className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.dot}`} /> {s.label}</span>
+                <span className={`text-2xl font-extrabold sm:text-3xl ${s.txt}`}>{s.n}</span>
                 <span className="text-[11px] text-slate-400">{s.sub}</span>
               </button>
               );

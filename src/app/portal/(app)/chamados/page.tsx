@@ -106,7 +106,8 @@ function corBarra(count: number, max: number, atual: boolean): string {
 function GraficoPorMes({ dados }: { dados: { label: string; count: number }[] }) {
   const max = Math.max(1, ...dados.map((d) => d.count));
   return (
-    <div className="flex h-44 items-end gap-1.5 sm:gap-2.5">
+    <div className="overflow-x-auto">
+    <div className="flex h-44 min-w-[560px] items-end gap-1.5 sm:min-w-0 sm:gap-2.5">
       {dados.map((d, i) => {
         const atual = i === dados.length - 1;
         return (
@@ -120,6 +121,7 @@ function GraficoPorMes({ dados }: { dados: { label: string; count: number }[] })
           </div>
         );
       })}
+    </div>
     </div>
   );
 }

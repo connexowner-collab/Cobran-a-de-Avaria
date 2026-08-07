@@ -418,12 +418,12 @@ function GraficoEmpilhado() {
       titulo="Gráfico de Serviços"
       subtitulo="Comparativo dos serviços realizados por tipo no período"
       acao={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <BotaoBaixar onClick={() => baixarCSV('grafico-servicos', [
             ['Mês', ...TIPOS_ORDEM.map((t) => TIPO_INFO[t].label)],
             ...EVOLUCAO_MENSAL.map((m) => [m.mes, ...TIPOS_ORDEM.map((t) => m.valores[t])]),
           ])} />
-          <span className="rounded-lg border border-slate-200 px-3 py-1.5 font-mono text-xs text-slate-600">
+          <span className="hidden rounded-lg border border-slate-200 px-3 py-1.5 font-mono text-xs text-slate-600 sm:inline-block">
             20/07/2025 ~ 20/07/2026
           </span>
           <div className="flex overflow-hidden rounded-lg border border-slate-200 text-xs font-bold">
@@ -440,7 +440,8 @@ function GraficoEmpilhado() {
         </div>
       }
     >
-      <div className="flex h-44 items-end gap-2">
+      <div className="overflow-x-auto">
+      <div className="flex h-44 min-w-[560px] items-end gap-2 sm:min-w-0">
         {EVOLUCAO_MENSAL.map((m) => {
           const total = TIPOS_ORDEM.reduce((s, t) => s + m.valores[t], 0);
           const tooltip = total === 0
@@ -466,6 +467,7 @@ function GraficoEmpilhado() {
             </div>
           );
         })}
+      </div>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-4 text-[11px] text-slate-500">
