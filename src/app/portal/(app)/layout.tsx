@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   ChevronDown, Bell, LogOut, AlertTriangle,
   AlertCircle, Info, ListFilter, ChevronLeft, ChevronRight, Check, Loader2,
-  KeyRound, X, Eye, EyeOff, Star,
+  KeyRound, X, Eye, EyeOff, Star, Menu,
 } from 'lucide-react';
 import { NOTIFICACOES, GRUPOS_DISTRIBUICAO } from '@/lib/portalData';
 import { NAV, type NavItem } from '@/lib/portalNav';
@@ -42,7 +42,9 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const notifVisivel = useMemo(() => NOTIFICACOES.filter((n) => rotaLiberada(n.href, liberarTudo)), [liberarTudo]);
 
   const [notifOpen, setNotifOpen] = useState(false);
-  const [colapsado, setColapsado] = useState(false);
+  const [colapsadoRaw, setColapsado] = useState(false);
+  const [menuMobileOpen, setMenuMobileOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
   const [grupoOpen, setGrupoOpen] = useState(false);
   const [grupoId, setGrupoId] = useState(GRUPOS_DISTRIBUICAO[0].id);
   const [trocandoGrupo, setTrocandoGrupo] = useState(false);
@@ -55,6 +57,19 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const perfilRef = useRef<HTMLDivElement>(null);
 
   const grupoAtual = GRUPOS_DISTRIBUICAO.find((g) => g.id === grupoId) ?? GRUPOS_DISTRIBUICAO[0];
+
+  /* Detecta desktop (>= lg). No mobile/tablet o menu vira drawer e o "recolhido" é ignorado. */
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+  const colapsado = isDesktop && colapsadoRaw;
+
+  /* Fecha o drawer ao trocar de rota. */
+  useEffect(() => { setMenuMobileOpen(false); }, [pathname]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -106,11 +121,20 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="flex min-h-screen bg-slate-100">
-      {/* ===== Sidebar ===== */}
+      {/* ===== Backdrop do drawer (mobile/tablet) ===== */}
+      {menuMobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden"
+          onClick={() => setMenuMobileOpen(false)}
+          aria-hidden
+        />
+      )}
+
+      {/* ===== Sidebar / Drawer ===== */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 flex flex-col overflow-y-auto bg-[#0e2233] text-white transition-[width] duration-200 ${
-          colapsado ? 'w-16' : 'w-64'
-        }`}
+        className={`fixed inset-y-0 left-0 z-40 flex flex-col overflow-y-auto bg-[#0e2233] text-white transition-[transform,width] duration-200 lg:z-30 ${
+          colapsado ? 'w-64 lg:w-16' : 'w-64'
+        } ${menuMobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
       >
         <div className={`flex items-center pb-2 pt-5 ${colapsado ? 'justify-center px-2' : 'px-4'}`}>
           <Link
@@ -257,14 +281,22 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         aria-label={colapsado ? 'Expandir menu' : 'Recolher menu'}
         title={colapsado ? 'Expandir menu' : 'Recolher menu'}
         style={{ left: colapsado ? '3.15rem' : '15.15rem' }}
-        className="fixed top-[4.5rem] z-40 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-[#0e2233] text-white/80 shadow-md transition-[left,background-color] duration-200 hover:bg-primary-600 hover:text-white"
+        className="fixed top-[4.5rem] z-40 hidden h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-[#0e2233] text-white/80 shadow-md transition-[left,background-color] duration-200 hover:bg-primary-600 hover:text-white lg:flex"
       >
         {colapsado ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
       </button>
 
       {/* ===== Conteúdo ===== */}
-      <div className={`flex min-h-screen min-w-0 flex-1 flex-col transition-[margin] duration-200 ${colapsado ? 'ml-16' : 'ml-64'}`}>
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-6">
+      <div className={`flex min-h-screen min-w-0 flex-1 flex-col transition-[margin] duration-200 ${colapsado ? 'lg:ml-16' : 'lg:ml-64'}`}>
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-slate-200 bg-white px-4 sm:gap-3 sm:px-6">
+          <button
+            type="button"
+            onClick={() => setMenuMobileOpen(true)}
+            aria-label="Abrir menu"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 lg:hidden"
+          >
+            <Menu size={18} />
+          </button>
           <div className="flex-1" />
 
           {/* Seletor de grupo/distribuição da frota vinculada ao perfil */}
@@ -278,7 +310,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               <ChevronDown size={13} className={`transition-transform ${grupoOpen ? 'rotate-180' : ''}`} />
             </button>
             {grupoOpen && (
-              <div className="absolute right-0 top-11 z-30 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+              <div className="absolute right-0 top-11 z-30 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
                 <div className="border-b border-slate-100 px-4 py-2.5">
                   <p className="text-[13px] font-bold text-slate-800">Grupos de cliente</p>
                   <p className="text-xs text-slate-500">Selecione a frota que deseja visualizar</p>
@@ -321,7 +353,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               </span>
             </button>
             {notifOpen && (
-              <div className="absolute right-0 top-11 w-96 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+              <div className="absolute right-0 top-11 z-30 w-96 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
                 <div className="border-b border-slate-100 px-4 py-3 text-sm font-bold text-slate-800">
                   Notificações
                 </div>
@@ -384,7 +416,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 px-8 py-7">
+        <main className="min-w-0 flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-7">
           <GuardaLiberacao>{children}</GuardaLiberacao>
         </main>
       </div>
