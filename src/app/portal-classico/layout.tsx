@@ -12,16 +12,15 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Home, FileText, Wrench, CalendarClock, DollarSign, MapPin, HelpCircle, Car,
-  Headset, Megaphone, Bell, ChevronDown, ChevronRight, Menu, Play, Pencil,
+  Home, FileText, DollarSign, MapPin, HelpCircle, Car,
+  Megaphone, Bell, ChevronDown, ChevronRight, Menu, Play, Pencil,
   Filter, Sparkles, Phone, MessageCircle, Mail,
 } from 'lucide-react';
 
 /* Rótulo do sub-cabeçalho conforme a rota. */
 const TITULOS: Record<string, string> = {
-  '/portal-classico/servicos': 'Serviços',
+  '/portal-classico/servicos': 'Serviços de Manutenção',
   '/portal-classico/chamados': 'Central de Chamados',
-  '/portal-classico/agendamentos': 'Agendamentos',
 };
 
 export default function PortalClassicoLayout({ children }: { children: React.ReactNode }) {
@@ -79,24 +78,16 @@ export default function PortalClassicoLayout({ children }: { children: React.Rea
               </button>
               {aberto['Manutenção'] && (
                 <div className="ml-3">
-                  <button type="button" className={itemCls(false, true)}>Entrada e Saída</button>
+                  <Link href="/portal-classico/chamados" onClick={() => setMenuOpen(false)} className={itemCls(on('/portal-classico/chamados'), true)}>
+                    <Marca ativo={on('/portal-classico/chamados')} /> Central de Chamados
+                  </Link>
                   <Link href="/portal-classico/servicos" onClick={() => setMenuOpen(false)} className={itemCls(on('/portal-classico/servicos'), true)}>
-                    <Marca ativo={on('/portal-classico/servicos')} /> Serviços
+                    <Marca ativo={on('/portal-classico/servicos')} /> Serviços de Manutenção
                   </Link>
                 </div>
               )}
             </div>
           )}
-
-          {/* Agendamentos */}
-          <Link href="/portal-classico/agendamentos" onClick={() => setMenuOpen(false)} className={itemCls(on('/portal-classico/agendamentos'))}>
-            <Marca ativo={on('/portal-classico/agendamentos')} /> <CalendarClock size={18} /> Agendamentos
-          </Link>
-
-          {/* Central de Chamados (liberada no protótipo) */}
-          <Link href="/portal-classico/chamados" onClick={() => setMenuOpen(false)} className={itemCls(on('/portal-classico/chamados'))}>
-            <Marca ativo={on('/portal-classico/chamados')} /> <Headset size={18} /> Central de Chamados
-          </Link>
 
           <button type="button" className={itemCls(false)}><DollarSign size={18} /> Faturamento</button>
           <button type="button" className={itemCls(false)}><MapPin size={18} /> Vamos Controle</button>
