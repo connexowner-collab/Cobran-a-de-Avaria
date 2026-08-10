@@ -33,10 +33,10 @@ export default function PortalClassicoLayout({ children }: { children: React.Rea
 
   const itemCls = (ativo: boolean, sub = false) =>
     `relative flex w-full items-center gap-3 rounded-lg py-2.5 text-left text-[13.5px] transition ${sub ? 'pl-11 pr-3' : 'px-3'} ${
-      ativo ? 'bg-slate-100 font-bold text-slate-900' : 'font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+      ativo ? 'bg-white/10 font-bold text-white' : 'font-semibold text-white/70 hover:bg-white/5 hover:text-white'
     }`;
   const Marca = ({ ativo }: { ativo: boolean }) =>
-    ativo ? <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-[#0b1f33]" /> : null;
+    ativo ? <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-white" /> : null;
 
   return (
     <div className="tema-classico flex min-h-screen bg-slate-100">
@@ -44,7 +44,7 @@ export default function PortalClassicoLayout({ children }: { children: React.Rea
 
       {/* ===== Sidebar clara (fiel à produção) ===== */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-y-auto border-r border-slate-200 bg-white transition-transform duration-200 lg:z-30 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-y-auto bg-[#0b1f33] transition-transform duration-200 lg:z-30 lg:translate-x-0 ${
           menuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -53,12 +53,12 @@ export default function PortalClassicoLayout({ children }: { children: React.Rea
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/grupo-vamos-squarelogo-1642582508943.webp" alt="Grupo Vamos" className="h-10 w-10 object-contain" />
           <span className="flex flex-col leading-none">
-            <span className="text-[9px] font-bold tracking-[0.28em] text-slate-500">GRUPO</span>
-            <span className="text-[22px] font-black leading-[0.9] tracking-tight text-[#c41e3a]">VAMOS<span className="align-super text-[8px]">®</span></span>
+            <span className="text-[9px] font-bold tracking-[0.28em] text-white/50">GRUPO</span>
+            <span className="text-[22px] font-black leading-[0.9] tracking-tight text-white">VAMOS<span className="align-super text-[8px]">®</span></span>
           </span>
         </div>
 
-        <nav className="flex-1 px-3 py-3 text-slate-600">
+        <nav className="flex-1 px-3 py-3">
           {/* Início */}
           <button type="button" className={itemCls(false)}><Home size={18} /> Início</button>
 
@@ -155,7 +155,7 @@ export default function PortalClassicoLayout({ children }: { children: React.Rea
         </div>
 
         {/* ===== Rodapé ===== */}
-        <footer className="bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
+        <footer className="bg-[#0b1f33] px-4 py-8 text-white/80 sm:px-6 lg:px-8">
           <div className="grid gap-8 md:grid-cols-[auto_1fr_1fr]">
             <div>
               <div className="inline-flex items-center gap-2 rounded-lg bg-[#c41e3a] px-3 py-3 text-white">
@@ -165,29 +165,29 @@ export default function PortalClassicoLayout({ children }: { children: React.Rea
               </div>
             </div>
             <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Fale Conosco</p>
-              <ul className="space-y-1.5 text-[13px] text-slate-600">
-                <li className="flex items-center gap-2"><Phone size={14} className="text-slate-400" /> 0800 025 4141</li>
-                <li className="flex items-center gap-2"><MessageCircle size={14} className="text-slate-400" /> (11) 97837-9385</li>
-                <li className="flex items-center gap-2"><Mail size={14} className="text-slate-400" /> sac@grupovamos.com.br</li>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-white/45">Fale Conosco</p>
+              <ul className="space-y-1.5 text-[13px] text-white/80">
+                <li className="flex items-center gap-2"><Phone size={14} className="text-white/45" /> 0800 025 4141</li>
+                <li className="flex items-center gap-2"><MessageCircle size={14} className="text-white/45" /> (11) 97837-9385</li>
+                <li className="flex items-center gap-2"><Mail size={14} className="text-white/45" /> sac@grupovamos.com.br</li>
               </ul>
-              <p className="mt-3 text-xs font-bold uppercase tracking-wide text-slate-500">Matriz</p>
-              <p className="text-[13px] text-slate-600">Rua Dr. Renato Paes de Barros, 1017 6º andar — Itaim Bibi, São Paulo/SP · CEP 04530-001</p>
+              <p className="mt-3 text-xs font-bold uppercase tracking-wide text-white/45">Matriz</p>
+              <p className="text-[13px] text-white/80">Rua Dr. Renato Paes de Barros, 1017 6º andar — Itaim Bibi, São Paulo/SP · CEP 04530-001</p>
             </div>
             <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Institucional</p>
-              <p className="text-[13px] text-slate-600">Nosso Site</p>
-              <p className="mt-4 text-xs font-bold uppercase tracking-wide text-slate-500">Siga o Grupo Vamos</p>
-              <p className="text-[13px] text-slate-600">Facebook · Instagram · LinkedIn · YouTube</p>
-              <p className="mt-4 text-[11px] font-bold text-slate-400">UMA EMPRESA DO GRUPO SIMPAR</p>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-white/45">Institucional</p>
+              <p className="text-[13px] text-white/80">Nosso Site</p>
+              <p className="mt-4 text-xs font-bold uppercase tracking-wide text-white/45">Siga o Grupo Vamos</p>
+              <p className="text-[13px] text-white/80">Facebook · Instagram · LinkedIn · YouTube</p>
+              <p className="mt-4 text-[11px] font-bold text-white/40">UMA EMPRESA DO GRUPO SIMPAR</p>
             </div>
           </div>
-          <div className="mt-6 flex flex-wrap gap-2 border-t border-slate-200 pt-4">
+          <div className="mt-6 flex flex-wrap gap-2 border-t border-white/10 pt-4">
             {['VAMOS LOCAÇÃO', 'VAMOS SEMINOVOS', 'VW TRANSRIO', 'VAMOS', 'TIETÊ', 'HM', 'BMB', 'TRUCKVAN'].map((m) => (
-              <span key={m} className="rounded bg-white px-2.5 py-1 text-[10px] font-bold text-slate-500 ring-1 ring-slate-200">{m}</span>
+              <span key={m} className="rounded bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/70 ring-1 ring-white/15">{m}</span>
             ))}
           </div>
-          <p className="mt-6 text-center text-[11px] text-slate-400">Grupo Vamos 2026 — Todos os direitos reservados</p>
+          <p className="mt-6 text-center text-[11px] text-white/40">Grupo Vamos 2026 — Todos os direitos reservados</p>
         </footer>
       </div>
     </div>
