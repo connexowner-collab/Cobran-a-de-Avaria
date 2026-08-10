@@ -39,7 +39,7 @@ export default function PortalClassicoLayout({ children }: { children: React.Rea
     ativo ? <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-[#0b1f33]" /> : null;
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
+    <div className="tema-classico flex min-h-screen bg-slate-100">
       {menuOpen && <div className="fixed inset-0 z-30 bg-slate-900/50 lg:hidden" onClick={() => setMenuOpen(false)} aria-hidden />}
 
       {/* ===== Sidebar clara (fiel à produção) ===== */}

@@ -10,18 +10,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        /* Identidade visual PDV / Vamos (Cobrança Avaria) */
+        /* Identidade visual PDV / Vamos. Cor via variáveis CSS: o padrão (vermelho)
+           vale em todo o app; o portal clássico (.tema-classico) sobrepõe para azul. */
         primary: {
-          50: '#fdf2f4',
-          100: '#fce7ea',
-          200: '#f9d0d7',
-          300: '#f4a9b5',
-          400: '#ec7a8e',
-          500: '#e04d6a',
-          600: '#c41e3a',
-          700: '#a01830',
-          800: '#86162a',
-          900: '#731628',
+          50: 'rgb(var(--primary-50) / <alpha-value>)',
+          100: 'rgb(var(--primary-100) / <alpha-value>)',
+          200: 'rgb(var(--primary-200) / <alpha-value>)',
+          300: 'rgb(var(--primary-300) / <alpha-value>)',
+          400: 'rgb(var(--primary-400) / <alpha-value>)',
+          500: 'rgb(var(--primary-500) / <alpha-value>)',
+          600: 'rgb(var(--primary-600) / <alpha-value>)',
+          700: 'rgb(var(--primary-700) / <alpha-value>)',
+          800: 'rgb(var(--primary-800) / <alpha-value>)',
+          900: 'rgb(var(--primary-900) / <alpha-value>)',
         },
       },
     },
