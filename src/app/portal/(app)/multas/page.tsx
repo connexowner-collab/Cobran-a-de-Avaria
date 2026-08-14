@@ -3,11 +3,11 @@
 import { Fragment, useMemo, useState } from 'react';
 import {
   ChevronRight, Download, UserCheck, Clock, X, Check,
-  FileDown, Bell,
+  FileDown, Bell, Info, CircleDollarSign, Wallet, type LucideIcon,
 } from 'lucide-react';
 import { MULTAS, VEICULOS, modeloDaPlaca, type Multa } from '@/lib/portalData';
 import {
-  PageTitle, StatusBadge, KpiCard, KpiRow, FilterChip, Toolbar,
+  PageTitle, StatusBadge, KpiCard, KpiRow, FunilEtapas,
   DataTable, Th, TablePagination, SectionCard, usePaginacao,
   ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
@@ -23,14 +23,35 @@ const STATUS_LABEL = {
   vencida: 'Vencida',
 } as const;
 
-const FILTROS: Array<{ key: Multa['status'] | 'todos'; label: string }> = [
-  { key: 'todos', label: 'Todas' },
-  { key: 'aguardando_identificacao', label: 'Aguardando identificação' },
-  { key: 'notificada', label: 'Notificadas' },
-  { key: 'em_recurso', label: 'Em recurso' },
-  { key: 'paga', label: 'Pagas' },
-  { key: 'vencida', label: 'Vencidas' },
-];
+/* Régua (linha do tempo) do processo administrativo da multa. */
+type Regua = 'notificacao' | 'identificacao' | 'paga' | 'reembolsado';
+const REGUA_ORDEM: Regua[] = ['notificacao', 'identificacao', 'paga', 'reembolsado'];
+const REGUA_LABEL: Record<Regua, string> = {
+  notificacao: 'Notificação',
+  identificacao: 'Identificação do Condutor',
+  paga: 'Multa paga para o órgão',
+  reembolsado: 'Valor Reembolsado',
+};
+const REGUA_ICON: Record<Regua, LucideIcon> = {
+  notificacao: Bell,
+  identificacao: UserCheck,
+  paga: CircleDollarSign,
+  reembolsado: Wallet,
+};
+/** Chave usada no StatusBadge (cor) para cada etapa da régua. */
+const REGUA_BADGE: Record<Regua, string> = {
+  notificacao: 'notificada',                 // âmbar
+  identificacao: 'aguardando_identificacao', // índigo
+  paga: 'analise',                           // azul
+  reembolsado: 'resolvido',                  // verde
+};
+/** Etapa da régua em que a multa se encontra. */
+function reguaDe(m: Multa): Regua {
+  if (m.reembolsado) return 'reembolsado';
+  if (m.status === 'paga') return 'paga';
+  if (m.status === 'aguardando_identificacao') return 'identificacao';
+  return 'notificacao'; // notificada, em_recurso, vencida
+}
 
 /* Data de referência do protótipo (para o prazo de identificação). */
 const HOJE = new Date(2026, 6, 20); // 20/07/2026
@@ -102,42 +123,15 @@ function baixarProcuracao(m: Multa) {
 }
 
 /* ------------------------------------------------------------------ *
- * Wizard de identificação do condutor: passo a passo + procuração + envio.
+ * Modal instrucional de identificação do condutor: prazo + como fazer +
+ * procuração + dados da empresa. A indicação é feita pelo cliente no órgão
+ * (Senatran/carteira digital); a situação da identificação vem do SERPRO.
  * ------------------------------------------------------------------ */
-function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Multa; onFechar: () => void; onRegistrar: (auto: string, resultado: 'identificado' | 'nao') => void }) {
-  // Dados da empresa/proprietário — vêm do PDV, não são preenchidos pelo cliente.
+function ModalIdentificarCondutor({ multa, onFechar }: { multa: Multa; onFechar: () => void }) {
+  // Dados da empresa/proprietário — vêm do PDV, somente leitura.
   const empresa = { razaoSocial: 'Vamos Locação S.A.', cnpj: '12.345.678/0001-90', responsavel: 'Lucas Pessoa Duarte' };
-  const [resultado, setResultado] = useState<'' | 'identificado' | 'nao'>('');
-  const [motivoNao, setMotivoNao] = useState('');
-  const [enviado, setEnviado] = useState(false);
   const sla = slaIdentificacao(multa.prazoIdentificacao);
   const prazoVencido = !!sla && !sla.liberado;
-  const protocolo = `ID-${multa.auto.replace(/\D/g, '').slice(-6)}-${new Date().getFullYear()}`;
-
-  const registrar = (r: 'identificado' | 'nao') => { onRegistrar(multa.auto, r); setEnviado(true); };
-
-  /* Pergunta final (reutilizada no fluxo normal e no caso de prazo vencido). */
-  const blocoPergunta = (
-    <div>
-      <p className="mb-2 text-[13px] font-semibold text-slate-700">O condutor foi identificado?</p>
-      <div className="grid grid-cols-2 gap-2">
-        <button type="button" onClick={() => setResultado('identificado')} className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-[13px] font-semibold transition ${resultado === 'identificado' ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-          <UserCheck size={16} /> Sim, identificado
-        </button>
-        <button type="button" onClick={() => setResultado('nao')} className={`flex items-center justify-center gap-2 rounded-xl border p-3 text-[13px] font-semibold transition ${resultado === 'nao' ? 'border-slate-400 bg-slate-100 text-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-          <X size={16} /> Não identificado
-        </button>
-      </div>
-      {resultado === 'nao' && (
-        <div className="mt-3 space-y-2">
-          <div className="rounded-lg bg-amber-50 px-3.5 py-2.5 text-[12px] text-amber-900">
-            O proprietário/empresa assume a infração — pontos e pagamento seguem no veículo. A ação fica registrada no histórico.
-          </div>
-          <textarea value={motivoNao} onChange={(e) => setMotivoNao(e.target.value)} placeholder="Motivo (opcional): condutor não localizado, veículo compartilhado…" className="input-field w-full py-2.5 text-[13px]" rows={2} />
-        </div>
-      )}
-    </div>
-  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
@@ -151,100 +145,61 @@ function ModalIdentificarCondutor({ multa, onFechar, onRegistrar }: { multa: Mul
           <button onClick={onFechar} aria-label="Fechar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X size={18} /></button>
         </div>
 
-        {enviado ? (
-          <div className="flex flex-col items-center py-8 text-center">
-            {resultado === 'nao' ? (
-              <>
-                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-600"><X size={26} /></span>
-                <h4 className="mt-4 text-base font-extrabold text-slate-900">Registrado: condutor não identificado</h4>
-                <p className="mt-1 max-w-sm text-sm text-slate-500">
-                  A multa <b className="font-mono">{multa.auto}</b> permanece de responsabilidade do proprietário/empresa — pontuação e pagamento seguem no veículo. Registro adicionado ao histórico.
-                </p>
-              </>
-            ) : (
-              <>
-                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check size={28} /></span>
-                <h4 className="mt-4 text-base font-extrabold text-slate-900">Condutor identificado!</h4>
-                <p className="mt-1 max-w-sm text-sm text-slate-500">
-                  A indicação de condutor (via procuração) para a multa <b className="font-mono">{multa.auto}</b> foi registrada. Registro adicionado ao histórico.
-                </p>
-              </>
-            )}
-            <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 font-mono text-[13px] font-bold text-slate-700">Protocolo: {protocolo}</p>
-            <button className="btn-secondary mt-6 text-[13px]" onClick={onFechar}>Fechar</button>
+        {/* Prazo */}
+        {sla && (
+          <div className={`mb-4 flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-[12px] font-semibold ${
+            prazoVencido ? 'bg-rose-50 text-rose-700' : bucketPrazo(multa.prazoIdentificacao) === 'amarelo' ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-800'
+          }`}>
+            <Clock size={15} /> {prazoVencido ? 'Prazo de identificação encerrado' : 'Prazo para identificação'}: <b>{multa.prazoIdentificacao}</b> · {sla.label}
           </div>
-        ) : prazoVencido ? (
-          /* Prazo vencido: só a pergunta, sem o wizard */
-          <div className="space-y-3">
-            <div className="rounded-lg bg-rose-50 px-3.5 py-2.5 text-[12px] font-semibold text-rose-700">
-              <Clock size={14} className="mr-1 inline" />Prazo de identificação encerrado ({multa.prazoIdentificacao}). Não é mais possível indicar o condutor ao órgão — registre o desfecho:
-            </div>
-            {blocoPergunta}
-            <div className="mt-5 flex justify-between gap-2 border-t border-slate-100 pt-4">
-              <button type="button" onClick={onFechar} className="btn-secondary text-[13px]">Cancelar</button>
-              <button type="button" onClick={() => resultado && registrar(resultado)} disabled={!resultado} className="btn-primary gap-1.5 text-[13px]"><Check size={15} /> Registrar</button>
-            </div>
+        )}
+
+        {prazoVencido ? (
+          <div className="rounded-lg bg-slate-50 px-3.5 py-3 text-[13px] text-slate-600">
+            O prazo para indicar o condutor ao órgão foi encerrado. Não é mais possível fazer a indicação; a responsabilidade permanece com o proprietário/empresa (pontuação e pagamento seguem no veículo).
           </div>
         ) : (
-          <>
-            {/* Prazo */}
-            {sla && (
-              <div className={`mb-4 flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-[12px] font-semibold ${bucketPrazo(multa.prazoIdentificacao) === 'amarelo' ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-800'}`}>
-                <Clock size={15} /> Prazo para identificação: <b>{multa.prazoIdentificacao}</b> · {sla.label}
-              </div>
-            )}
-
-            {/* Procuração + dados da empresa (PDV) */}
-            <div className="space-y-3">
-              <div className="rounded-lg bg-sky-50 px-3.5 py-3 text-[12px] text-sky-900">
-                <p className="mb-1 font-bold">Como fazer a indicação:</p>
-                <ol className="ml-4 list-decimal space-y-0.5">
-                  <li>Baixe o modelo de procuração já preenchido com os dados da multa.</li>
-                  <li>Preencha os dados do condutor no documento e colha as assinaturas.</li>
-                </ol>
-              </div>
-              <button type="button" onClick={() => baixarProcuracao(multa)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary-200 bg-primary-50 py-2.5 text-[13px] font-semibold text-primary-700 hover:bg-primary-100">
-                <FileDown size={16} /> Baixar modelo de procuração
-              </button>
-              <div className="rounded-lg border border-slate-200 bg-slate-50/60">
-                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
-                  <p className="text-[13px] font-bold text-slate-700">Dados da empresa / proprietário</p>
-                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-500">via PDV</span>
-                </div>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-3 text-[13px]">
-                  <div><dt className="text-[11px] text-slate-400">Razão social</dt><dd className="font-semibold text-slate-800">{empresa.razaoSocial}</dd></div>
-                  <div><dt className="text-[11px] text-slate-400">CNPJ</dt><dd className="font-mono text-slate-700">{empresa.cnpj}</dd></div>
-                  <div className="col-span-2"><dt className="text-[11px] text-slate-400">Responsável</dt><dd className="font-semibold text-slate-800">{empresa.responsavel}</dd></div>
-                </dl>
-              </div>
+          <div className="space-y-3">
+            <div className="rounded-lg bg-sky-50 px-3.5 py-3 text-[12px] text-sky-900">
+              <p className="mb-1 font-bold">Como fazer a indicação:</p>
+              <ol className="ml-4 list-decimal space-y-0.5">
+                <li>Baixe o modelo de procuração já preenchido com os dados da multa.</li>
+                <li>Preencha os dados do condutor no documento e colha as assinaturas.</li>
+                <li>Faça a indicação do condutor no órgão (Senatran / carteira digital) dentro do prazo.</li>
+              </ol>
             </div>
-
-            {/* Pergunta direto */}
-            <div className="mt-4">{blocoPergunta}</div>
-
-            {/* Rodapé */}
-            <div className="mt-5 flex justify-between gap-2 border-t border-slate-100 pt-4">
-              <button type="button" onClick={onFechar} className="btn-secondary text-[13px]">Cancelar</button>
-              <button type="button" onClick={() => resultado && registrar(resultado)} disabled={!resultado} className="btn-primary gap-1.5 text-[13px]">
-                {resultado === 'nao' ? <><Check size={15} /> Registrar</> : <><UserCheck size={15} /> Enviar identificação</>}
-              </button>
+            <button type="button" onClick={() => baixarProcuracao(multa)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary-200 bg-primary-50 py-2.5 text-[13px] font-semibold text-primary-700 hover:bg-primary-100">
+              <FileDown size={16} /> Baixar modelo de procuração
+            </button>
+            <div className="rounded-lg border border-slate-200 bg-slate-50/60">
+              <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
+                <p className="text-[13px] font-bold text-slate-700">Dados da empresa / proprietário</p>
+                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-500">via PDV</span>
+              </div>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 px-4 py-3 text-[13px]">
+                <div><dt className="text-[11px] text-slate-400">Razão social</dt><dd className="font-semibold text-slate-800">{empresa.razaoSocial}</dd></div>
+                <div><dt className="text-[11px] text-slate-400">CNPJ</dt><dd className="font-mono text-slate-700">{empresa.cnpj}</dd></div>
+                <div className="col-span-2"><dt className="text-[11px] text-slate-400">Responsável</dt><dd className="font-semibold text-slate-800">{empresa.responsavel}</dd></div>
+              </dl>
             </div>
-          </>
+          </div>
         )}
+
+        <div className="mt-5 flex justify-end border-t border-slate-100 pt-4">
+          <button type="button" onClick={onFechar} className="btn-primary text-[13px]">Entendi</button>
+        </div>
       </div>
     </div>
   );
 }
 
 export default function MultasPage() {
-  const [filtro, setFiltro] = useState<Multa['status'] | 'todos'>('todos');
+  const [filtro, setFiltro] = useState<Regua | 'todos'>('todos');
   /** Filtro pelo prazo de identificação (semáforo) — null = sem filtro. */
   const [filtroPrazo, setFiltroPrazo] = useState<'vermelho' | 'amarelo' | 'verde' | null>(null);
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [identificar, setIdentificar] = useState<Multa | null>(null);
-  /** Histórico de desfecho por multa (identificado / não identificado). */
-  const [registros, setRegistros] = useState<Record<string, 'identificado' | 'nao'>>({});
 
   // Agrupamento acumulado por placa — a visão principal desta tela.
   const porPlacaBase = useMemo(() => {
@@ -269,7 +224,7 @@ export default function MultasPage() {
 
   // Multas que batem com o filtro de status + filtros por coluna.
   const multasBase = useMemo(() => MULTAS.filter((m) => {
-    if (filtro !== 'todos' && m.status !== filtro) return false;
+    if (filtro !== 'todos' && reguaDe(m) !== filtro) return false;
     if (filtroPrazo) {
       if (m.status !== 'aguardando_identificacao') return false;
       if (bucketPrazo(m.prazoIdentificacao) !== filtroPrazo) return false;
@@ -358,10 +313,16 @@ export default function MultasPage() {
         subtitulo="Consulte as multas da sua frota por veículo e baixe as notificações"
       />
 
+      {/* Aviso: os valores são o valor original da multa no órgão (não o valor final cobrado). */}
+      <div className="mb-4 flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-[12px] text-rose-700">
+        <Info size={15} className="mt-0.5 shrink-0" />
+        <p>Os valores exibidos são o <b>valor original da multa no órgão autuador</b>. No reembolso à Vamos pode ser acrescida a <b>taxa administrativa do seu contrato</b> — valor sujeito a alteração.</p>
+      </div>
+
       <KpiRow>
         <KpiCard label="Total de multas" valor={String(totalMultas)} detalhe={`${placasComMulta} veículos envolvidos`} cor="border-l-[#0e2233]" />
         <KpiCard label="Aguardando identificação" valor={String(aguardandoIdent)} detalhe="condutor a identificar" cor="border-l-indigo-500" detalheCor="text-indigo-700" />
-        <KpiCard label="Valor total" valor={fmtBRL(valorTotal)} detalhe="todas as multas" cor="border-l-primary-600" detalheCor="text-primary-700" />
+        <KpiCard label="Valor total (órgão)" valor={fmtBRL(valorTotal)} detalhe="Soma dos valores do órgão" cor="border-l-primary-600" detalheCor="text-primary-700" />
         <KpiCard label="Placas com multas" valor={String(placasComMulta)} detalhe={`de ${VEICULOS.length} veículos na frota`} cor="border-l-sky-600" />
       </KpiRow>
 
@@ -445,16 +406,20 @@ export default function MultasPage() {
         </div>
       </SectionCard>
 
-      <Toolbar>
-        {FILTROS.map((f) => (
-          <FilterChip
-            key={f.key}
-            label={f.label}
-            active={filtro === f.key}
-            onClick={() => setFiltro((atual) => (atual === f.key ? 'todos' : f.key))}
-          />
-        ))}
-      </Toolbar>
+      {/* Régua (linha do tempo) do processo da multa — clique para filtrar a lista. */}
+      <FunilEtapas
+        titulo="Situação da multa"
+        subtitulo="Etapas do processo · clique numa etapa para filtrar a lista abaixo"
+        etapas={REGUA_ORDEM.map((k) => ({
+          key: k,
+          label: REGUA_LABEL[k],
+          icon: REGUA_ICON[k],
+          count: MULTAS.filter((m) => reguaDe(m) === k).length,
+        }))}
+        ativo={filtro === 'todos' ? null : filtro}
+        onSelecionar={(k) => setFiltro((k as Regua) ?? 'todos')}
+        className="mb-4"
+      />
 
       {/* Ações em massa */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -495,7 +460,7 @@ export default function MultasPage() {
             <Th className="w-10" />
             <Th>Veículo</Th>
             <Th>Qtd multas</Th>
-            <Th>Valor total</Th>
+            <Th>Valor total (órgão)</Th>
             <Th>Pontos</Th>
             <Th>Pendentes</Th>
             <Th />
@@ -575,15 +540,20 @@ export default function MultasPage() {
                               <th className="px-3 py-2 font-bold">Auto</th>
                               <th className="px-3 py-2 font-bold">Infração</th>
                               <th className="px-3 py-2 font-bold">Data</th>
-                              <th className="px-3 py-2 font-bold">Valor</th>
+                              <th className="px-3 py-2 font-bold">Valor original (órgão)</th>
                               <th className="px-3 py-2 text-center font-bold">Pontos</th>
-                              <th className="px-3 py-2 font-bold">Prazo</th>
+                              <th className="px-3 py-2 font-bold">Prazo de identificação</th>
+                              <th className="px-3 py-2 font-bold">Identificação do condutor</th>
                               <th className="px-3 py-2 font-bold">Status</th>
                               <th className="px-3 py-2 text-right font-bold">Ações</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {g.multas.map((m) => (
+                            {g.multas.map((m) => {
+                              const ehIdent = reguaDe(m) === 'identificacao';
+                              const slaM = ehIdent ? slaIdentificacao(m.prazoIdentificacao) : null;
+                              const identVencido = !!slaM && !slaM.liberado;
+                              return (
                               <tr key={m.auto} className={`border-t border-slate-100 hover:bg-slate-50 ${selecionados.has(m.auto) ? 'bg-primary-50/40' : ''}`}>
                                 <td className="px-3 py-2">
                                   <input type="checkbox" checked={selecionados.has(m.auto)} onChange={() => toggleUma(m.auto)} aria-label={`Selecionar ${m.auto}`} className="h-4 w-4 rounded border-slate-300" />
@@ -598,38 +568,34 @@ export default function MultasPage() {
                                 <td className="px-3 py-2 text-center font-mono text-xs">{m.pontos}</td>
                                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{m.prazo}</td>
                                 <td className="px-3 py-2">
-                                  <StatusBadge status={m.status} label={STATUS_LABEL[m.status]} />
-                                  {m.status === 'aguardando_identificacao' && (() => {
-                                    const reg = registros[m.auto];
-                                    if (reg) {
-                                      return (
-                                        <p className={`mt-1 flex items-center gap-1 text-[11px] font-bold ${reg === 'identificado' ? 'text-emerald-600' : 'text-slate-500'}`}>
-                                          {reg === 'identificado' ? <><Check size={11} /> Condutor identificado</> : <><X size={11} /> Não identificado (registrado)</>}
-                                        </p>
-                                      );
-                                    }
-                                    const sla = slaIdentificacao(m.prazoIdentificacao);
-                                    return sla ? <p className={`mt-1 flex items-center gap-1 text-[11px] font-bold ${sla.cls}`}><Clock size={11} /> {sla.label}</p> : null;
-                                  })()}
+                                  {m.condutorIdentificado === 'identificado' ? (
+                                    <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-emerald-600"><Check size={12} /> Identificado</span>
+                                  ) : m.condutorIdentificado === 'nao' || (ehIdent && identVencido) ? (
+                                    <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-rose-600"><X size={12} /> Não identificado</span>
+                                  ) : ehIdent ? (
+                                    <span className="text-[12px] text-slate-400">Pendente</span>
+                                  ) : (
+                                    <span className="text-slate-300">—</span>
+                                  )}
+                                </td>
+                                <td className="whitespace-nowrap px-3 py-2">
+                                  <StatusBadge status={REGUA_BADGE[reguaDe(m)]} label={REGUA_LABEL[reguaDe(m)]} />
                                 </td>
                                 <td className="px-3 py-2">
                                   <div className="flex justify-end gap-1.5">
-                                    {m.status === 'aguardando_identificacao' && !registros[m.auto] && (() => {
-                                      const sla = slaIdentificacao(m.prazoIdentificacao);
-                                      const vencido = sla ? !sla.liberado : false;
-                                      return (
-                                        <button type="button" onClick={() => setIdentificar(m)} title={vencido ? 'Prazo encerrado — registrar desfecho' : 'Identificar condutor'} className="btn-primary gap-1.5 px-3 py-1.5 text-xs">
-                                          <UserCheck size={13} /> {vencido ? 'Registrar desfecho' : 'Identificar condutor'}
-                                        </button>
-                                      );
-                                    })()}
+                                    {ehIdent && !m.condutorIdentificado && !identVencido && (
+                                      <button type="button" onClick={() => setIdentificar(m)} title="Como identificar o condutor" className="btn-primary gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs">
+                                        <UserCheck size={13} /> Identificar condutor
+                                      </button>
+                                    )}
                                     <button className="btn-secondary gap-1.5 px-3 py-1.5 text-xs">
                                       <Download size={13} /> Notificação
                                     </button>
                                   </div>
                                 </td>
                               </tr>
-                            ))}
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -646,7 +612,6 @@ export default function MultasPage() {
         <ModalIdentificarCondutor
           multa={identificar}
           onFechar={() => setIdentificar(null)}
-          onRegistrar={(auto, r) => setRegistros((prev) => ({ ...prev, [auto]: r }))}
         />
       )}
     </div>

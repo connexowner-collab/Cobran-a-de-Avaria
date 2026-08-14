@@ -381,6 +381,10 @@ export interface Multa {
   prazo: string;
   /** Prazo final para identificação do condutor (quando status = aguardando_identificacao). */
   prazoIdentificacao?: string;
+  /** Situação da identificação do condutor (leitura, origem SERPRO). Ausente = ainda pendente. */
+  condutorIdentificado?: 'identificado' | 'nao';
+  /** Valor já reembolsado à Vamos pelo cliente (última etapa da régua). */
+  reembolsado?: boolean;
 }
 
 /** Modelo de um veículo pela placa (a partir da frota canônica). */
@@ -434,15 +438,22 @@ function gerarMultasMock(): Multa[] {
 
       let prazo = '—';
       let prazoIdentificacao: string | undefined;
+      let condutorIdentificado: Multa['condutorIdentificado'];
       if (status === 'aguardando_identificacao') {
         const offset = Math.floor(rnd() * 50) - 10; // -10..+39 dias → semáforo vermelho/amarelo/verde
         prazoIdentificacao = fmt(addDias(HOJE, offset));
         prazo = fmt(addDias(HOJE, offset + 15));
+        // Situação da identificação (origem SERPRO): parte já identificada, parte pendente.
+        const r = rnd();
+        if (r < 0.25) condutorIdentificado = 'identificado';
+        else if (r < 0.35) condutorIdentificado = 'nao';
       } else if (status === 'vencida') {
         prazo = fmt(addDias(dataInfracao, 30));
       } else if (status !== 'paga') {
         prazo = fmt(addDias(HOJE, 10 + Math.floor(rnd() * 60)));
       }
+      // Parte das multas pagas ao órgão já foi reembolsada à Vamos (última etapa da régua).
+      const reembolsado = status === 'paga' && rnd() < 0.4;
 
       out.push({
         auto: `AIT-${contador++}`,
@@ -455,6 +466,8 @@ function gerarMultasMock(): Multa[] {
         status,
         prazo,
         ...(prazoIdentificacao && { prazoIdentificacao }),
+        ...(condutorIdentificado && { condutorIdentificado }),
+        ...(reembolsado && { reembolsado: true }),
       });
     }
   });

@@ -12,7 +12,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Home, FileText, DollarSign, MapPin, HelpCircle, Car,
+  Home, FileText, DollarSign, MapPin, HelpCircle, Car, Receipt,
   Megaphone, Bell, ChevronDown, ChevronRight, Menu, Play, Pencil,
   Filter, Sparkles, Phone, MessageCircle, Mail,
 } from 'lucide-react';
@@ -21,6 +21,7 @@ import {
 const TITULOS: Record<string, string> = {
   '/portal-classico/servicos': 'Serviços de Manutenção',
   '/portal-classico/chamados': 'Central de Chamados',
+  '/portal-classico/multas': 'Multas',
 };
 
 export default function PortalClassicoLayout({ children }: { children: React.ReactNode }) {
@@ -88,6 +89,10 @@ export default function PortalClassicoLayout({ children }: { children: React.Rea
               )}
             </div>
           )}
+
+          <Link href="/portal-classico/multas" onClick={() => setMenuOpen(false)} className={itemCls(on('/portal-classico/multas'))}>
+            <Marca ativo={on('/portal-classico/multas')} /> <Receipt size={18} /> Multas
+          </Link>
 
           <button type="button" className={itemCls(false)}><DollarSign size={18} /> Faturamento</button>
           <button type="button" className={itemCls(false)}><MapPin size={18} /> Vamos Controle</button>
