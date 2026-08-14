@@ -24,6 +24,7 @@ export const MODULOS_LIBERADOS: string[] = [
   '/portal/servicos',
   '/portal/chamados',
   '/portal/agendamentos', // fluxo "Nova Manutenção" (aberto pela Central de Chamados)
+  '/portal/multas',
 ];
 
 /** Destino padrão (login, logo e redirecionamentos) — a primeira tela liberada. */
