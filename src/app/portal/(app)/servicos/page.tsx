@@ -181,10 +181,23 @@ function etapasManutencao(a: AtendimentoServico): EtapaManutencao[] {
   ];
 }
 
+/** Gera um número de atendimento (protocolo do Sigma) para cada mensagem enviada. */
+function gerarChamado(): string {
+  return `SG-2026-${Math.floor(10000 + Math.random() * 89999)}`;
+}
+
 function ModalAcompanhamento({ atendimento: a, onFechar }: { atendimento: AtendimentoServico; onFechar: () => void }) {
   const identificador = a.placa !== '—' ? a.placa : a.numeroSerie;
   const identLabel = 'Chassi / Número de série';
   const identValor = a.chassi !== '—' ? a.chassi : a.numeroSerie;
+  const [texto, setTexto] = useState('');
+  const [msgs, setMsgs] = useState<{ texto: string; chamado: string }[]>([]);
+  const enviar = () => {
+    const t = texto.trim();
+    if (!t) return;
+    setMsgs((m) => [...m, { texto: t, chamado: gerarChamado() }]);
+    setTexto('');
+  };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -213,14 +226,31 @@ function ModalAcompanhamento({ atendimento: a, onFechar }: { atendimento: Atendi
 
         <div className="mt-5 border-t border-slate-100 pt-4">
           <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Falar com o controlador sobre o status</p>
+          {msgs.length > 0 && (
+            <div className="mb-3 space-y-2.5">
+              {msgs.map((m, i) => (
+                <div key={i} className="flex flex-col items-end gap-1">
+                  <div className="max-w-[80%] rounded-2xl bg-primary-600 px-3.5 py-2.5 text-[13px] text-white shadow-sm">{m.texto}</div>
+                  <span className="text-[10.5px] text-slate-400">Atendimento nº <b className="font-mono text-slate-500">{m.chamado}</b> aberto</span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="mb-2 flex items-center gap-2 text-[12px] text-slate-500">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold text-white">LP</span>
             Enviando como <b className="text-slate-700">Lucas Pessoa</b> · Cliente
           </div>
           <div className="flex gap-2.5">
-            <input placeholder="Escreva sua mensagem ao controlador…" className="input-field flex-1 bg-slate-50 py-2.5 text-[13px]" />
-            <button className="btn-primary gap-1.5 text-[13px]"><Send size={14} /> Enviar</button>
+            <input
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') enviar(); }}
+              placeholder="Escreva sua mensagem ao controlador…"
+              className="input-field flex-1 bg-slate-50 py-2.5 text-[13px]"
+            />
+            <button onClick={enviar} className="btn-primary gap-1.5 text-[13px]"><Send size={14} /> Enviar</button>
           </div>
+          <p className="mt-2 text-[11px] text-slate-400">Cada mensagem abre um <b className="font-semibold text-slate-500">atendimento</b> com número de protocolo. Guarde o número — se preferir, acompanhe pelo <b className="font-semibold text-slate-500">0800 025 4141</b>.</p>
         </div>
       </div>
     </div>

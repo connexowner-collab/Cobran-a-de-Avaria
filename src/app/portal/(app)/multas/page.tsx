@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import {
   ChevronRight, Download, UserCheck, Clock, X, Check,
-  FileDown, Bell, Info, CircleDollarSign, Wallet, type LucideIcon,
+  FileDown, Bell, Info, CircleDollarSign, Wallet, MessageSquare, Send, type LucideIcon,
 } from 'lucide-react';
 import { MULTAS, VEICULOS, modeloDaPlaca, type Multa } from '@/lib/portalData';
 import {
@@ -51,6 +51,14 @@ function reguaDe(m: Multa): Regua {
   if (m.status === 'paga') return 'paga';
   if (m.status === 'aguardando_identificacao') return 'identificacao';
   return 'notificacao'; // notificada, em_recurso, vencida
+}
+
+/** Ação pendente do cliente: multa aguardando identificação, ainda não identificada
+ *  e dentro do prazo (é onde aparece o botão "Identificar condutor"). */
+function acaoPendente(m: Multa): boolean {
+  if (m.status !== 'aguardando_identificacao' || m.condutorIdentificado) return false;
+  const sla = slaIdentificacao(m.prazoIdentificacao);
+  return sla ? sla.liberado : true;
 }
 
 /* Data de referência do protótipo (para o prazo de identificação). */
@@ -193,6 +201,76 @@ function ModalIdentificarCondutor({ multa, onFechar }: { multa: Multa; onFechar:
   );
 }
 
+/** Gera um número de atendimento (protocolo do Sigma) para cada mensagem enviada. */
+function gerarChamado(): string {
+  return `SG-2026-${Math.floor(10000 + Math.random() * 89999)}`;
+}
+
+/* ------------------------------------------------------------------ *
+ * Central de Multas: chat do cliente com a equipe de multas (abre chamado).
+ * ------------------------------------------------------------------ */
+function ModalCentralMultas({ multa, onFechar }: { multa: Multa; onFechar: () => void }) {
+  const [texto, setTexto] = useState('');
+  const [msgs, setMsgs] = useState<{ texto: string; chamado: string }[]>([]);
+  const enviar = () => {
+    const t = texto.trim();
+    if (!t) return;
+    setMsgs((m) => [...m, { texto: t, chamado: gerarChamado() }]);
+    setTexto('');
+  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
+      <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+        {/* Cabeçalho */}
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6 pb-4">
+          <div>
+            <p className="font-mono text-xs font-semibold text-slate-500">{multa.auto} · {multa.placa}</p>
+            <h3 className="mt-0.5 text-lg font-extrabold text-slate-900">Central de Multas</h3>
+            <p className="mt-0.5 text-[13px] text-slate-500">{multa.infracao}</p>
+          </div>
+          <button onClick={onFechar} aria-label="Fechar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X size={18} /></button>
+        </div>
+
+        {/* Conversa */}
+        <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50/60 p-6">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Fale com a equipe de multas</p>
+          <div className="flex justify-start">
+            <div className="max-w-[80%] rounded-2xl bg-white px-3.5 py-2.5 text-[13px] text-slate-700 shadow-sm">
+              <p className="mb-0.5 text-[11px] font-semibold text-slate-500">Central de Multas · Vamos</p>
+              <p>Olá! Envie aqui sua dúvida sobre esta multa — prazo de identificação, como indicar o condutor, contestação ou valor. A equipe responde por este canal.</p>
+            </div>
+          </div>
+          {msgs.map((m, i) => (
+            <div key={i} className="flex flex-col items-end gap-1">
+              <div className="max-w-[80%] rounded-2xl bg-primary-600 px-3.5 py-2.5 text-[13px] text-white shadow-sm">{m.texto}</div>
+              <span className="text-[10.5px] text-slate-400">Atendimento nº <b className="font-mono text-slate-500">{m.chamado}</b> aberto</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Envio */}
+        <div className="border-t border-slate-100 p-4">
+          <div className="mb-2 flex items-center gap-2 text-[12px] text-slate-500">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold text-white">LP</span>
+            Enviando como <b className="text-slate-700">Lucas Pessoa</b> · Cliente
+          </div>
+          <div className="flex gap-2.5">
+            <input
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') enviar(); }}
+              placeholder="Escreva sua mensagem à Central de Multas…"
+              className="input-field flex-1 bg-slate-50 py-2.5 text-[13px]"
+            />
+            <button onClick={enviar} className="btn-primary gap-1.5 text-[13px]"><Send size={14} /> Enviar</button>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-400">Cada mensagem abre um <b className="font-semibold text-slate-500">atendimento</b> com número de protocolo. Guarde o número — se preferir, acompanhe pelo <b className="font-semibold text-slate-500">0800 025 4141</b>.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function MultasPage() {
   const [filtro, setFiltro] = useState<Regua | 'todos'>('todos');
   /** Filtro pelo prazo de identificação (semáforo) — null = sem filtro. */
@@ -200,6 +278,7 @@ export default function MultasPage() {
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [identificar, setIdentificar] = useState<Multa | null>(null);
+  const [chatMulta, setChatMulta] = useState<Multa | null>(null);
 
   // Agrupamento acumulado por placa — a visão principal desta tela.
   const porPlacaBase = useMemo(() => {
@@ -215,7 +294,7 @@ export default function MultasPage() {
           qtd: multas.length,
           valor: multas.reduce((s, m) => s + valorNum(m.valor), 0),
           pontos: multas.reduce((s, m) => s + m.pontos, 0),
-          pendentes: multas.filter((m) => m.status === 'notificada' || m.status === 'vencida' || m.status === 'aguardando_identificacao').length,
+          pendentes: multas.filter(acaoPendente).length,
         };
       })
       .sort((a, b) => b.qtd - a.qtd || b.valor - a.valor);
@@ -254,7 +333,7 @@ export default function MultasPage() {
           multas,
           valor: multas.reduce((s, m) => s + valorNum(m.valor), 0),
           pontos: multas.reduce((s, m) => s + m.pontos, 0),
-          pendentes: multas.filter((m) => m.status === 'notificada' || m.status === 'vencida' || m.status === 'aguardando_identificacao').length,
+          pendentes: multas.filter(acaoPendente).length,
         };
       })
       .sort((a, b) => b.multas.length - a.multas.length);
@@ -395,11 +474,6 @@ export default function MultasPage() {
                 </p>
                 <p className="font-mono text-xs text-slate-500">{fmtBRL(p.valor)} · {p.pontos} pontos</p>
               </div>
-              {p.pendentes > 0 && (
-                <span className="flex-none rounded-full bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700">
-                  {p.pendentes} pendente{p.pendentes > 1 ? 's' : ''}
-                </span>
-              )}
             </button>
             );
           })}
@@ -462,7 +536,7 @@ export default function MultasPage() {
             <Th>Qtd multas</Th>
             <Th>Valor total (órgão)</Th>
             <Th>Pontos</Th>
-            <Th>Pendentes</Th>
+            <Th>Ações Pendentes</Th>
             <Th />
           </>
         }
@@ -514,7 +588,7 @@ export default function MultasPage() {
                 <td className="px-4 py-3">
                   {g.pendentes > 0 && (
                     <span className="rounded-full bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700">
-                      {g.pendentes} pendente{g.pendentes > 1 ? 's' : ''}
+                      {g.pendentes} {g.pendentes > 1 ? 'Ações Pendentes' : 'Ação Pendente'}
                     </span>
                   )}
                 </td>
@@ -588,7 +662,10 @@ export default function MultasPage() {
                                         <UserCheck size={13} /> Identificar condutor
                                       </button>
                                     )}
-                                    <button className="btn-secondary gap-1.5 px-3 py-1.5 text-xs">
+                                    <button type="button" onClick={() => setChatMulta(m)} title="Falar com a Central de Multas" aria-label="Falar com a Central de Multas" className="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100 hover:text-primary-700">
+                                      <MessageSquare size={15} />
+                                    </button>
+                                    <button className="btn-secondary gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs">
                                       <Download size={13} /> Notificação
                                     </button>
                                   </div>
@@ -613,6 +690,10 @@ export default function MultasPage() {
           multa={identificar}
           onFechar={() => setIdentificar(null)}
         />
+      )}
+
+      {chatMulta && (
+        <ModalCentralMultas multa={chatMulta} onFechar={() => setChatMulta(null)} />
       )}
     </div>
   );
