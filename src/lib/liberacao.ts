@@ -31,26 +31,37 @@ export const MODULOS_LIBERADOS: string[] = [
 export const ROTA_PADRAO = MODULOS_LIBERADOS[0] ?? '/portal/servicos';
 
 /**
- * MODO DESENVOLVEDOR
+ * MODO DESENVOLVEDOR — DOIS LINKS DISTINTOS
  * ---------------------------------------------------------------------------
- * Enquanto o cliente fica restrito ao MODULOS_LIBERADOS, VOCÊ (desenvolvedor)
- * pode desbloquear TODAS as telas apenas no seu navegador:
+ * A visão é decidida pelo LINK usado para ENTRAR (não fica "grudada" no cache):
  *
- *   - Abra qualquer tela do portal com  ?dev=1   → destrava tudo neste navegador.
- *   - Abra com                          ?dev=0   → volta a simular o cliente.
+ *   - Link do CLIENTE (o que você envia):  /portal  (ou qualquer tela liberada)
+ *       → sempre a visão do cliente. Abrir sem ?dev=1 SEMPRE volta ao modo
+ *         cliente, mesmo que o navegador já tivesse entrado como dev antes.
  *
- * A preferência fica salva no navegador (localStorage), então persiste ao
- * navegar. O cliente, sem esse parâmetro, continua vendo só o que foi liberado.
+ *   - Link do DESENVOLVEDOR:               /dev
+ *       → entra no portal com TODAS as telas destravadas (redireciona para a
+ *         primeira tela liberada com ?dev=1). Também vale abrir qualquer tela
+ *         diretamente com ?dev=1.
+ *
+ * Durante a navegação interna (clicando no menu) a preferência é mantida, então
+ * o desenvolvedor continua vendo tudo; basta recarregar/abrir um link limpo
+ * (sem ?dev=1) para voltar à visão do cliente. Assim o link que você manda para
+ * o cliente nunca mostra a visão de desenvolvedor por causa do cache.
  */
 const DEV_KEY = 'portal_acesso_dev';
 
-/** Lê ?dev=1 / ?dev=0 da URL e grava/limpa a preferência de modo desenvolvedor. */
+/**
+ * Lê ?dev=1 da URL e grava/limpa a preferência de modo desenvolvedor.
+ * Regra: só ?dev=1 (ou on) ATIVA o modo dev; QUALQUER outro carregamento
+ * (sem parâmetro, ?dev=0, ?dev=off) volta para a visão do cliente.
+ */
 export function aplicarModoDevDaURL(search: string): void {
   if (typeof window === 'undefined') return;
   const dev = new URLSearchParams(search).get('dev');
   try {
     if (dev === '1' || dev === 'on') localStorage.setItem(DEV_KEY, '1');
-    else if (dev === '0' || dev === 'off') localStorage.removeItem(DEV_KEY);
+    else localStorage.removeItem(DEV_KEY);
   } catch { /* ignora */ }
 }
 
