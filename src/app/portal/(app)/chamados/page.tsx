@@ -14,8 +14,7 @@ import { CHAMADOS, VEICULOS, type Chamado, type ChamadoStatus } from '@/lib/port
 const STATUS_LABEL: Record<ChamadoStatus, string> = {
   aberto: 'Aberto',
   atendimento: 'Em atendimento',
-  aguardando: 'Aguardando',
-  resolvido: 'Resolvido',
+  resolvido: 'Finalizado',
 };
 
 /** Um chamado é considerado "em aberto" enquanto não estiver resolvido. */
@@ -44,6 +43,12 @@ function ymOf(d: string): number {
   return yy * 12 + (mm - 1);
 }
 
+/** Timestamp de uma data dd/mm/aaaa (para ordenação). */
+function tsData(d: string): number {
+  const [dd, mm, yy] = d.split('/').map(Number);
+  return new Date(yy || 0, (mm || 1) - 1, dd || 1).getTime();
+}
+
 /** Opções do filtro de período (em meses; 0 = todo o histórico). */
 const PERIODOS = [
   { key: '3', label: '3 meses', meses: 3 },
@@ -57,7 +62,6 @@ type PeriodoKey = (typeof PERIODOS)[number]['key'];
 const STATUS_DOT: Record<ChamadoStatus, string> = {
   aberto: 'bg-primary-500',
   atendimento: 'bg-amber-500',
-  aguardando: 'bg-sky-500',
   resolvido: 'bg-emerald-500',
 };
 
@@ -239,7 +243,7 @@ export default function ChamadosPage() {
 
   /* Contagem por status dentro do período (para os chips). */
   const contagem = useMemo(() => {
-    const base: Record<ChamadoStatus, number> = { aberto: 0, atendimento: 0, aguardando: 0, resolvido: 0 };
+    const base: Record<ChamadoStatus, number> = { aberto: 0, atendimento: 0, resolvido: 0 };
     for (const c of basePeriodo) base[c.status]++;
     return base;
   }, [basePeriodo]);
@@ -268,7 +272,12 @@ export default function ChamadosPage() {
     { key: 'solicitante', get: (c) => c.solicitante },
   ], []);
   const { val, set, filtradas: lista } = useFiltrosColuna(baseTabela, cols);
-  const pag = usePaginacao(lista, 10);
+  /* Ordena a listagem por Data de Abertura, da mais nova para a mais antiga. */
+  const listaOrdenada = useMemo(
+    () => [...lista].sort((a, b) => tsData(b.dataAbertura) - tsData(a.dataAbertura)),
+    [lista],
+  );
+  const pag = usePaginacao(listaOrdenada, 10);
 
   return (
     <div>
@@ -320,7 +329,7 @@ export default function ChamadosPage() {
             {topPlacas.map((p, i) => (
               <li key={p.placa} className="flex items-center gap-3">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[12px] font-extrabold text-slate-600">
-                  {i + 1}
+                  {i + 1}º
                 </span>
                 <span className="w-20 shrink-0 font-mono text-[13px] font-semibold text-slate-800">{p.placa}</span>
                 <div className="min-w-0 flex-1">
@@ -336,15 +345,20 @@ export default function ChamadosPage() {
 
         {/* Top chamados por tipo de chamados */}
         <SectionCard titulo="Top 5 tipos de chamado" subtitulo="Tipos de chamado mais recorrentes">
-          <div className="space-y-3">
-            {topTipos.map((t) => (
-              <div key={t.tipo}>
-                <div className="mb-1 flex justify-between gap-3 text-[13px]">
-                  <span className="truncate font-semibold text-slate-700">{t.tipo}</span>
-                  <span className="shrink-0 font-mono text-slate-500">{t.qtd} · {t.pct}%</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full rounded-full bg-[#0e2233]" style={{ width: `${t.pct}%` }} />
+          <div className="space-y-3.5">
+            {topTipos.map((t, i) => (
+              <div key={t.tipo} className="flex items-center gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[12px] font-extrabold text-slate-600">
+                  {i + 1}º
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex justify-between gap-3 text-[13px]">
+                    <span className="truncate font-semibold text-slate-700">{t.tipo}</span>
+                    <span className="shrink-0 font-mono text-slate-500">{t.qtd} · {t.pct}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-full rounded-full bg-[#0e2233]" style={{ width: `${t.pct}%` }} />
+                  </div>
                 </div>
               </div>
             ))}
@@ -368,8 +382,8 @@ export default function ChamadosPage() {
         <button
           type="button"
           onClick={() => baixarCSV('chamados', [
-            ['Chamado', 'Assunto', 'Placa / Ativo', 'Solicitante', 'Data de Abertura'],
-            ...lista.map((c) => [c.id, c.categoria, c.placa, c.solicitante, c.dataAbertura]),
+            ['Chamado', 'Assunto', 'Placa / Ativo', 'Solicitante', 'Data de Abertura', 'Status'],
+            ...listaOrdenada.map((c) => [c.id, c.categoria, c.placa, c.solicitante, c.dataAbertura, STATUS_LABEL[c.status]]),
           ])}
           className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary-300 hover:text-primary-700"
         >
@@ -378,7 +392,7 @@ export default function ChamadosPage() {
       </div>
 
       <DataTable
-        colSpan={6}
+        colSpan={7}
         vazio={lista.length === 0}
         vazioLabel="Nenhum chamado encontrado com os filtros atuais."
         filterRow={
@@ -387,6 +401,7 @@ export default function ChamadosPage() {
             <ThFiltro><ColunaFiltro value={val('categoria')} onChange={set('categoria')} placeholder="Assunto" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa / Ativo" multi ariaLabel="Filtrar placa ou ativo" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('solicitante')} onChange={set('solicitante')} placeholder="Solicitante" /></ThFiltro>
+            <ThFiltro />
             <ThFiltro />
             <ThFiltro />
           </>
@@ -398,6 +413,7 @@ export default function ChamadosPage() {
             <Th>Placa / Ativo</Th>
             <Th>Solicitante</Th>
             <Th>Data de Abertura</Th>
+            <Th>Status</Th>
             <Th className="text-right">Detalhes</Th>
           </>
         }
@@ -420,6 +436,7 @@ export default function ChamadosPage() {
             <td className="px-4 py-3.5 font-mono text-xs text-slate-600">{c.placa}</td>
             <td className="px-4 py-3.5 text-xs text-slate-600">{c.solicitante}</td>
             <td className="px-4 py-3.5 font-mono text-xs text-slate-600">{c.dataAbertura}</td>
+            <td className="px-4 py-3.5"><StatusBadge status={c.status} label={STATUS_LABEL[c.status]} /></td>
             <td className="px-4 py-3.5 text-right">
               <button
                 onClick={() => setAberto(c)}

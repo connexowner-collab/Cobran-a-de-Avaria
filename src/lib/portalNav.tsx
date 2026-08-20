@@ -36,8 +36,8 @@ export const NAV: { grupo: string; itens: NavItem[] }[] = [
   {
     grupo: 'Operação',
     itens: [
-      { label: 'Serviços de manutenção', href: '/portal/servicos', icon: <Wrench size={18} /> },
       { label: 'Central de Chamados', href: '/portal/chamados', icon: <Headset size={18} />, novo: true },
+      { label: 'Serviços de manutenção', href: '/portal/servicos', icon: <Wrench size={18} /> },
       { label: 'Veículos / CRLV', href: '/portal/veiculos', icon: <Truck size={18} /> },
     ],
   },

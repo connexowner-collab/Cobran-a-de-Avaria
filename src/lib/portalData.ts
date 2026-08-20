@@ -29,7 +29,7 @@ export const GRUPOS_DISTRIBUICAO: GrupoDistribuicao[] = [
   { id: 'g-go', nome: 'Frota Centro-Oeste', distribuicao: 'Distribuição GO', ativos: 24, regiao: 'Centro-Oeste' },
 ];
 
-export type ChamadoStatus = 'aberto' | 'atendimento' | 'aguardando' | 'resolvido';
+export type ChamadoStatus = 'aberto' | 'atendimento' | 'resolvido';
 
 export interface ChamadoResposta {
   autor: string;
@@ -64,7 +64,7 @@ const CHAMADOS_BASE: Chamado[] = [
     ],
   },
   {
-    id: 'CH-3388', categoria: 'Pneu furado - eixo traseiro', placa: 'JBL5B25', status: 'aguardando',
+    id: 'CH-3388', categoria: 'Pneu furado - eixo traseiro', placa: 'JBL5B25', status: 'atendimento',
     dataAbertura: '19/07/2026', abertoHa: 'Aberto há 1d', descricao: 'Pneu traseiro direito furou durante o trajeto; veículo parado no acostamento aguardando socorro.', solicitante: 'Fernanda Reis', responsavel: 'Diego Souza',
     respostas: [
       { autor: 'Fernanda Reis', origem: 'cliente', horario: 'Ontem 14:02', texto: 'Pneu traseiro direito furou durante o trajeto.' },
@@ -126,7 +126,7 @@ const CHAMADOS_BASE: Chamado[] = [
     ],
   },
   {
-    id: 'CH-3345', categoria: 'Erro no painel de telemetria', placa: 'MNT7D45', status: 'aguardando',
+    id: 'CH-3345', categoria: 'Erro no painel de telemetria', placa: 'MNT7D45', status: 'atendimento',
     dataAbertura: '11/07/2026', abertoHa: 'Aberto há 9d', descricao: 'Painel de telemetria não atualiza a localização do equipamento há 2 dias.', solicitante: 'Marcos Lima', responsavel: 'Equipe Técnica SP',
     respostas: [
       { autor: 'Marcos Lima', origem: 'cliente', horario: 'Qui 08:00', texto: 'Painel de telemetria não atualiza a localização do equipamento há 2 dias.' },
@@ -153,8 +153,8 @@ function gerarChamados(): Chamado[] {
     'Solicitação de segunda via de crachá', 'Dúvida sobre contrato',
   ];
   const STATUSES: ChamadoStatus[] = [
-    'aberto', 'atendimento', 'aguardando', 'atendimento', 'resolvido',
-    'resolvido', 'atendimento', 'aberto', 'aguardando', 'resolvido',
+    'aberto', 'atendimento', 'atendimento', 'atendimento', 'resolvido',
+    'resolvido', 'atendimento', 'aberto', 'atendimento', 'resolvido',
   ];
   const PLACAS = ['SHQ6B80', 'JBL5B25', 'DSA9924', 'JBL5E88', 'JBL5B26', 'RTX4C12', 'MNT7D45', 'JBL5B27', '—'];
   const SOLICITANTES = ['Marcos Lima', 'Fernanda Reis', 'Carlos Mota', 'Patrícia Nunes', 'Rafael Dias', 'Juliana Alves', 'Bruno Costa', 'Sandra Melo'];
@@ -383,6 +383,8 @@ export interface Multa {
   prazoIdentificacao?: string;
   /** Situação da identificação do condutor (leitura, origem SERPRO). Ausente = ainda pendente. */
   condutorIdentificado?: 'identificado' | 'nao';
+  /** Nome do condutor indicado (quando a multa já foi indicada a um condutor). */
+  condutor?: string;
   /** Valor já reembolsado à Vamos pelo cliente (última etapa da régua). */
   reembolsado?: boolean;
 }
@@ -419,6 +421,12 @@ function gerarMultasMock(): Multa[] {
     'Rod. dos Bandeirantes, km 40 · Jundiaí/SP', 'Av. Brasil · Rio de Janeiro/RJ', 'BR-101, km 210 · Curitiba/PR',
   ] as const;
   const statusPool = ['paga', 'paga', 'paga', 'paga', 'notificada', 'notificada', 'vencida', 'em_recurso'] as const;
+  // Pool de condutores (menor que a frota → condutores se repetem entre ativos, gerando ranking).
+  const CONDUTORES = [
+    'Carlos Henrique Alves', 'Marcos Antônio Ribeiro', 'José Aparecido Lima', 'Fernando Souza Dias',
+    'Roberto Carlos Mendes', 'Anderson Luiz Ferreira', 'Paulo Sérgio Nunes', 'Edson Ramos da Silva',
+    'Luciano Batista Rocha', 'Rafael Oliveira Costa', 'Sérgio Moreira Pinto', 'André Tavares Gomes',
+  ] as const;
 
   const out: Multa[] = [];
   let contador = 700000;
@@ -426,6 +434,7 @@ function gerarMultasMock(): Multa[] {
   VEICULOS.forEach((ativo, idx) => {
     if (idx < baseLen) return; // placas base já têm multas escritas à mão
     const ehLider = idx === baseLen;
+    const condutorAtivo = pick(CONDUTORES); // condutor principal do ativo
     if (!ehLider && rnd() < 0.05) return; // ~5% da frota sem multas
     // Apenas o líder fica acima de 10; o restante abaixo, com viés para poucos (algumas com 1).
     const qtdMultas = ehLider ? 13 : 1 + Math.floor(rnd() * rnd() * 9); // 1 a 9, concentrado no baixo
@@ -454,6 +463,9 @@ function gerarMultasMock(): Multa[] {
       }
       // Parte das multas pagas ao órgão já foi reembolsada à Vamos (última etapa da régua).
       const reembolsado = status === 'paga' && rnd() < 0.4;
+      // Condutor indicado: multas que não estão pendentes de identificação já têm condutor.
+      const temCondutor = status !== 'aguardando_identificacao' || condutorIdentificado === 'identificado';
+      const condutor = temCondutor ? condutorAtivo : undefined;
 
       out.push({
         auto: `AIT-${contador++}`,
@@ -467,6 +479,7 @@ function gerarMultasMock(): Multa[] {
         prazo,
         ...(prazoIdentificacao && { prazoIdentificacao }),
         ...(condutorIdentificado && { condutorIdentificado }),
+        ...(condutor && { condutor }),
         ...(reembolsado && { reembolsado: true }),
       });
     }

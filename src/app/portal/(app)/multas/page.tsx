@@ -3,7 +3,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import {
   ChevronRight, Download, UserCheck, Clock, X, Check,
-  FileDown, Bell, Info, CircleDollarSign, Wallet, MessageSquare, Send, type LucideIcon,
+  FileDown, Bell, Info, CircleDollarSign, Wallet, MessageSquare, MessageCircle, type LucideIcon,
 } from 'lucide-react';
 import { MULTAS, VEICULOS, modeloDaPlaca, type Multa } from '@/lib/portalData';
 import {
@@ -201,23 +201,25 @@ function ModalIdentificarCondutor({ multa, onFechar }: { multa: Multa; onFechar:
   );
 }
 
-/** Gera um número de atendimento (protocolo do Sigma) para cada mensagem enviada. */
-function gerarChamado(): string {
-  return `SG-2026-${Math.floor(10000 + Math.random() * 89999)}`;
+/** Número do WhatsApp da Central de Multas e link com mensagem pré-preenchida. */
+const WHATSAPP_CENTRAL = '5511978379385';
+function linkWhatsApp(texto: string): string {
+  return `https://wa.me/${WHATSAPP_CENTRAL}?text=${encodeURIComponent(texto)}`;
 }
 
 /* ------------------------------------------------------------------ *
- * Central de Multas: chat do cliente com a equipe de multas (abre chamado).
+ * Central de Multas: redireciona o cliente para o WhatsApp da equipe de multas.
  * ------------------------------------------------------------------ */
 function ModalCentralMultas({ multa, onFechar }: { multa: Multa; onFechar: () => void }) {
-  const [texto, setTexto] = useState('');
-  const [msgs, setMsgs] = useState<{ texto: string; chamado: string }[]>([]);
-  const enviar = () => {
-    const t = texto.trim();
-    if (!t) return;
-    setMsgs((m) => [...m, { texto: t, chamado: gerarChamado() }]);
-    setTexto('');
-  };
+  /* Mensagem pré-preenchida para o WhatsApp (dados da multa + solicitante). */
+  const msgWhatsApp = [
+    'Olá! Preciso de suporte sobre uma multa.',
+    '',
+    `AIT: ${multa.auto}`,
+    `Placa: ${multa.placa}`,
+    `Infração: ${multa.infracao}`,
+    'Solicitante: Lucas Pessoa',
+  ].join('\n');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
       <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -237,34 +239,22 @@ function ModalCentralMultas({ multa, onFechar }: { multa: Multa; onFechar: () =>
           <div className="flex justify-start">
             <div className="max-w-[80%] rounded-2xl bg-white px-3.5 py-2.5 text-[13px] text-slate-700 shadow-sm">
               <p className="mb-0.5 text-[11px] font-semibold text-slate-500">Central de Multas · Vamos</p>
-              <p>Olá! Envie aqui sua dúvida sobre esta multa — prazo de identificação, como indicar o condutor, contestação ou valor. A equipe responde por este canal.</p>
+              <p>Olá! Fale com a equipe de multas pelo WhatsApp — prazo de identificação, como indicar o condutor, contestação ou valor. Ao clicar abaixo, você é redirecionado com uma mensagem já preenchida com os dados desta multa.</p>
             </div>
           </div>
-          {msgs.map((m, i) => (
-            <div key={i} className="flex flex-col items-end gap-1">
-              <div className="max-w-[80%] rounded-2xl bg-primary-600 px-3.5 py-2.5 text-[13px] text-white shadow-sm">{m.texto}</div>
-              <span className="text-[10.5px] text-slate-400">Atendimento nº <b className="font-mono text-slate-500">{m.chamado}</b> aberto</span>
-            </div>
-          ))}
         </div>
 
-        {/* Envio */}
+        {/* Ação: WhatsApp */}
         <div className="border-t border-slate-100 p-4">
-          <div className="mb-2 flex items-center gap-2 text-[12px] text-slate-500">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold text-white">LP</span>
-            Enviando como <b className="text-slate-700">Lucas Pessoa</b> · Cliente
-          </div>
-          <div className="flex gap-2.5">
-            <input
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') enviar(); }}
-              placeholder="Escreva sua mensagem à Central de Multas…"
-              className="input-field flex-1 bg-slate-50 py-2.5 text-[13px]"
-            />
-            <button onClick={enviar} className="btn-primary gap-1.5 text-[13px]"><Send size={14} /> Enviar</button>
-          </div>
-          <p className="mt-2 text-[11px] text-slate-400">Cada mensagem abre um <b className="font-semibold text-slate-500">atendimento</b> com número de protocolo. Guarde o número — se preferir, acompanhe pelo <b className="font-semibold text-slate-500">0800 025 4141</b>.</p>
+          <a
+            href={linkWhatsApp(msgWhatsApp)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-emerald-700"
+          >
+            <MessageCircle size={16} /> Entrar em contato pelo WhatsApp
+          </a>
+          <p className="mt-2 text-center text-[11px] text-slate-400">Você será redirecionado ao WhatsApp com uma mensagem já preenchida com os dados desta multa.</p>
         </div>
       </div>
     </div>
@@ -301,6 +291,22 @@ export default function MultasPage() {
   }, []);
   const topPlacas = porPlacaBase.slice(0, TOP_N);
 
+  /* Ranking dos condutores indicados com mais multas (top 5). */
+  const topCondutores = useMemo(() => {
+    const mapa = new Map<string, { qtd: number; placas: Set<string> }>();
+    MULTAS.forEach((m) => {
+      if (!m.condutor) return;
+      const e = mapa.get(m.condutor) ?? { qtd: 0, placas: new Set<string>() };
+      e.qtd++;
+      e.placas.add(m.placa);
+      mapa.set(m.condutor, e);
+    });
+    return Array.from(mapa.entries())
+      .map(([nome, v]) => ({ nome, qtd: v.qtd, placas: v.placas.size }))
+      .sort((a, b) => b.qtd - a.qtd)
+      .slice(0, TOP_N);
+  }, []);
+
   // Multas que batem com o filtro de status + filtros por coluna.
   const multasBase = useMemo(() => MULTAS.filter((m) => {
     if (filtro !== 'todos' && reguaDe(m) !== filtro) return false;
@@ -318,6 +324,7 @@ export default function MultasPage() {
     { key: 'valor', get: (m) => m.valor },
     { key: 'prazo', get: (m) => m.prazo },
     { key: 'status', get: (m) => STATUS_LABEL[m.status] },
+    { key: 'condutor', get: (m) => m.condutor ?? '' },
   ], []);
   const { val, set, filtradas: linhasFiltradas } = useFiltrosColuna(multasBase, cols);
 
@@ -342,7 +349,7 @@ export default function MultasPage() {
   const pag = usePaginacao(grupos, 10);
 
   // Com filtro de status ou busca ativos, expande automaticamente os grupos com resultado.
-  const filtroAtivo = filtro !== 'todos' || filtroPrazo !== null;
+  const filtroAtivo = filtro !== 'todos' || filtroPrazo !== null || !!val('condutor');
   const estaExpandido = (placa: string) => filtroAtivo || expandidos.has(placa);
   const toggleExpandido = (placa: string) => {
     setExpandidos((prev) => {
@@ -442,11 +449,26 @@ export default function MultasPage() {
         </div>
       )}
 
-      {/* Ranking fixo (top 5) — não cresce com o tamanho da frota. Para achar qualquer outra placa, use a busca abaixo. */}
+      {/* Régua (linha do tempo) do processo da multa — clique para filtrar a lista. */}
+      <FunilEtapas
+        titulo="Situação da multa"
+        subtitulo="Etapas do processo · clique numa etapa para filtrar a lista abaixo"
+        etapas={REGUA_ORDEM.map((k) => ({
+          key: k,
+          label: REGUA_LABEL[k],
+          icon: REGUA_ICON[k],
+          count: MULTAS.filter((m) => reguaDe(m) === k).length,
+        }))}
+        ativo={filtro === 'todos' ? null : filtro}
+        onSelecionar={(k) => setFiltro((k as Regua) ?? 'todos')}
+        className="mb-6"
+      />
+
+      {/* Rankings lado a lado: veículos e condutores com mais multas. */}
+      <div className="mb-6 grid items-start gap-4 lg:grid-cols-2">
       <SectionCard
         titulo="Top veículos com mais multas"
         subtitulo={`Os ${Math.min(TOP_N, placasComMulta)} veículos com mais ocorrências — clique para ver o detalhe na lista abaixo`}
-        className="mb-6"
       >
         <div className="divide-y divide-slate-100">
           {topPlacas.map((p, i) => {
@@ -461,7 +483,7 @@ export default function MultasPage() {
               aria-pressed={ativo}
               className={`-mx-2 flex w-[calc(100%+1rem)] items-center gap-4 rounded-lg px-2 py-3 text-left transition ${ativo ? 'bg-primary-50 ring-1 ring-inset ring-primary-200' : 'hover:bg-slate-50'}`}
             >
-              <span className={`flex h-7 w-7 flex-none items-center justify-center rounded-full border text-[11px] font-black ${RANK_STYLE[i] ?? 'border-slate-200 bg-slate-50 text-slate-400'}`}>
+              <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-slate-100 text-[12px] font-extrabold text-slate-600">
                 {i + 1}º
               </span>
               <div className="min-w-[110px]">
@@ -480,20 +502,44 @@ export default function MultasPage() {
         </div>
       </SectionCard>
 
-      {/* Régua (linha do tempo) do processo da multa — clique para filtrar a lista. */}
-      <FunilEtapas
-        titulo="Situação da multa"
-        subtitulo="Etapas do processo · clique numa etapa para filtrar a lista abaixo"
-        etapas={REGUA_ORDEM.map((k) => ({
-          key: k,
-          label: REGUA_LABEL[k],
-          icon: REGUA_ICON[k],
-          count: MULTAS.filter((m) => reguaDe(m) === k).length,
-        }))}
-        ativo={filtro === 'todos' ? null : filtro}
-        onSelecionar={(k) => setFiltro((k as Regua) ?? 'todos')}
-        className="mb-4"
-      />
+      {/* Ranking de condutores indicados com mais multas */}
+      <SectionCard
+        titulo="Top condutores indicados com mais multas"
+        subtitulo="Condutores indicados com maior número de multas na frota"
+      >
+        {topCondutores.length === 0 ? (
+          <p className="py-4 text-center text-[13px] text-slate-400">Nenhum condutor indicado até o momento.</p>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {topCondutores.map((c, i) => {
+              const ativoCond = val('condutor') === c.nome;
+              return (
+              <button
+                key={c.nome}
+                onClick={() => set('condutor')(ativoCond ? '' : c.nome)}
+                aria-pressed={ativoCond}
+                className={`-mx-2 flex w-[calc(100%+1rem)] items-center gap-4 rounded-lg px-2 py-3 text-left transition ${ativoCond ? 'bg-primary-50 ring-1 ring-inset ring-primary-200' : 'hover:bg-slate-50'}`}
+              >
+                <span className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-slate-100 text-[12px] font-extrabold text-slate-600">
+                  {i + 1}º
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-slate-800">{c.nome}</p>
+                  <p className="truncate text-xs text-slate-400">clique para filtrar a lista</p>
+                </div>
+                <div className="flex-none text-right">
+                  <p className="font-mono text-sm font-bold text-slate-800">
+                    {c.qtd} <span className="text-xs font-semibold text-slate-400">multa{c.qtd > 1 ? 's' : ''}</span>
+                  </p>
+                  <p className="text-xs text-slate-500">Indicado em {c.placas} ativo{c.placas > 1 ? 's' : ''}</p>
+                </div>
+              </button>
+              );
+            })}
+          </div>
+        )}
+      </SectionCard>
+      </div>
 
       {/* Ações em massa */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -618,7 +664,10 @@ export default function MultasPage() {
                               <th className="px-3 py-2 text-center font-bold">Pontos</th>
                               <th className="px-3 py-2 font-bold">Prazo de identificação</th>
                               <th className="px-3 py-2 font-bold">Identificação do condutor</th>
+                              <th className="px-3 py-2 font-bold">Nome do Indicado</th>
                               <th className="px-3 py-2 font-bold">Status</th>
+                              <th className="px-3 py-2 text-center font-bold">Paga ao órgão</th>
+                              <th className="px-3 py-2 text-center font-bold">Reembolsada à Vamos</th>
                               <th className="px-3 py-2 text-right font-bold">Ações</th>
                             </tr>
                           </thead>
@@ -652,8 +701,25 @@ export default function MultasPage() {
                                     <span className="text-slate-300">—</span>
                                   )}
                                 </td>
+                                <td className="whitespace-nowrap px-3 py-2 text-slate-700">{m.condutor ?? '—'}</td>
                                 <td className="whitespace-nowrap px-3 py-2">
                                   <StatusBadge status={REGUA_BADGE[reguaDe(m)]} label={REGUA_LABEL[reguaDe(m)]} />
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                  {m.status === 'paga' ? (
+                                    <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-emerald-600"><Check size={12} /> Sim</span>
+                                  ) : (
+                                    <span className="text-slate-300">—</span>
+                                  )}
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                  {m.status !== 'paga' ? (
+                                    <span className="text-slate-300">—</span>
+                                  ) : m.reembolsado ? (
+                                    <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-emerald-600"><Check size={12} /> Sim</span>
+                                  ) : (
+                                    <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">Não</span>
+                                  )}
                                 </td>
                                 <td className="px-3 py-2">
                                   <div className="flex justify-end gap-1.5">
