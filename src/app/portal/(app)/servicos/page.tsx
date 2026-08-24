@@ -508,8 +508,6 @@ function GraficoEmpilhado() {
   );
 }
 
-/** Opções da lista suspensa de tipo (na coluna "Motivo do atendimento"). */
-const OPCOES_TIPO = TIPOS_ORDEM.map((t) => ({ value: TIPO_INFO[t].label, label: TIPO_INFO[t].label }));
 /** Opções da lista suspensa de status do atendimento. */
 const OPCOES_STATUS = [
   { value: 'Em aberto', label: 'Em aberto' },
@@ -554,8 +552,6 @@ export default function ServicosPage() {
   const cols = useMemo<ColDef<AtendimentoServico>[]>(() => [
     { key: 'numero', get: (a) => a.numero, multi: true },
     { key: 'statusAt', get: (a) => (a.status === 'finalizado' ? 'Finalizado' : 'Em aberto') },
-    // A coluna "Motivo" filtra pelo tipo do serviço (Preventiva/Corretiva/Sinistro/Outros).
-    { key: 'motivo', get: (a) => TIPO_INFO[a.tipo].label },
     { key: 'placa', get: (a) => a.placa, multi: true },
     { key: 'chassi', get: (a) => a.chassi, multi: true },
     { key: 'serie', get: (a) => a.numeroSerie, multi: true },
@@ -652,14 +648,13 @@ export default function ServicosPage() {
       />
 
       <DataTable
-        colSpan={15}
+        colSpan={14}
         vazio={linhas.length === 0}
         vazioLabel="Nenhum atendimento encontrado com os filtros atuais."
         head={
           <>
             <Th className="whitespace-nowrap">Nº de atendimento</Th>
             <Th className="whitespace-nowrap">Status do atendimento</Th>
-            <Th className="whitespace-nowrap">Motivo do atendimento</Th>
             <Th className="whitespace-nowrap text-center">Nº de OS</Th>
             <Th className="whitespace-nowrap">Placa</Th>
             <Th className="whitespace-nowrap">Chassi</Th>
@@ -678,7 +673,6 @@ export default function ServicosPage() {
           <>
             <ThFiltro><ColunaFiltro value={val('numero')} onChange={set('numero')} placeholder="Nº atend." multi ariaLabel="Filtrar nº de atendimento" /></ThFiltro>
             <ThFiltro><ColunaDropdown value={val('statusAt')} onChange={set('statusAt')} options={OPCOES_STATUS} placeholder="Todos os status" ariaLabel="Filtrar status do atendimento" /></ThFiltro>
-            <ThFiltro><ColunaDropdown value={val('motivo')} onChange={set('motivo')} options={OPCOES_TIPO} placeholder="Todos os tipos" ariaLabel="Filtrar tipo de serviço" /></ThFiltro>
             <ThFiltro />
             <ThFiltro><ColunaFiltro value={val('placa')} onChange={set('placa')} placeholder="Placa" multi ariaLabel="Filtrar placa" /></ThFiltro>
             <ThFiltro><ColunaFiltro value={val('chassi')} onChange={set('chassi')} placeholder="Chassi" multi ariaLabel="Filtrar chassi" /></ThFiltro>
@@ -726,7 +720,6 @@ export default function ServicosPage() {
                       {a.status === 'finalizado' ? 'Finalizado' : 'Em aberto'}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold">{a.motivo}</td>
                   <td className="whitespace-nowrap px-4 py-3.5 text-center">
                     <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-slate-100 px-1.5 text-xs font-bold text-slate-600">{a.ordens.length}</span>
                   </td>
@@ -788,7 +781,7 @@ export default function ServicosPage() {
                 </tr>
                 {aberto && (
                   <tr className="bg-slate-50/60">
-                    <td colSpan={15} className="px-6 py-3.5">
+                    <td colSpan={14} className="px-6 py-3.5">
                       <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
                         Ordens de Serviço do atendimento {a.numero} ({a.ordens.length})
                       </p>
