@@ -388,7 +388,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                 LP
               </span>
               <span className="hidden text-left leading-tight md:block">
-                <span className="block text-xs font-bold text-slate-800">Lucas Pessoa 😊</span>
+                <span className="block text-xs font-bold text-slate-800">Lucas Pessoa</span>
                 <span className="block text-[10px] text-slate-400">Vamos Locação</span>
               </span>
               <ChevronDown size={13} className={`text-slate-400 transition-transform ${perfilOpen ? 'rotate-180' : ''}`} />
@@ -396,7 +396,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             {perfilOpen && (
               <div className="absolute right-0 top-11 z-30 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
                 <div className="border-b border-slate-100 px-4 py-3">
-                  <p className="text-[13px] font-bold text-slate-800">Lucas Pessoa 😊</p>
+                  <p className="text-[13px] font-bold text-slate-800">Lucas Pessoa</p>
                   <p className="text-xs text-slate-500">Vamos Locação</p>
                 </div>
                 <button
