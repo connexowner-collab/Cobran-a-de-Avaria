@@ -59,7 +59,7 @@ export default function PortalInicioPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[26px] font-extrabold text-slate-900">Olá, Lucas</h1>
+          <h1 className="text-[26px] font-extrabold text-slate-900">Olá, Lucas 😊</h1>
           <p className="text-[13px] text-slate-500">
             {editando
               ? 'Monte sua visão: adicione, reordene ou remova os itens de qualquer aba do portal.'
