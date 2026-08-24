@@ -8,7 +8,7 @@ import {
   DataTable, Th, TablePagination, usePaginacao,
   ColunaFiltro, ThFiltro, useFiltrosColuna, type ColDef,
 } from '@/components/portal/ui';
-import { CHAMADOS, VEICULOS, type Chamado, type ChamadoStatus } from '@/lib/portalData';
+import { CHAMADOS, VEICULOS, assuntoChamado, type Chamado, type ChamadoStatus } from '@/lib/portalData';
 
 /** Rótulo de cada status de chamado (a cor vem de StatusBadge). */
 const STATUS_LABEL: Record<ChamadoStatus, string> = {
@@ -140,7 +140,7 @@ function ModalChamado({ chamado: c, onFechar }: { chamado: Chamado; onFechar: ()
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6 pb-4">
           <div>
             <p className="font-mono text-[13px] font-semibold text-slate-500">Chamado {c.id}</p>
-            <h2 className="mt-0.5 text-xl font-extrabold text-slate-900">{c.categoria}</h2>
+            <h2 className="mt-0.5 text-xl font-extrabold text-slate-900">{assuntoChamado(c)}</h2>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
               <span>Solicitante <b className="text-slate-800">{c.solicitante}</b></span>
               <span>Responsável <b className="text-slate-800">{c.responsavel}</b></span>
@@ -226,7 +226,10 @@ export default function ChamadosPage() {
   /* Top chamados por tipo (categoria) mais recorrente. */
   const topTipos = useMemo(() => {
     const cont = new Map<string, number>();
-    CHAMADOS.forEach((c) => cont.set(c.categoria, (cont.get(c.categoria) ?? 0) + 1));
+    CHAMADOS.forEach((c) => {
+      const assunto = assuntoChamado(c);
+      cont.set(assunto, (cont.get(assunto) ?? 0) + 1);
+    });
     const total = CHAMADOS.length;
     return Array.from(cont.entries())
       .sort((a, b) => b[1] - a[1])
@@ -267,7 +270,7 @@ export default function ChamadosPage() {
 
   const cols = useMemo<ColDef<Chamado>[]>(() => [
     { key: 'id', get: (c) => c.id, multi: true },
-    { key: 'categoria', get: (c) => c.categoria },
+    { key: 'categoria', get: (c) => assuntoChamado(c) },
     { key: 'placa', get: (c) => c.placa, multi: true },
     { key: 'solicitante', get: (c) => c.solicitante },
   ], []);
@@ -383,7 +386,7 @@ export default function ChamadosPage() {
           type="button"
           onClick={() => baixarCSV('chamados', [
             ['Chamado', 'Assunto', 'Placa / Ativo', 'Solicitante', 'Data de Abertura', 'Status'],
-            ...listaOrdenada.map((c) => [c.id, c.categoria, c.placa, c.solicitante, c.dataAbertura, STATUS_LABEL[c.status]]),
+            ...listaOrdenada.map((c) => [c.id, assuntoChamado(c), c.placa, c.solicitante, c.dataAbertura, STATUS_LABEL[c.status]]),
           ])}
           className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-primary-300 hover:text-primary-700"
         >
@@ -432,7 +435,7 @@ export default function ChamadosPage() {
         {pag.pageItens.map((c) => (
           <tr key={c.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
             <td className="px-4 py-3.5 font-mono text-xs font-semibold text-slate-800">{c.id}</td>
-            <td className="px-4 py-3.5 text-[13px] font-semibold text-slate-800">{c.categoria}</td>
+            <td className="px-4 py-3.5 text-[13px] font-semibold text-slate-800">{assuntoChamado(c)}</td>
             <td className="px-4 py-3.5 font-mono text-xs text-slate-600">{c.placa}</td>
             <td className="px-4 py-3.5 text-xs text-slate-600">{c.solicitante}</td>
             <td className="px-4 py-3.5 font-mono text-xs text-slate-600">{c.dataAbertura}</td>

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { AlertCircle, ArrowRight } from 'lucide-react';
 import { KpiCard, BarraProgresso } from '@/components/portal/ui';
-import { CHAMADOS, VEICULOS, FATURAS, AVARIAS, MULTAS, TELEMETRIA, FROTA_TOTAL } from '@/lib/portalData';
+import { CHAMADOS, VEICULOS, FATURAS, AVARIAS, MULTAS, TELEMETRIA, FROTA_TOTAL, assuntoChamado } from '@/lib/portalData';
 
 /** Distribuição da frota por região (derivada da frota canônica). */
 const REGIOES_FROTA = (() => {
@@ -221,7 +221,7 @@ export const CATALOGO_WIDGETS: WidgetInicio[] = [
       <MiniTabela
         colunas={['Chamado', 'Placa', 'Status']}
         linhas={CHAMADOS.slice(0, 5).map((c) => [
-          <span key="id"><span className="block font-mono font-semibold text-slate-700">{c.id}</span><span className="block text-[11px] text-slate-400">{c.categoria}</span></span>,
+          <span key="id"><span className="block font-mono font-semibold text-slate-700">{c.id}</span><span className="block text-[11px] text-slate-400">{assuntoChamado(c)}</span></span>,
           <span key="p" className="font-mono text-slate-600">{c.placa}</span>,
           <Badge key="s" texto={c.status} cor={COR_CHAMADO[c.status]} />,
         ])}

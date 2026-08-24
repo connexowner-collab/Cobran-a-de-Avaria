@@ -53,6 +53,18 @@ export interface Chamado {
   respostas: ChamadoResposta[];
 }
 
+/** Assunto padrão da Central enquanto só existem chamados de manutenção (GEO). */
+export const ASSUNTO_CHAMADO_PADRAO = 'Solicitação de Manutenção';
+
+/**
+ * Assunto exibido na coluna e no modal da Central.
+ * Hoje todo chamado vindo do GEO é manutenção — valor fixo.
+ * Quando existirem outros tipos, derivar aqui (origem/tipo) para o filtro continuar funcionando.
+ */
+export function assuntoChamado(_chamado: Chamado): string {
+  return ASSUNTO_CHAMADO_PADRAO;
+}
+
 const CHAMADOS_BASE: Chamado[] = [
   {
     id: 'CH-3391', categoria: 'Falha no sistema de freios', placa: 'SHQ6B80', status: 'atendimento',
