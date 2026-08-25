@@ -203,23 +203,15 @@ function ModalIdentificarCondutor({ multa, onFechar }: { multa: Multa; onFechar:
 
 /** Número do WhatsApp da Central de Multas e link com mensagem pré-preenchida. */
 const WHATSAPP_CENTRAL = '5511978379385';
-function linkWhatsApp(texto: string): string {
-  return `https://wa.me/${WHATSAPP_CENTRAL}?text=${encodeURIComponent(texto)}`;
+/* Abre direto o WhatsApp da Central, sem mensagem pré-preenchida. */
+function linkWhatsApp(): string {
+  return `https://wa.me/${WHATSAPP_CENTRAL}`;
 }
 
 /* ------------------------------------------------------------------ *
  * Central de Multas: redireciona o cliente para o WhatsApp da equipe de multas.
  * ------------------------------------------------------------------ */
 function ModalCentralMultas({ multa, onFechar }: { multa: Multa; onFechar: () => void }) {
-  /* Mensagem pré-preenchida para o WhatsApp (dados da multa + solicitante). */
-  const msgWhatsApp = [
-    'Olá! Preciso de suporte sobre uma multa.',
-    '',
-    `AIT: ${multa.auto}`,
-    `Placa: ${multa.placa}`,
-    `Infração: ${multa.infracao}`,
-    'Solicitante: Lucas Pessoa',
-  ].join('\n');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
       <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -239,7 +231,7 @@ function ModalCentralMultas({ multa, onFechar }: { multa: Multa; onFechar: () =>
           <div className="flex justify-start">
             <div className="max-w-[80%] rounded-2xl bg-white px-3.5 py-2.5 text-[13px] text-slate-700 shadow-sm">
               <p className="mb-0.5 text-[11px] font-semibold text-slate-500">Central de Multas · Vamos</p>
-              <p>Olá! Fale com a equipe de multas pelo WhatsApp — prazo de identificação, como indicar o condutor, contestação ou valor. Ao clicar abaixo, você é redirecionado com uma mensagem já preenchida com os dados desta multa.</p>
+              <p>Olá! Fale com a equipe de multas pelo WhatsApp — prazo de identificação, como indicar o condutor, contestação ou valor. Ao clicar abaixo, você é redirecionado direto para o atendimento.</p>
             </div>
           </div>
         </div>
@@ -247,14 +239,14 @@ function ModalCentralMultas({ multa, onFechar }: { multa: Multa; onFechar: () =>
         {/* Ação: WhatsApp */}
         <div className="border-t border-slate-100 p-4">
           <a
-            href={linkWhatsApp(msgWhatsApp)}
+            href={linkWhatsApp()}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-emerald-700"
           >
             <MessageCircle size={16} /> Entrar em contato pelo WhatsApp
           </a>
-          <p className="mt-2 text-center text-[11px] text-slate-400">Você será redirecionado ao WhatsApp com uma mensagem já preenchida com os dados desta multa.</p>
+          <p className="mt-2 text-center text-[11px] text-slate-400">Você será redirecionado direto para o WhatsApp da Central de Atendimento.</p>
         </div>
       </div>
     </div>

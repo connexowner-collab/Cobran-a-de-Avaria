@@ -183,8 +183,9 @@ function etapasManutencao(a: AtendimentoServico): EtapaManutencao[] {
 
 /** Número do WhatsApp da central e link com mensagem pré-preenchida. */
 const WHATSAPP_CENTRAL = '5511978379385';
-function linkWhatsApp(texto: string): string {
-  return `https://wa.me/${WHATSAPP_CENTRAL}?text=${encodeURIComponent(texto)}`;
+/* Abre direto o WhatsApp da Central, sem mensagem pré-preenchida. */
+function linkWhatsApp(): string {
+  return `https://wa.me/${WHATSAPP_CENTRAL}`;
 }
 
 /** Timestamp da Data de agendamento (dd/mm/aaaa) para ordenação; "—" vai por último. */
@@ -198,17 +199,6 @@ function ModalAcompanhamento({ atendimento: a, onFechar }: { atendimento: Atendi
   const identificador = a.placa !== '—' ? a.placa : a.numeroSerie;
   const identLabel = 'Chassi / Número de série';
   const identValor = a.chassi !== '—' ? a.chassi : a.numeroSerie;
-  /* Mensagem pré-preenchida para o WhatsApp (dados do atendimento + solicitante). */
-  const msgWhatsApp = [
-    'Olá! Preciso de suporte sobre um serviço de manutenção.',
-    '',
-    `Atendimento: ${a.numero}`,
-    a.placa !== '—' ? `Placa: ${a.placa}` : null,
-    a.chassi !== '—' ? `Chassi: ${a.chassi}` : null,
-    a.numeroSerie !== '—' ? `Nº de série: ${a.numeroSerie}` : null,
-    `Marca/Modelo: ${a.marcaModelo}`,
-    'Solicitante: Lucas Pessoa',
-  ].filter(Boolean).join('\n');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4" onClick={onFechar}>
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -237,14 +227,14 @@ function ModalAcompanhamento({ atendimento: a, onFechar }: { atendimento: Atendi
         <div className="mt-5 border-t border-slate-100 pt-4">
           <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500">Falar com o controlador sobre o status</p>
           <a
-            href={linkWhatsApp(msgWhatsApp)}
+            href={linkWhatsApp()}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-emerald-700"
           >
             <MessageCircle size={16} /> Entrar em contato pelo WhatsApp
           </a>
-          <p className="mt-2 text-[11px] text-slate-400">Você será redirecionado ao WhatsApp com uma mensagem já preenchida com os dados do atendimento.</p>
+          <p className="mt-2 text-[11px] text-slate-400">Você será redirecionado direto para o WhatsApp da Central de Atendimento.</p>
         </div>
       </div>
     </div>
@@ -632,7 +622,7 @@ export default function ServicosPage() {
             <button className="btn-secondary gap-1.5 px-3 py-2 text-xs">
               <Download size={13} /> Baixar planilha
             </button>
-            <Link href="/portal/chamados" className="btn-primary gap-1.5 px-3 py-2 text-xs">
+            <Link href="/portal/agendamentos" className="btn-primary gap-1.5 px-3 py-2 text-xs">
               <CalendarPlus size={13} /> Agendar Manutenção
             </Link>
           </div>

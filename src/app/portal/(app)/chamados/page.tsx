@@ -328,6 +328,9 @@ export default function ChamadosPage() {
             </li>
           ))}
         </ul>
+        <p className="mt-4 border-t border-slate-100 pt-3 text-[11px] text-slate-400">
+          Este ranking considera todo o período (histórico completo de chamados), independentemente dos filtros aplicados na tabela abaixo.
+        </p>
       </SectionCard>
 
       {/* Filtro por status com contador + download da tabela. */}
