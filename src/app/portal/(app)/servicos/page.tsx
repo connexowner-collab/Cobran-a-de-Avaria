@@ -207,7 +207,6 @@ function ModalAcompanhamento({ atendimento: a, onFechar }: { atendimento: Atendi
     a.chassi !== '—' ? `Chassi: ${a.chassi}` : null,
     a.numeroSerie !== '—' ? `Nº de série: ${a.numeroSerie}` : null,
     `Marca/Modelo: ${a.marcaModelo}`,
-    `Motivo do atendimento: ${a.motivo}`,
     'Solicitante: Lucas Pessoa',
   ].filter(Boolean).join('\n');
   return (
@@ -228,7 +227,6 @@ function ModalAcompanhamento({ atendimento: a, onFechar }: { atendimento: Atendi
           <div><dt className="text-xs font-bold uppercase text-slate-400">Placa</dt><dd className="font-mono font-semibold">{a.placa}</dd></div>
           <div><dt className="text-xs font-bold uppercase text-slate-400">{identLabel}</dt><dd className="font-mono font-semibold">{identValor}</dd></div>
           <div><dt className="text-xs font-bold uppercase text-slate-400">Marca/Modelo</dt><dd className="font-semibold">{a.marcaModelo}</dd></div>
-          <div><dt className="text-xs font-bold uppercase text-slate-400">Motivo do atendimento</dt><dd className="font-semibold">{a.motivo}</dd></div>
         </dl>
 
         <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">Andamento da manutenção</p>
@@ -287,7 +285,6 @@ function ModalDetalheAtendimento({
               <div><dt className="text-xs font-bold uppercase text-slate-400">Placa</dt><dd className="font-mono font-semibold">{atendimento.placa}</dd></div>
               <div><dt className="text-xs font-bold uppercase text-slate-400">{identificacaoLabel}</dt><dd className="font-mono font-semibold">{identificacaoValor}</dd></div>
               <div><dt className="text-xs font-bold uppercase text-slate-400">Marca/Modelo</dt><dd className="font-semibold">{atendimento.marcaModelo}</dd></div>
-              <div><dt className="text-xs font-bold uppercase text-slate-400">Motivo do atendimento</dt><dd className="font-semibold">{atendimento.motivo}</dd></div>
             </dl>
             <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-3">
               <p className="text-xs font-bold uppercase tracking-wide text-sky-700">Problema relatado no chamado</p>
@@ -307,7 +304,6 @@ function ModalDetalheAtendimento({
               <div><dt className="text-xs font-bold uppercase text-slate-400">Placa</dt><dd className="font-mono font-semibold">{atendimento.placa}</dd></div>
               <div><dt className="text-xs font-bold uppercase text-slate-400">{identificacaoLabel}</dt><dd className="font-mono font-semibold">{identificacaoValor}</dd></div>
               <div><dt className="text-xs font-bold uppercase text-slate-400">Marca/Modelo</dt><dd className="font-semibold">{atendimento.marcaModelo}</dd></div>
-              <div><dt className="text-xs font-bold uppercase text-slate-400">Motivo do atendimento</dt><dd className="font-semibold">{atendimento.motivo}</dd></div>
             </dl>
             <p className="text-xs text-slate-500">Itens de mão de obra e peças registrados pela oficina, separados por ordem de serviço.</p>
             {atendimento.ordens.map((os) => {
