@@ -112,7 +112,7 @@ function baixarProcuracao(m: Multa) {
 <style>body{font-family:Arial,Helvetica,sans-serif;font-size:12pt;line-height:1.7;margin:2.5cm}h1{text-align:center;font-size:14pt;margin-bottom:24px}.linha{margin-top:22px}.ass{margin-top:52px}</style></head>
 <body>
 <h1>PROCURAÇÃO PARA INDICAÇÃO DE CONDUTOR</h1>
-<p>Pelo presente instrumento particular, o(a) <b>OUTORGANTE</b> (proprietário(a)/possuidor(a) do veículo de placa <b>${m.placa}</b>) nomeia e constitui seu bastante procurador(a) o(a) <b>OUTORGADO(A)</b> abaixo qualificado(a), condutor(a) responsável pela infração de trânsito registrada no Auto de Infração <b>${m.auto}</b> — ${m.infracao}, ocorrida em <b>${m.data}</b>, no local ${m.local} — com poderes específicos para assumir a responsabilidade pela referida infração e assinar o formulário de identificação do condutor junto ao órgão autuador.</p>
+<p>Pelo presente instrumento particular, o(a) <b>OUTORGANTE</b> (proprietário(a)/possuidor(a) do veículo de placa <b>${m.placa}</b>) nomeia e constitui seu bastante procurador(a) o(a) <b>OUTORGADO(A)</b> abaixo qualificado(a), condutor(a) responsável pela infração de trânsito registrada no Auto de Infração <b>${m.auto}</b> — ${m.infracao}, ocorrida em <b>${m.dataHoraAtuacao}</b>, no local ${m.local} — com poderes específicos para assumir a responsabilidade pela referida infração e assinar o formulário de identificação do condutor junto ao órgão autuador.</p>
 <p class="linha"><b>OUTORGANTE (empresa / proprietário):</b><br>Nome / Razão social: ____________________________________________<br>CNPJ / CPF: ______________________________</p>
 <p class="linha"><b>OUTORGADO (condutor responsável):</b><br>Nome: ____________________________________________<br>CPF: ____________________&nbsp;&nbsp;CNH nº: ____________________&nbsp;&nbsp;Categoria: ______</p>
 <p class="linha">Local e data: ______________________________, ______ / ______ / __________.</p>
@@ -311,6 +311,7 @@ export default function MultasPage() {
     { key: 'placa', get: (m) => m.placa, multi: true },
     { key: 'auto', get: (m) => m.auto, multi: true },
     { key: 'infracao', get: (m) => m.infracao },
+    { key: 'dataHoraAtuacao', get: (m) => m.dataHoraAtuacao },
     { key: 'data', get: (m) => m.data },
     { key: 'valor', get: (m) => m.valor },
     { key: 'prazo', get: (m) => m.prazo },
@@ -646,7 +647,8 @@ export default function MultasPage() {
                               <th className="w-10 px-3 py-2" />
                               <th className="px-3 py-2 font-bold">Auto</th>
                               <th className="px-3 py-2 font-bold">Infração</th>
-                              <th className="px-3 py-2 font-bold">Data</th>
+                              <th className="px-3 py-2 font-bold">Data/hora da atuação</th>
+                              <th className="px-3 py-2 font-bold">Data notificação</th>
                               <th className="px-3 py-2 font-bold">Valor original (órgão)</th>
                               <th className="px-3 py-2 font-bold">Prazo de identificação</th>
                               <th className="px-3 py-2 font-bold">Identificação do condutor</th>
@@ -672,6 +674,7 @@ export default function MultasPage() {
                                   <p className="font-semibold text-slate-800">{m.infracao}</p>
                                   <p className="text-xs text-slate-500">{m.local}</p>
                                 </td>
+                                <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{m.dataHoraAtuacao}</td>
                                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{m.data}</td>
                                 <td className="whitespace-nowrap px-3 py-2 font-mono font-semibold">{m.valor}</td>
                                 <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{m.prazo}</td>

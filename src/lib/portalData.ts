@@ -386,7 +386,10 @@ export interface Multa {
   placa: string;
   infracao: string;
   local: string;
+  /** Data em que a notificação chegou ao proprietário (dd/mm/aaaa). */
   data: string;
+  /** Data e hora da atuação (dd/mm/aaaa hh:mm). */
+  dataHoraAtuacao: string;
   valor: string;
   pontos: number;
   status: 'notificada' | 'em_recurso' | 'paga' | 'vencida' | 'aguardando_identificacao';
@@ -412,6 +415,8 @@ function gerarMultasMock(): Multa[] {
   const pick = <T>(arr: readonly T[]): T => arr[Math.floor(rnd() * arr.length)];
   const HOJE = new Date(2026, 6, 20);
   const fmt = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  const fmtDataHora = (d: Date) =>
+    `${fmt(d)} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   const addDias = (base: Date, dias: number) => { const d = new Date(base); d.setDate(d.getDate() + dias); return d; };
 
   const infracoes = [
@@ -454,6 +459,8 @@ function gerarMultasMock(): Multa[] {
       const inf = pick(infracoes);
       const local = pick(locais);
       const dataInfracao = addDias(HOJE, -Math.floor(rnd() * 540));
+      dataInfracao.setHours(6 + Math.floor(rnd() * 16), Math.floor(rnd() * 60), 0, 0);
+      const dataNotificacao = addDias(dataInfracao, 2 + Math.floor(rnd() * 12));
       let status: Multa['status'] = pick(statusPool);
       if (rnd() < 0.1) status = 'aguardando_identificacao';
 
@@ -484,7 +491,8 @@ function gerarMultasMock(): Multa[] {
         placa: ativo.placa,
         infracao: inf.t,
         local,
-        data: fmt(dataInfracao),
+        data: fmt(dataNotificacao),
+        dataHoraAtuacao: fmtDataHora(dataInfracao),
         valor: inf.v,
         pontos: inf.p,
         status,
@@ -500,16 +508,16 @@ function gerarMultasMock(): Multa[] {
 }
 
 export const MULTAS: Multa[] = [
-  { auto: 'AIT-559102', placa: 'SHQ6B80', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Anhanguera, km 32 · SP', data: '28/06/2026', valor: 'R$ 195,23', pontos: 4, status: 'aguardando_identificacao', prazo: '28/07/2026', prazoIdentificacao: '30/07/2026' },
-  { auto: 'AIT-556310', placa: 'SHQ6B80', infracao: 'Avanço de sinal vermelho', local: 'Marginal Tietê · São Paulo', data: '02/06/2026', valor: 'R$ 293,47', pontos: 7, status: 'paga', prazo: '—' },
-  { auto: 'AIT-551987', placa: 'SHQ6B80', infracao: 'Estacionar em local proibido', local: 'Av. Paulista · São Paulo', data: '20/04/2026', valor: 'R$ 195,23', pontos: 4, status: 'vencida', prazo: '20/05/2026' },
-  { auto: 'AIT-548876', placa: 'JBL5E88', infracao: 'Trafegar em faixa exclusiva', local: 'Av. do Estado · São Paulo', data: '11/06/2026', valor: 'R$ 293,47', pontos: 5, status: 'em_recurso', prazo: '11/08/2026' },
-  { auto: 'AIT-540221', placa: 'JBL5E88', infracao: 'Excesso de velocidade até 20%', local: 'BR-116, km 214 · Registro/SP', data: '25/05/2026', valor: 'R$ 195,23', pontos: 4, status: 'notificada', prazo: '25/07/2026' },
-  { auto: 'AIT-529981', placa: 'DSA9924', infracao: 'Avanço de sinal vermelho', local: 'Av. Ipanema · Sorocaba', data: '15/04/2026', valor: 'R$ 293,47', pontos: 7, status: 'vencida', prazo: '15/05/2026' },
-  { auto: 'AIT-533402', placa: 'DSA9924', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Castello Branco · Sorocaba', data: '30/04/2026', valor: 'R$ 195,23', pontos: 4, status: 'aguardando_identificacao', prazo: '30/07/2026', prazoIdentificacao: '18/07/2026' },
-  { auto: 'AIT-534210', placa: 'JBL5B26', infracao: 'Estacionar em local proibido', local: 'Centro · Campinas', data: '02/05/2026', valor: 'R$ 195,23', pontos: 4, status: 'paga', prazo: '—' },
-  { auto: 'AIT-521045', placa: 'JBL5B25', infracao: 'Uso de celular ao dirigir', local: 'Rod. Anhanguera, km 88 · Campinas', data: '18/03/2026', valor: 'R$ 293,47', pontos: 7, status: 'paga', prazo: '—' },
-  { auto: 'AIT-560877', placa: 'RTX4C12', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Anhanguera, km 55 · Jundiaí', data: '05/07/2026', valor: 'R$ 195,23', pontos: 4, status: 'aguardando_identificacao', prazo: '05/08/2026', prazoIdentificacao: '22/07/2026' },
+  { auto: 'AIT-559102', placa: 'SHQ6B80', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Anhanguera, km 32 · SP', data: '28/06/2026', dataHoraAtuacao: '25/06/2026 14:32', valor: 'R$ 195,23', pontos: 4, status: 'aguardando_identificacao', prazo: '28/07/2026', prazoIdentificacao: '30/07/2026' },
+  { auto: 'AIT-556310', placa: 'SHQ6B80', infracao: 'Avanço de sinal vermelho', local: 'Marginal Tietê · São Paulo', data: '02/06/2026', dataHoraAtuacao: '28/05/2026 19:08', valor: 'R$ 293,47', pontos: 7, status: 'paga', prazo: '—' },
+  { auto: 'AIT-551987', placa: 'SHQ6B80', infracao: 'Estacionar em local proibido', local: 'Av. Paulista · São Paulo', data: '20/04/2026', dataHoraAtuacao: '14/04/2026 11:45', valor: 'R$ 195,23', pontos: 4, status: 'vencida', prazo: '20/05/2026' },
+  { auto: 'AIT-548876', placa: 'JBL5E88', infracao: 'Trafegar em faixa exclusiva', local: 'Av. do Estado · São Paulo', data: '11/06/2026', dataHoraAtuacao: '06/06/2026 08:17', valor: 'R$ 293,47', pontos: 5, status: 'em_recurso', prazo: '11/08/2026' },
+  { auto: 'AIT-540221', placa: 'JBL5E88', infracao: 'Excesso de velocidade até 20%', local: 'BR-116, km 214 · Registro/SP', data: '25/05/2026', dataHoraAtuacao: '21/05/2026 16:03', valor: 'R$ 195,23', pontos: 4, status: 'notificada', prazo: '25/07/2026' },
+  { auto: 'AIT-529981', placa: 'DSA9924', infracao: 'Avanço de sinal vermelho', local: 'Av. Ipanema · Sorocaba', data: '15/04/2026', dataHoraAtuacao: '10/04/2026 07:51', valor: 'R$ 293,47', pontos: 7, status: 'vencida', prazo: '15/05/2026' },
+  { auto: 'AIT-533402', placa: 'DSA9924', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Castello Branco · Sorocaba', data: '30/04/2026', dataHoraAtuacao: '24/04/2026 13:20', valor: 'R$ 195,23', pontos: 4, status: 'aguardando_identificacao', prazo: '30/07/2026', prazoIdentificacao: '18/07/2026' },
+  { auto: 'AIT-534210', placa: 'JBL5B26', infracao: 'Estacionar em local proibido', local: 'Centro · Campinas', data: '02/05/2026', dataHoraAtuacao: '28/04/2026 09:40', valor: 'R$ 195,23', pontos: 4, status: 'paga', prazo: '—' },
+  { auto: 'AIT-521045', placa: 'JBL5B25', infracao: 'Uso de celular ao dirigir', local: 'Rod. Anhanguera, km 88 · Campinas', data: '18/03/2026', dataHoraAtuacao: '12/03/2026 18:26', valor: 'R$ 293,47', pontos: 7, status: 'paga', prazo: '—' },
+  { auto: 'AIT-560877', placa: 'RTX4C12', infracao: 'Excesso de velocidade até 20%', local: 'Rod. Anhanguera, km 55 · Jundiaí', data: '05/07/2026', dataHoraAtuacao: '01/07/2026 15:12', valor: 'R$ 195,23', pontos: 4, status: 'aguardando_identificacao', prazo: '05/08/2026', prazoIdentificacao: '22/07/2026' },
   ...gerarMultasMock(),
 ];
 
